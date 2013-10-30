@@ -5,7 +5,7 @@ libraryDependencies ++= Seq(
   )
 
 libraryDependencies ++= Seq(
-    "org.specs2"          %% "specs2"             % "2.3-SNAPSHOT" % "test",
+    "org.specs2"          %% "specs2"             % "2.3"          % "test",
     "org.scalacheck"      %% "scalacheck"         % "1.10.0"       % "test",
     "org.hamcrest"        %  "hamcrest-all"       % "1.1"          % "test",
     "org.mockito"         %  "mockito-all"        % "1.9.5"        % "test",
