@@ -9,13 +9,8 @@ import com.amazonaws.services.ec2.AmazonEC2Client
 
 /** Sydney-region EC2 client. */
 object AwsEc2Client {
-  val Ec2Endpoint = "ec2.ap-southeast-2.amazonaws.com"
-
-  def create: AmazonEC2Client = {
-    val c = new AmazonEC2Client()
-    c.setEndpoint(Ec2Endpoint)
-    c
-  }
+  import com.ambiata.saws.ec2.EC2
+  def create: AmazonEC2Client = EC2()
 }
 
 
