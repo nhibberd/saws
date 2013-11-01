@@ -1,21 +1,10 @@
 package com.ambiata.saws
 package iam
 
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
-import com.amazonaws.services.identitymanagement.model._
-
 
 case class IamPolicy(policyName: String, policyDocument: String)
 
 object IamPolicy {
-
-  def putRolePolicy(iam: AmazonIdentityManagementClient, roleName: String, policy: IamPolicy) {
-    val policyReq = (new PutRolePolicyRequest())
-      .withRoleName(roleName)
-      .withPolicyName(policy.policyName)
-      .withPolicyDocument(policy.policyDocument)
-    iam.putRolePolicy(policyReq)
-  }
 
   def S3ReadPathPolicy(path: String): IamPolicy = {
     val name = s"ReadAccessTo_$path".replace('/', '+')
