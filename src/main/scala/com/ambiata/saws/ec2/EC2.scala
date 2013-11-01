@@ -4,7 +4,7 @@ package ec2
 import com.amazonaws.services.ec2.AmazonEC2Client
 
 
-/** Sydney-region IAM client. */
+/** Sydney-region EC2 client. */
 object EC2 {
   val Ec2Endpoint = "ec2.ap-southeast-2.amazonaws.com"
 

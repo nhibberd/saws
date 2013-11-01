@@ -1,5 +1,5 @@
 package com.ambiata.saws
-package iam
+package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
 
