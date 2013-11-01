@@ -41,9 +41,9 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
         |}""".stripMargin
 
     val roleReq = (new CreateRoleRequest()).withRoleName(IamRole()).withAssumeRolePolicyDocument(Ec2AssumedRolePolicy)
-    iam.createRole(roleReq)
+    iam.client.createRole(roleReq)
 
-    iam.listRoles.getRoles.find(_.getRoleName == roleReq.getRoleName) must beSome
+    iam.client.listRoles.getRoles.find(_.getRoleName == roleReq.getRoleName) must beSome
   }
 
 
@@ -81,12 +81,12 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
 
     /** Remove all roles that match the specs environment identifier. */
     def removeAll() {
-      val specRoles = iam.listRoles.getRoles.map(_.getRoleName).filter(RoleName.findFirstMatchIn(_).isDefined)
+      val specRoles = iam.client.listRoles.getRoles.map(_.getRoleName).filter(RoleName.findFirstMatchIn(_).isDefined)
       specRoles foreach { r =>
-        iam.listRolePolicies((new ListRolePoliciesRequest).withRoleName(r)).getPolicyNames foreach { p =>
-          iam.deleteRolePolicy((new DeleteRolePolicyRequest).withRoleName(r).withPolicyName(p))
+        iam.client.listRolePolicies((new ListRolePoliciesRequest).withRoleName(r)).getPolicyNames foreach { p =>
+          iam.client.deleteRolePolicy((new DeleteRolePolicyRequest).withRoleName(r).withPolicyName(p))
         }
-        iam.deleteRole((new DeleteRoleRequest).withRoleName(r))
+        iam.client.deleteRole((new DeleteRoleRequest).withRoleName(r))
       }
     }
 

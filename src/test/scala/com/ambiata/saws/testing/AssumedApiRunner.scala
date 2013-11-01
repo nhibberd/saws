@@ -1,4 +1,5 @@
 package com.ambiata.saws
+package testing
 
 import scalaz._, Scalaz._
 import org.specs2.matcher._
@@ -49,3 +50,28 @@ object AssumedApiRunner extends MustMatchers {
   def beDenied: Matcher[Validated[CommandResult]] =
     (result: Validated[CommandResult]) => result.right.map(_.stdErrAsString().isEmpty) must beRight(false)
 }
+
+
+
+
+
+/**
+ *    yum install wget -y
+ *    wget https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
+ *    wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+ *    python ez_setup.py
+ *    python get-pip.py
+ *    pip install awscli
+ *
+ *    curl http://169.254.169.254/latest/meta-data/iam/security-credentials/specs2-role-1
+ *    export AWS_ACCESS_KEY_ID="ASIAJHMHGM7N6LXQ74VA"
+ *    export AWS_SECRET_ACCESS_KEY="mmMyDeTu4nXW82tOd2zaSzs5lt1BE3NLYupuOlBN"
+ *    export AWS_SECURITY_TOKEN=
+ *
+ *    user:      jenkins-ci
+ *    password: '4jenkins,ci only'
+ *
+ * aws --region ap-southeast-2 s3api list-buckets
+ * 287208473713
+ * 287208473713
+ */
