@@ -1,6 +1,7 @@
 package com.ambiata.saws
 package iam
 
+import com.ambiata.saws.s3._
 import scala.collection.JavaConversions._
 import org.specs2.Specification
 import org.specs2.specification._
