@@ -1,8 +1,7 @@
 libraryDependencies ++= Seq(
     "org.scalaz"          %% "scalaz-core"        % "7.0.4",
     "com.github.scopt"    %% "scopt"              % "3.1.0",
-    "com.amazonaws"       %  "aws-java-sdk"       % "1.6.1",
-    "com.ambiata"         %% "fiddle"             % "1.0-SNAPSHOT"
+    "com.amazonaws"       %  "aws-java-sdk"       % "1.6.1"
   )
 
 libraryDependencies ++= Seq(
@@ -20,8 +19,6 @@ resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
     Resolver.sonatypeRepo("snapshots"),
     Resolver.typesafeRepo("releases"),
-    "cloudera"              at "https://repository.cloudera.com/content/repositories/releases",
-    "spray"                 at "http://repo.spray.io",
-    "artifactory"           at "http://etd-packaging.research.nicta.com.au/artifactory/libs-release-local",
-    "artifactory snapshot"  at "http://etd-packaging.research.nicta.com.au/artifactory/libs-snapshot-local"
+    "cloudera" at "https://repository.cloudera.com/content/repositories/releases",
+    "spray"    at "http://repo.spray.io"
   )
