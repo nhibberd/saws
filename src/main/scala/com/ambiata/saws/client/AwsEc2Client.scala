@@ -10,7 +10,7 @@ import com.amazonaws.services.ec2.AmazonEC2Client
 /** Sydney-region EC2 client. */
 object AwsEc2Client {
   import com.ambiata.saws.ec2.EC2
-  def create: AmazonEC2Client = EC2()
+  def create: AmazonEC2Client = EC2.create()
 }
 
 

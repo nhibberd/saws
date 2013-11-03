@@ -25,7 +25,7 @@ case class AssumedApiRunner(assumedInstanceName: String, login: String, password
 
   lazy val dns: Validated[String] = {
     val ec2 = EC2()
-    val reservations: List[Reservation] = ec2.describeInstances.getReservations.toList
+    val reservations: List[Reservation] = ec2.client.describeInstances.getReservations.toList
     val instances: List[Instance] = reservations.flatMap(_.getInstances)
     val instance =
       instances.find(_.getTags.exists(t => t.getKey == "Name" && t.getValue == assumedInstanceName))
