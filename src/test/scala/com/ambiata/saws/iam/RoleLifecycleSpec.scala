@@ -1,11 +1,11 @@
 package com.ambiata.saws
 package iam
 
+import scalaz._, Scalaz._
 import org.specs2.Specification
 import org.specs2.specification._
 import org.specs2.matcher._
-import com.amazonaws.services.identitymanagement.model._
-import scala.collection.JavaConversions._
+import testing.AwsAttemptMatcher._
 
 
 class RoleLifecycleSpec extends Specification with BeforeAfterExample with ThrownExpectations { def is = sequential ^ s2"""
@@ -14,89 +14,49 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
   ==============
   - can create an IAM role that doesn't already exist $e1
   - can create an IAM role that already exists $e2
-  - can delete an IAM role that doesn't already exist $e3
+  - can not delete an IAM role that doesn't already exist $e3
   - can delete an IAM role that already exists $e4
-
 
 """
 
-
+  val roleName = "role-lifecycle-spec"
   lazy val iam = IAM()
 
-  // TODO - refactor out
   def e1 = {
-    val Ec2AssumedRolePolicy =
-      """|{
-        |  "Version": "2008-10-17",
-        |  "Statement": [
-        |    {
-        |      "Sid": "",
-        |      "Effect": "Allow",
-        |      "Principal": {
-        |        "Service": "ec2.amazonaws.com"
-        |      },
-        |      "Action": "sts:AssumeRole"
-        |    }
-        |  ]
-        |}""".stripMargin
-
-    val roleReq = (new CreateRoleRequest()).withRoleName(IamRole()).withAssumeRolePolicyDocument(Ec2AssumedRolePolicy)
-    iam.client.createRole(roleReq)
-
-    iam.client.listRoles.getRoles.find(_.getRoleName == roleReq.getRoleName) must beSome
+    val steps =
+      iam.createRole(roleName) >>
+      iam.roleExists(roleName)
+    steps must beSuccessful
+    steps.toEither must beRight(true)
   }
-
 
   def e2 = {
-    pending
+    val steps =
+      iam.createRole(roleName).replicateM(2) >>
+      iam.roleExists(roleName)
+    steps must beSuccessful
+    steps.toEither must beRight(true)
   }
-
 
   def e3 = {
-    pending
+    iam.deleteRole(roleName) must beSuccessful.not
+    iam.roleExists(roleName).toEither must beRight(false)
   }
-
 
   def e4 = {
-    pending
-  }
-
-
-  /** Helpers for constructing security group names. All security group names contain a unique index and clients
-    * must ensure that a given security group is only dependent on security groups with lower indexes. This ensures
-    * that security groups are destroyed in the correct order.
-    */
-  object IamRole {
-    val env = "specs2"
-    val RoleName = s"$env\\-role-(.*)".r
-
-    var i = 0
-
-    /** Create a unique role name. */
-    def apply(): String = {
-      val name = s"$env-role-$i"
-      i += 1
-      name
-    }
-
-    /** Remove all roles that match the specs environment identifier. */
-    def removeAll() {
-      val specRoles = iam.client.listRoles.getRoles.map(_.getRoleName).filter(RoleName.findFirstMatchIn(_).isDefined)
-      specRoles foreach { r =>
-        iam.client.listRolePolicies((new ListRolePoliciesRequest).withRoleName(r)).getPolicyNames foreach { p =>
-          iam.client.deleteRolePolicy((new DeleteRolePolicyRequest).withRoleName(r).withPolicyName(p))
-        }
-        iam.client.deleteRole((new DeleteRoleRequest).withRoleName(r))
-      }
-    }
-
+    val steps =
+      iam.createRole(roleName) >>
+      iam.deleteRole(roleName) >>
+      iam.roleExists(roleName)
+    steps must beSuccessful
+    steps.toEither must beRight(false)
   }
 
   def before {
-    IamRole.removeAll()
+    iam.deleteRole(roleName)
   }
 
   def after {
-    IamRole.removeAll()
+    iam.deleteRole(roleName)
   }
 }
