@@ -16,13 +16,23 @@ import testing.AwsAttemptMatcher._
 import com.decodified.scalassh._
 
 
-class RoleS3PolicySpec extends Specification with ThrownExpectations with Tables { def is = sequential ^ s2"""
+class RolePolicySpec extends Specification with ThrownExpectations with Tables { def is = sequential ^ s2"""
 
   S3 Policies
   ===========
   ${Step(createFiles)}
-  - can use policies to control a role's access to buckets and objects $ex
+  - can use policies to control a role's access to buckets and objects $exS3
   ${Step(removeFiles)}
+
+
+  EC2 Policies
+  ============
+  - can add an 'EC2 full access' policy to a role $exEc2
+
+
+  EMR Policies
+  ============
+  - can add an 'EMR full access' policy to a role $exEmr
 
 """
 
@@ -61,7 +71,7 @@ class RoleS3PolicySpec extends Specification with ThrownExpectations with Tables
   }
 
 
-  def ex = {
+  def exS3 = {
     "policy"                                    | "read key1" | "read key2" | "write key1" | "write key2" |
     allowS3ReadPath(TestBucket)                 ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
     allowS3ReadPath(s"$TestBucket/$path1")      ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
@@ -86,5 +96,15 @@ class RoleS3PolicySpec extends Specification with ThrownExpectations with Tables
         commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
       }
     }
+  }
+
+
+  def exEc2 = {
+    iam.updateRolePolicies(CiRole, List(allowEc2FullAccess)) must beSuccessful
+  }
+
+
+  def exEmr = {
+    iam.updateRolePolicies(CiRole, List(allowEmrFullAccess)) must beSuccessful
   }
 }
