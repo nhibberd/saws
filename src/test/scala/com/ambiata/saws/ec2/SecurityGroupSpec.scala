@@ -96,8 +96,10 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
   }
 
 
-  def securityGroupMustExist(client: AmazonEC2Client, name: String): MatchResult[List[String]] =
-    client.describeSecurityGroups().getSecurityGroups.map(_.getGroupName).toList must contain(name)
+  def securityGroupMustExist(client: AmazonEC2Client, name: String): MatchResult[List[String]] = {
+    def allGroups = client.describeSecurityGroups().getSecurityGroups.map(_.getGroupName).toList
+    allGroups must contain(name).eventually(retries = 3, sleep = 2.seconds)
+  }
 
   def permissionWith(protocol: String, fromPort: Int, toPort: Int, ipRanges: List[String], userIdGroupPairs: List[String]): Matcher[IpPermission] =
     (p: IpPermission) => {
