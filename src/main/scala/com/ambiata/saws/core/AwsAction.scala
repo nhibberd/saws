@@ -3,15 +3,30 @@ package core
 
 import scalaz._, Scalaz._
 
-case class AwsAction[-A, +B](toReaderT: ReaderT[AwsAttempt, A, B]) {
+case class AwsAction[A, +B](toReaderT: ReaderT[AwsAttempt, A, B]) {
+  def map[C](f: B => C): AwsAction[A, C] =
+    AwsAction(toReaderT.map(f))
+
+  def flatMap[C](f: B => AwsAction[A, C]): AwsAction[A, C] =
+    AwsAction(toReaderT.flatMap(a => f(a).toReaderT))
+
   def run(a: A): AwsAttempt[B] =
-    toReaderT.run(a)
+    safe.toReaderT.run(a)
 
   def runOrElse[BB >: B](a: A, otherwise: => BB): BB =
     run(a).getOrElse(otherwise)
+
+  def safe: AwsAction[A, B] =
+    AwsAction(Kleisli(a => AwsAttempt.safe(toReaderT.run(a)).join))
+
+  def safely[C](f: B => C): AwsAction[A, C] =
+    map(f).safe
 }
 
 object AwsAction {
+  def config[A]: AwsAction[A, A] =
+    AwsAction(Kleisli.ask[AwsAttempt, A])
+
   def safe[A, B](f: A => B): AwsAction[A, B] =
     AwsAction(Kleisli(a => AwsAttempt.safe(f(a))))
 
@@ -29,6 +44,9 @@ object AwsAction {
 
   def error[A, B](message: String, t: Throwable): AwsAction[A, B] =
     AwsAction(Kleisli(_ => AwsAttempt.error(message, t)))
+
+  def withClient[A, B](f: A => B): AwsAction[A, B] =
+    config[A].safely(f)
 }
 
 trait AwsActionTemplate[A] {
