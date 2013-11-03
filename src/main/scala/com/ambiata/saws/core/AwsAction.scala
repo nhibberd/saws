@@ -11,7 +11,7 @@ case class AwsAction[A, +B](toReaderT: ReaderT[AwsAttempt, A, B]) {
     AwsAction(toReaderT.flatMap(a => f(a).toReaderT))
 
   def attempt[C](f: B => AwsAttempt[C]): AwsAction[A, C] =
-    flatMap(b => AwsAction(Kleisli(_ => f(b))))
+    flatMap(b => AwsAction(Kleisli(_ => f(b)))).safe
 
   def run(a: A): AwsAttempt[B] =
     safe.toReaderT.run(a)
@@ -50,6 +50,9 @@ object AwsAction {
 
   def withClient[A, B](f: A => B): AwsAction[A, B] =
     config[A].safely(f)
+
+  def attemptWithClient[A, B](f: A => AwsAttempt[B]): AwsAction[A, B] =
+    config[A].attempt(f)
 }
 
 trait AwsActionTemplate[A] {
