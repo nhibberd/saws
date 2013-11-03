@@ -10,6 +10,9 @@ case class AwsAction[A, +B](toReaderT: ReaderT[AwsAttempt, A, B]) {
   def flatMap[C](f: B => AwsAction[A, C]): AwsAction[A, C] =
     AwsAction(toReaderT.flatMap(a => f(a).toReaderT))
 
+  def attempt[C](f: B => AwsAttempt[C]): AwsAction[A, C] =
+    flatMap(b => AwsAction(Kleisli(_ => f(b))))
+
   def run(a: A): AwsAttempt[B] =
     safe.toReaderT.run(a)
 
