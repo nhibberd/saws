@@ -80,7 +80,4 @@ object EC2 {
     c.setEndpoint(Ec2Endpoint)
     EC2(c)
   }
-
-  def create(): AmazonEC2Client =
-    EC2().client
 }
