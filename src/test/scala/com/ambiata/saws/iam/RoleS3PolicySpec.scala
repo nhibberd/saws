@@ -9,7 +9,7 @@ import org.specs2.matcher.{Matcher, ThrownExpectations}
 import com.amazonaws.services.s3.model._
 import java.io.File
 import s3._
-import IamPolicy._
+import Policy._
 import testing._
 import testing.AssumedApiRunner._
 import testing.AwsAttemptMatcher._
@@ -62,13 +62,13 @@ class RoleS3PolicySpec extends Specification with ThrownExpectations with Tables
 
 
   def ex = {
-    "policy"                                     | "read key1" | "read key2" | "write key1" | "write key2" |
-    S3ReadPathPolicy(TestBucket)                 ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
-    S3ReadPathPolicy(s"$TestBucket/$path1")      ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
-    S3WritePathPolicy(TestBucket)                ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
-    S3WritePathPolicy(s"$TestBucket/$path1")     ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
-    S3ReadWritePathPolicy(TestBucket)            ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
-    S3ReadWritePathPolicy(s"$TestBucket/$path1") ! beGranted   ! beDenied    ! beGranted    ! beDenied     |> {
+    "policy"                                    | "read key1" | "read key2" | "write key1" | "write key2" |
+    allowS3ReadPath(TestBucket)                 ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
+    allowS3ReadPath(s"$TestBucket/$path1")      ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
+    allowS3WritePath(TestBucket)                ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
+    allowS3WritePath(s"$TestBucket/$path1")     ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
+    allowS3ReadWritePath(TestBucket)            ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
+    allowS3ReadWritePath(s"$TestBucket/$path1") ! beGranted   ! beDenied    ! beGranted    ! beDenied     |> {
 
       (policy, rk1, rk2, wk1, wk2) => {
 
@@ -82,7 +82,7 @@ class RoleS3PolicySpec extends Specification with ThrownExpectations with Tables
         )
         val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beDenied)
 
-        (iam.clearRolePolicies(CiRole) >> iam.addRolePolicy(CiRole, policy)) must beSuccessful
+        (iam.updateRolePolicies(CiRole, List(policy))) must beSuccessful
         commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
       }
     }

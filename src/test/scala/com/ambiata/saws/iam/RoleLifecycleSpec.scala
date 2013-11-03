@@ -19,44 +19,44 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
 
 """
 
-  val roleName = "role-lifecycle-spec"
+  val role = Role("role-lifecycle-spec", Nil)
   lazy val iam = IAM()
 
   def e1 = {
     val steps =
-      iam.createRole(roleName) >>
-      iam.roleExists(roleName)
+      iam.createRole(role) >>
+      iam.roleExists(role.name)
     steps must beSuccessful
     steps.toEither must beRight(true)
   }
 
   def e2 = {
     val steps =
-      iam.createRole(roleName).replicateM(2) >>
-      iam.roleExists(roleName)
+      iam.createRole(role).replicateM(2) >>
+      iam.roleExists(role.name)
     steps must beSuccessful
     steps.toEither must beRight(true)
   }
 
   def e3 = {
-    iam.deleteRole(roleName) must beSuccessful.not
-    iam.roleExists(roleName).toEither must beRight(false)
+    iam.deleteRole(role.name) must beSuccessful.not
+    iam.roleExists(role.name).toEither must beRight(false)
   }
 
   def e4 = {
     val steps =
-      iam.createRole(roleName) >>
-      iam.deleteRole(roleName) >>
-      iam.roleExists(roleName)
+      iam.createRole(role) >>
+      iam.deleteRole(role.name) >>
+      iam.roleExists(role.name)
     steps must beSuccessful
     steps.toEither must beRight(false)
   }
 
   def before {
-    iam.deleteRole(roleName)
+    iam.deleteRole(role.name)
   }
 
   def after {
-    iam.deleteRole(roleName)
+    iam.deleteRole(role.name)
   }
 }
