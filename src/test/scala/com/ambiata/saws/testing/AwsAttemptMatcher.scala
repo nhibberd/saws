@@ -2,7 +2,7 @@ package com.ambiata.saws
 package testing
 
 import org.specs2.matcher._
-import AwsAttempt._
+import core.AwsAttempt
 
 
 object AwsAttemptMatcher extends MustMatchers {
