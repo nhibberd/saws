@@ -23,7 +23,11 @@ case class EC2(client: AmazonEC2Client) {
     securityGroup(group.name) >>= { sg =>
       AwsAttempt {
         if (sg.isEmpty)
-          client.createSecurityGroup(new CreateSecurityGroupRequest(group.name, group.desc))
+          client.createSecurityGroup({
+            val request = new CreateSecurityGroupRequest(group.name, group.desc)
+            group.vpc.foreach(request.setVpcId(_))
+            request
+          })
       }
     }
   }
