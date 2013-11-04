@@ -65,8 +65,8 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
     val groups = List(otherGroup, sg)
 
     val attempt =
-      groups.map(ec2.createSecurityGroup).sequence >>
-      groups.map(ec2.updateSecurityGroupIngress).sequence
+      groups.traverse(ec2.createSecurityGroup) >>
+      groups.traverse(ec2.updateSecurityGroupIngress)
 
     attempt must beSuccessful
     securityGroupMustExist(ec2.client, sg.name)
@@ -83,8 +83,8 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
 
     /* Set security policy to private SSH, then update to public SSH. */
     val attempt =
-      groups.map(ec2.createSecurityGroup).sequence >>
-      groups.map(ec2.updateSecurityGroupIngress).sequence >>
+      groups.traverse(ec2.createSecurityGroup) >>
+      groups.traverse(ec2.updateSecurityGroupIngress) >>
       ec2.updateSecurityGroupIngress(sg.copy(ingressRules = List(SecurityGroup.publicSshIngress)))
 
     attempt must beSuccessful

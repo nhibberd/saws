@@ -5,7 +5,7 @@ import scalaz._, Scalaz._
 import scala.collection.JavaConversions._
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.{SecurityGroup => AwsSecurityGroup, _}
-import AwsAttempt._
+import core.AwsAttempt, AwsAttempt.safe
 
 
 /** Wrapper for Java IAM client. */
@@ -13,7 +13,7 @@ case class EC2(client: AmazonEC2Client) {
 
   /** Return details for a specified security group, if it exists. */
   def securityGroup(name: String): AwsAttempt[Option[AwsSecurityGroup]] =
-    AwsAttempt {
+    safe {
       client.describeSecurityGroups().getSecurityGroups.find(_.getGroupName == name)
     }
 
@@ -21,7 +21,7 @@ case class EC2(client: AmazonEC2Client) {
   /** Create a security group. Do nothing if the security group already exists. */
   def createSecurityGroup(group: SecurityGroup): AwsAttempt[Option[CreateSecurityGroupResult]] = {
     securityGroup(group.name) >>= { sg =>
-      AwsAttempt {
+      safe {
         if (sg.isEmpty)
           Some(client.createSecurityGroup({
             val request = new CreateSecurityGroupRequest(group.name, group.desc)
@@ -38,7 +38,7 @@ case class EC2(client: AmazonEC2Client) {
   /** Revoke all existing permissions then apply specified ingress rules for a given security group. */
   def updateSecurityGroupIngress(group: SecurityGroup): AwsAttempt[Unit] = {
     securityGroup(group.name) >>= { sg =>
-      AwsAttempt {
+      safe {
         sg foreach { existing =>
           existing.getIpPermissions.map(safeIpPermissionCopy) foreach { ipp => revokeSecurityGroupIngress(group.name, ipp) }
           group.ingressRules foreach { ipp => authorizeSecurityGroupIngress(group.name, ipp) }
@@ -50,7 +50,7 @@ case class EC2(client: AmazonEC2Client) {
 
   /** Authorize an ingress rules for a given security group. */
   def authorizeSecurityGroupIngress(group: String, ipPermission: IpPermission): AwsAttempt[Unit] = {
-    AwsAttempt {
+    safe {
       client.authorizeSecurityGroupIngress(new AuthorizeSecurityGroupIngressRequest(group, List(ipPermission)))
     }
   }
@@ -58,7 +58,7 @@ case class EC2(client: AmazonEC2Client) {
 
   /** Revoke an ingress rules for a given security group. */
   def revokeSecurityGroupIngress(group: String, ipPermission: IpPermission): AwsAttempt[Unit] = {
-    AwsAttempt {
+    safe {
       client.revokeSecurityGroupIngress(new RevokeSecurityGroupIngressRequest(group, List(ipPermission)))
     }
   }
