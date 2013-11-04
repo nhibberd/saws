@@ -27,7 +27,7 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
       iam.createRole(role) >>
       iam.roleExists(role.name)
     steps must beSuccessful
-    steps.toEither must beRight(true)
+    steps.run.toEither must beRight(true)
   }
 
   def e2 = {
@@ -35,12 +35,12 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
       iam.createRole(role).replicateM(2) >>
       iam.roleExists(role.name)
     steps must beSuccessful
-    steps.toEither must beRight(true)
+    steps.run.toEither must beRight(true)
   }
 
   def e3 = {
     iam.deleteRole(role.name) must beSuccessful.not
-    iam.roleExists(role.name).toEither must beRight(false)
+    iam.roleExists(role.name).run.toEither must beRight(false)
   }
 
   def e4 = {
@@ -49,7 +49,7 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
       iam.deleteRole(role.name) >>
       iam.roleExists(role.name)
     steps must beSuccessful
-    steps.toEither must beRight(false)
+    steps.run.toEither must beRight(false)
   }
 
   def before {
