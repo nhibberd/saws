@@ -29,8 +29,11 @@ trait S3Files {
    * upload one file to a given bucket/key
    */
   def uploadFile(bucket: String, key: String, file: File, client: AmazonS3Client = new AmazonS3Client): EitherStr[PutObjectResult] =
-    if(file.isDirectory) s"'${file.getPath}' is not a file!".left
-    else                 try client.putObject(bucket, key, file).right catch { case t: Throwable => t.getMessage.left }
+    file match {
+      case f if(!f.exists)     => s"'${file.getPath}' doesn't exist!".left
+      case f if(f.isDirectory) => s"'${file.getPath}' is not a file!".left
+      case _                   => try client.putObject(bucket, key, file).right catch { case t: Throwable => t.getMessage.left }
+    }
 
   /**
    * @return the lines of a text file on S3
