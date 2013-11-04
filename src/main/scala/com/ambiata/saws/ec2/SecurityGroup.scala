@@ -9,7 +9,8 @@ case class SecurityGroup (
   name: String,
   desc: String,
   ingressRules: List[IpPermission],
-  egressRules: List[IpPermission] = Nil
+  egressRules: List[IpPermission] = Nil,
+  vpc: Option[String] = None
 )
 
 object SecurityGroup {
