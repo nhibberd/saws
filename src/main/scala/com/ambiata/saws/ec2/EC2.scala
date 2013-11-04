@@ -19,17 +19,19 @@ case class EC2(client: AmazonEC2Client) {
 
 
   /** Create a security group. Do nothing if the security group already exists. */
-  def createSecurityGroup(group: SecurityGroup): AwsAttempt[Option[CreateSecurityGroupResult]] = {
+  def createSecurityGroup(group: SecurityGroup): AwsAttempt[Either[AwsSecurityGroup, CreateSecurityGroupResult]] = {
     securityGroup(group.name) >>= { sg =>
       safe {
-        if (sg.isEmpty)
-          Some(client.createSecurityGroup({
-            val request = new CreateSecurityGroupRequest(group.name, group.desc)
-            group.vpc.foreach(request.setVpcId(_))
-            request
-          }))
-        else
-          None
+        sg match {
+          case None =>
+            Right(client.createSecurityGroup({
+              val request = new CreateSecurityGroupRequest(group.name, group.desc)
+              group.vpc.foreach(request.setVpcId(_))
+              request
+            }))
+          case Some(current) =>
+            Left(current)
+        }
       }
     }
   }
