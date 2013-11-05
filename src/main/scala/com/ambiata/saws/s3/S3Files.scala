@@ -23,7 +23,7 @@ trait S3Files {
    */
   def uploadFiles(bucket: String, key: String, file: File, client: AmazonS3Client = new AmazonS3Client, metadata: ObjectMetadata = S3.ServerSideEncryption): EitherStr[List[PutObjectResult]] =
     if(file.isDirectory) file.listFiles.toList.traverse(f => uploadFiles(bucket, key + "/" + f.getName, f, client, metadata)).map(_.flatten)
-    else                 uploadFile(bucket, key, file, client).map(List(_))
+    else                 uploadFile(bucket, key, file, client, metadata).map(List(_))
 
   /**
    * upload one file to a given bucket/key

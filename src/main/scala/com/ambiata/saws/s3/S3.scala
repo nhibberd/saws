@@ -42,7 +42,7 @@ object S3 {
   /** Object metadata that enables AES256 server-side encryption. */
   val ServerSideEncryption: ObjectMetadata = {
     val m = new ObjectMetadata
-    m.setServerSideEncryption("AES256")
+    m.setServerSideEncryption(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
     m
   }
 }
