@@ -2,7 +2,7 @@ package com.ambiata.saws
 package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{S3Object, S3ObjectSummary}
+import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary}
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
 
@@ -38,4 +38,11 @@ object S3 {
 
   def listKeys(bucket: String, prefix: String): S3Action[List[String]] =
     listSummary(bucket, prefix).safely(_.map(_.getKey))
+
+  /** Object metadata that enables AES256 server-side encryption. */
+  val ServerSideEncryption: ObjectMetadata = {
+    val m = new ObjectMetadata
+    m.setServerSideEncryption("AES256")
+    m
+  }
 }
