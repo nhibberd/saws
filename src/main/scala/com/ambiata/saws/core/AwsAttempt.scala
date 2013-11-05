@@ -48,6 +48,6 @@ object AwsAttempt {
 
   implicit def AwsAttemptMonad: Monad[AwsAttempt] = new Monad[AwsAttempt] {
     def point[A](v: => A) = ok(v)
-    def bind[A, B](ma: AwsAttempt[A])(f: A => AwsAttempt[B]) = ma.flatMap(f)
+    def bind[A, B](m: AwsAttempt[A])(f: A => AwsAttempt[B]) = m.flatMap(f)
   }
 }
