@@ -88,4 +88,5 @@ object EC2 {
     c.setEndpoint(Ec2Endpoint)
     EC2(c)
   }
+
 }
