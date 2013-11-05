@@ -77,8 +77,24 @@ case class IAM(client: AmazonIdentityManagementClient) {
     for {
       policies <- safe { client.listRolePolicies(listReq).getPolicyNames.toList }
       _        <- policies.traverse(p => safe { client.deleteRolePolicy(deleteReq(p)) })
-    } yield (())
+    } yield ()
   }
+
+  /** Create an instance profile with attached roles. */
+  def createInstanceProfile(profile: InstanceProfile) = for {
+    _ <- safe {
+        client.createInstanceProfile(
+          (new CreateInstanceProfileRequest)
+            .withInstanceProfileName(profile.name))
+      }
+    _ <- profile.roles.traverse(role => safe {
+        client.addRoleToInstanceProfile(
+          (new AddRoleToInstanceProfileRequest)
+            .withInstanceProfileName(profile.name)
+            .withRoleName(role.name)
+        )
+      })
+  } yield ()
 }
 
 
@@ -96,3 +112,6 @@ object IAM {
 
 /** An IAM role. */
 case class Role(name: String, policies: List[Policy])
+
+/** An IAM instance profile */
+case class InstanceProfile(name: String, roles: List[Role])
