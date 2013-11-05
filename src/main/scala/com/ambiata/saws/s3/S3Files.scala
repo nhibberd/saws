@@ -5,7 +5,7 @@ package s3
 import java.io._
 import java.net.URLClassLoader
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.PutObjectResult
+import com.amazonaws.services.s3.model._
 import java.util.jar.{JarInputStream, JarEntry, JarOutputStream}
 import scala.collection.mutable
 import scala.collection.JavaConversions._
@@ -21,18 +21,19 @@ trait S3Files {
   /**
    * upload one file or all the files of a directory to a given bucket/key
    */
-  def uploadFiles(bucket: String, key: String, file: File, client: AmazonS3Client = new AmazonS3Client): EitherStr[List[PutObjectResult]] =
-    if(file.isDirectory) file.listFiles.toList.traverse(f => uploadFiles(bucket, key + "/" + f.getName, f, client)).map(_.flatten)
+  def uploadFiles(bucket: String, key: String, file: File, client: AmazonS3Client = new AmazonS3Client, metadata: ObjectMetadata = S3.ServerSideEncryption): EitherStr[List[PutObjectResult]] =
+    if(file.isDirectory) file.listFiles.toList.traverse(f => uploadFiles(bucket, key + "/" + f.getName, f, client, metadata)).map(_.flatten)
     else                 uploadFile(bucket, key, file, client).map(List(_))
 
   /**
    * upload one file to a given bucket/key
    */
-  def uploadFile(bucket: String, key: String, file: File, client: AmazonS3Client = new AmazonS3Client): EitherStr[PutObjectResult] =
+  def uploadFile(bucket: String, key: String, file: File, client: AmazonS3Client = new AmazonS3Client, metadata: ObjectMetadata = S3.ServerSideEncryption): EitherStr[PutObjectResult] =
     file match {
       case f if(!f.exists)     => s"'${file.getPath}' doesn't exist!".left
       case f if(f.isDirectory) => s"'${file.getPath}' is not a file!".left
-      case _                   => try client.putObject(bucket, key, file).right catch { case t: Throwable => t.getMessage.left }
+      case _                   =>
+        try client.putObject((new PutObjectRequest(bucket, key, file).withMetadata(metadata))).right catch { case t: Throwable => t.getMessage.left }
     }
 
   /**
