@@ -40,7 +40,7 @@ object S3 {
     listSummary(bucket, prefix).map(_.map(_.getKey))
 
   /** Object metadata that enables AES256 server-side encryption. */
-  val ServerSideEncryption: ObjectMetadata = {
+  def ServerSideEncryption: ObjectMetadata = {
     val m = new ObjectMetadata
     m.setServerSideEncryption(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
     m
