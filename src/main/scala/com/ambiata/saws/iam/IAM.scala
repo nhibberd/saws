@@ -4,7 +4,7 @@ package iam
 import scalaz._, Scalaz._
 import scala.collection.JavaConversions._
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
-import com.amazonaws.services.identitymanagement.model._
+import com.amazonaws.services.identitymanagement.model.{InstanceProfile => AwsInstanceProfile, _}
 import core.AwsAttempt, AwsAttempt.safe
 
 
@@ -79,6 +79,15 @@ case class IAM(client: AmazonIdentityManagementClient) {
       _        <- policies.traverse(p => safe { client.deleteRolePolicy(deleteReq(p)) })
     } yield ()
   }
+
+  /** Create an instance profile with attached roles. */
+  def getInstanceProfile(name: String): AwsAttempt[Option[AwsInstanceProfile]] =
+    safe {
+      Option(client.getInstanceProfile(
+        (new GetInstanceProfileRequest)
+          .withInstanceProfileName(name))
+        .getInstanceProfile)
+    }
 
   /** Create an instance profile with attached roles. */
   def createInstanceProfile(profile: InstanceProfile) = for {
