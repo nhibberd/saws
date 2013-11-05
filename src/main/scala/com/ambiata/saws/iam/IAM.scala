@@ -83,10 +83,10 @@ case class IAM(client: AmazonIdentityManagementClient) {
   /** Create an instance profile with attached roles. */
   def getInstanceProfile(name: String): AwsAttempt[Option[AwsInstanceProfile]] =
     safe {
-      Option(client.getInstanceProfile(
-        (new GetInstanceProfileRequest)
-          .withInstanceProfileName(name))
-        .getInstanceProfile)
+      client
+        .listInstanceProfiles(new ListInstanceProfilesRequest)
+        .getInstanceProfiles
+        .find(_.getInstanceProfileName == name)
     }
 
   /** Create an instance profile with attached roles. */
