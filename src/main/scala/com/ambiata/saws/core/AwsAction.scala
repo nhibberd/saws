@@ -3,80 +3,64 @@ package core
 
 import scalaz._, Scalaz._
 
-case class AwsAction[A, +B](toReaderT: ReaderT[AwsAttempt, A, B]) {
+case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
   def map[C](f: B => C): AwsAction[A, C] =
-    AwsAction(toReaderT.map(f))
+    flatMap(f andThen AwsAction.ok)
 
   def flatMap[C](f: B => AwsAction[A, C]): AwsAction[A, C] =
-    AwsAction(toReaderT.flatMap(a => f(a).toReaderT))
+    AwsAction(a => run(a) match {
+      case (log, AwsAttempt(\/-(b))) =>
+        f(b).run(a) match {
+          case (log2, result) => (log ++ log2, result)
+        }
+      case (log, AwsAttempt(-\/(e))) =>
+        (log, AwsAttempt(-\/(e)))
+    })
 
   def attempt[C](f: B => AwsAttempt[C]): AwsAction[A, C] =
-    flatMap(b => AwsAction(Kleisli(_ => f(b)))).safe
-
-  def run(a: A): AwsAttempt[B] =
-    safe.toReaderT.run(a)
-
-  def runOrElse[BB >: B](a: A, otherwise: => BB): BB =
-    run(a).getOrElse(otherwise)
+    flatMap(f andThen AwsAction.attempt)
 
   def safe: AwsAction[A, B] =
-    AwsAction(Kleisli(a => AwsAttempt.safe(toReaderT.run(a)).join))
-
-  def safely[C](f: B => C): AwsAction[A, C] =
-    map(f).safe
+    AwsAction(a => AwsAttempt.safe(run(a)) match {
+      case AwsAttempt(-\/(err)) => (Vector(), AwsAttempt(-\/(err)))
+      case AwsAttempt(\/-(ok))   => ok
+    })
 }
 
 object AwsAction {
   def config[A]: AwsAction[A, A] =
-    AwsAction(Kleisli.ask[AwsAttempt, A])
+    AwsAction(a => (Vector(), AwsAttempt.ok(a)))
 
-  def safe[A, B](f: A => B): AwsAction[A, B] =
-    AwsAction(Kleisli(a => AwsAttempt.safe(f(a))))
+  def ok[A, B](strict: B): AwsAction[A, B] =
+    value(strict)
 
-  def attempt[A, B](value: => B): AwsAction[A, B] =
-    AwsAction(Kleisli(_ => AwsAttempt.safe(value)))
+  def attempt[A, B](value: AwsAttempt[B]): AwsAction[A, B] =
+    AwsAction(_ => (Vector(), value))
 
-  def ok[A, B](value: B): AwsAction[A, B] =
-    AwsAction(Kleisli(_ => AwsAttempt.ok(value)))
+  def value[A, B](value: => B): AwsAction[A, B] =
+    AwsAction(_ => (Vector(), AwsAttempt.ok(value)))
 
   def exception[A, B](t: Throwable): AwsAction[A, B] =
-    AwsAction(Kleisli(_ => AwsAttempt.exception(t)))
+    AwsAction(_ => (Vector(), AwsAttempt.exception(t)))
 
   def fail[A, B](message: String): AwsAction[A, B] =
-    AwsAction(Kleisli(_ => AwsAttempt.fail(message)))
+    AwsAction(_ => (Vector(), AwsAttempt.fail(message)))
 
   def error[A, B](message: String, t: Throwable): AwsAction[A, B] =
-    AwsAction(Kleisli(_ => AwsAttempt.error(message, t)))
+    AwsAction(_ => (Vector(), AwsAttempt.error(message, t)))
 
   def withClient[A, B](f: A => B): AwsAction[A, B] =
-    config[A].safely(f)
+    config[A].map(f)
 
   def attemptWithClient[A, B](f: A => AwsAttempt[B]): AwsAction[A, B] =
     config[A].attempt(f)
+
+  def log[A](message: AwsLog): AwsAction[A, Unit] =
+    AwsAction(_ => (Vector(message), AwsAttempt.ok(())))
 
   implicit def AwsActionMonad[A]: Monad[({ type l[a] = AwsAction[A, a] })#l] =
     new Monad[({ type L[a] = AwsAction[A, a] })#L] {
       def point[B](v: => B) = AwsAction.ok(v)
       def bind[B, C](m: AwsAction[A, B])(f: B => AwsAction[A, C]) = m.flatMap(f)
     }
-}
-
-trait AwsActionTemplate[A] {
-  def safe[B](f: A => B): AwsAction[A, B] =
-    AwsAction.safe(f)
-
-  def attempt[B](value: => B): AwsAction[A, B] =
-    AwsAction.attempt[A, B](value)
-
-  def ok[B](value: B): AwsAction[A, B] =
-    AwsAction.ok[A, B](value)
-
-  def exception[B](t: Throwable): AwsAction[A, B] =
-    AwsAction.exception[A, B](t)
-
-  def fail[B](message: String): AwsAction[A, B] =
-    AwsAction.fail[A, B](message)
-
-  def error[B](message: String, t: Throwable): AwsAction[A, B] =
-    AwsAction.error[A, B](message, t)
 }
