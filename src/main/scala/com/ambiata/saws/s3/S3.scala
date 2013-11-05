@@ -27,17 +27,17 @@ object S3 {
     AwsAction.withClient(_.getObject(bucket, key))
 
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
-    getStream(bucket, key).safely(Streams.bytes(_))
+    getStream(bucket, key).map(Streams.bytes(_))
 
   def getStream(bucket: String, key: String): S3Action[InputStream] =
-    getObject(bucket, key).safely(_.getObjectContent)
+    getObject(bucket, key).map(_.getObjectContent)
 
   def listSummary(bucket: String, prefix: String): S3Action[List[S3ObjectSummary]] =
     AwsAction.withClient(client =>
       client.listObjects(bucket, prefix).getObjectSummaries.asScala.toList)
 
   def listKeys(bucket: String, prefix: String): S3Action[List[String]] =
-    listSummary(bucket, prefix).safely(_.map(_.getKey))
+    listSummary(bucket, prefix).map(_.map(_.getKey))
 
   /** Object metadata that enables AES256 server-side encryption. */
   val ServerSideEncryption: ObjectMetadata = {
@@ -46,3 +46,4 @@ object S3 {
     m
   }
 }
+
