@@ -35,10 +35,12 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
     val roleReq = (new CreateRoleRequest()).withRoleName(role.name).withAssumeRolePolicyDocument(Ec2AssumedRolePolicy)
 
-    roleExists(role.name) >>= { exists =>
-      if (!exists) safe { client.createRole(roleReq) } >> addRolePolicies(role.name, role.policies)
-      else         updateRolePolicies(role.name, role.policies)
-    }
+    for {
+      exists <- roleExists(role.name)
+      _      <- if (!exists) safe { client.createRole(roleReq) } >> addRolePolicies(role.name, role.policies)
+                else         updateRolePolicies(role.name, role.policies)
+      _      <- createInstanceProfile(role)
+    } yield ()
   }
 
   /** Delete an IAM role and all of its policies. */
@@ -90,19 +92,27 @@ case class IAM(client: AmazonIdentityManagementClient) {
     }
 
   /** Create an instance profile with attached roles. */
-  def createInstanceProfile(profile: InstanceProfile) = for {
-    _ <- safe {
+  def instanceProfileExists(name: String): AwsAttempt[Boolean] =
+    getInstanceProfile(name).map(_.isDefined)
+
+  /** Create an instance profile with attached roles. */
+  def createInstanceProfile(role: Role) = for {
+    current <- getInstanceProfile(role.name)
+    profile <- current match {
+      case None => safe {
         client.createInstanceProfile(
           (new CreateInstanceProfileRequest)
-            .withInstanceProfileName(profile.name))
+            .withInstanceProfileName(role.name)).getInstanceProfile
       }
-    _ <- profile.roles.traverse(role => safe {
-        client.addRoleToInstanceProfile(
-          (new AddRoleToInstanceProfileRequest)
-            .withInstanceProfileName(profile.name)
-            .withRoleName(role.name)
-        )
-      })
+      case Some(profile) =>
+        profile.point[AwsAttempt]
+    }
+    _ <- profile.getRoles.exists(_.getRoleName == role.name).unlessM { safe {
+      client.addRoleToInstanceProfile(
+        (new AddRoleToInstanceProfileRequest)
+          .withInstanceProfileName(role.name)
+          .withRoleName(role.name))
+    } }
   } yield ()
 }
 
@@ -121,6 +131,3 @@ object IAM {
 
 /** An IAM role. */
 case class Role(name: String, policies: List[Policy])
-
-/** An IAM instance profile */
-case class InstanceProfile(name: String, roles: List[Role])
