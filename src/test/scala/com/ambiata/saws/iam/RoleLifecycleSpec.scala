@@ -40,14 +40,14 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
 
   def e3 = {
     iam.deleteRole(role.name) must beSuccessful.not
-    iam.roleExists(role.name).run.toEither must beRight(false)
+    iam.roleExists(role.name).run.toEither must beRight(false).eventually(retries = 8, sleep = 5.seconds)
   }
 
   def e4 = {
     val steps =
-      iam.createRole(role) >>
+      (iam.createRole(role) >>
       iam.deleteRole(role.name) >>
-      iam.roleExists(role.name)
+      iam.roleExists(role.name)).map(println)
     steps must beSuccessful
     steps.run.toEither must beRight(false)
   }
