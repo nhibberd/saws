@@ -4,6 +4,7 @@ package s3
 
 import java.io._
 import java.net.URLClassLoader
+import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model._
 import java.util.jar.{JarInputStream, JarEntry, JarOutputStream}
@@ -47,6 +48,18 @@ trait S3Files {
    */
   def downloadFile(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[InputStream] =
     try client.getObject(bucket, key).getObjectContent.right catch { case t: Throwable => s"can't read from $bucket/$key because ${t.getMessage}".left }
+
+  /**
+   * @return true if the object exists in S3
+   */
+  def exists(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[Boolean] =
+    try {
+      client.getObject(bucket, key)
+      true.right
+    } catch {
+      case ase: AmazonServiceException => if(ase.getErrorCode == "NoSuchKey") false.right else ase.getMessage.left
+      case t: Throwable                => t.getMessage.left
+    }
 
   /**
    * @return the lines of a text file on S3
