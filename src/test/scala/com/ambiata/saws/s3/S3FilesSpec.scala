@@ -21,6 +21,7 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
    download a file from S3        $e3
    delete a file from S3          $e4
    delete multiple files from S3  $e5
+   check existance of file on S3  $e6
                                   """
 
   val bucket = "ambiata-dist-test"
@@ -75,6 +76,14 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
     deleteFiles(bucket, s => s == key1).toOption must beSome
     readLines(bucket, key1).toOption must beNone
     readLines(bucket, key2).toEither must beRight(===(Seq("testing2")))
+  }
+
+  def e6 = {
+    val tmpFile = createFile("test6", "testing6")
+    val key = s3Key(tmpFile)
+    uploadFile(bucket, key, tmpFile).toOption must beSome
+    exists(bucket, key).toEither must beRight(===(true))
+    exists(bucket, key + "does_not_exist").toEither must beRight(===(false))
   }
 
   def s3Key(f: File, base: String = tmpPath.getName): String =
