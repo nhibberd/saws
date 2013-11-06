@@ -22,4 +22,7 @@ object Interpret {
 
   def ec2iam[A](action: EC2IAMAction[A]): Result[A] =
     action.run(EC2().client -> IAM().client)
+
+  def s3ec2iam[A](action: S3EC2IAMAction[A]): Result[A] =
+    action.run((S3().client, EC2().client, IAM().client))
 }
