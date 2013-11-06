@@ -46,6 +46,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
   /** Delete an IAM role and all of its policies. */
   def deleteRole(roleName: String): AwsAttempt[Unit] = {
     clearRolePolicies(roleName) >>
+    deleteInstanceProfile(roleName) >>
     safe { client.deleteRole((new DeleteRoleRequest).withRoleName(roleName)) }
   }
 
@@ -94,6 +95,14 @@ case class IAM(client: AmazonIdentityManagementClient) {
   /** Create an instance profile with attached roles. */
   def instanceProfileExists(name: String): AwsAttempt[Boolean] =
     getInstanceProfile(name).map(_.isDefined)
+
+  /** Create an instance profile with attached roles. */
+  def deleteInstanceProfile(name: String) = for {
+    exists <- instanceProfileExists(name)
+    _      <- exists.whenM {
+      safe { client.deleteInstanceProfile((new DeleteInstanceProfileRequest).withInstanceProfileName(name)) }
+    }
+  } yield ()
 
   /** Create an instance profile with attached roles. */
   def createInstanceProfile(role: Role) = for {
