@@ -11,11 +11,18 @@ package object core {
   type EC2Action[A] = AwsAction[AmazonEC2Client, A]
   type IAMAction[A] = AwsAction[AmazonIdentityManagementClient, A]
   type S3EC2Action[A] = AwsAction[(AmazonS3Client, AmazonEC2Client), A]
+  type EC2IAMAction[A] = AwsAction[(AmazonEC2Client, AmazonIdentityManagementClient), A]
 
   implicit def S3EC2ActionInstances: MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] =
     new MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] {
       def liftS3[A](f: S3Action[A]) = AwsAction({ case (s3, ec2) => f.run(s3) })
       def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (s3, ec2) => f.run(ec2) })
+    }
+
+  implicit def EC2IAMActionInstances: MonadIAM[EC2IAMAction] with MonadEC2[EC2IAMAction] =
+    new MonadIAM[EC2IAMAction] with MonadEC2[EC2IAMAction] {
+      def liftIAM[A](f: IAMAction[A]) = AwsAction({ case (ec2, iam) => f.run(iam) })
+      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (ec2, iam) => f.run(ec2) })
     }
 
   implicit class S3ActionSyntax[A](action: S3Action[A]) {
