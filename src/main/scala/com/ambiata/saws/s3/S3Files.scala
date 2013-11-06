@@ -37,13 +37,19 @@ trait S3Files {
     }
 
   /**
+   * upload one inputStream to a given bucket/key
+   */
+  def uploadStream(bucket: String, key: String, input: InputStream, client: AmazonS3Client = new AmazonS3Client, metadata: ObjectMetadata = S3.ServerSideEncryption): EitherStr[PutObjectResult] =
+    try client.putObject(bucket, key, input, metadata).right catch { case t: Throwable => s"can't upload the stream on $bucket/$key because ${t.getMessage}".left }
+
+  /**
    * @return the lines of a text file on S3
    */
   def readLines(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[Seq[String]] = {
     try {
       val result = client.getObject(bucket, key).getObjectContent
       Source.fromInputStream(result).getLines.toSeq.right
-    } catch { case t: Throwable => t.getMessage.left }
+    } catch { case t: Throwable => s"can't read from $bucket/$key because ${t.getMessage}".left }
   }
 
   /**
