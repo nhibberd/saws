@@ -43,14 +43,16 @@ trait S3Files {
     try client.putObject(bucket, key, input, metadata).right catch { case t: Throwable => s"can't upload the stream on $bucket/$key because ${t.getMessage}".left }
 
   /**
+   * @return a file from S3
+   */
+  def downloadFile(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[InputStream] =
+    try client.getObject(bucket, key).getObjectContent.right catch { case t: Throwable => s"can't read from $bucket/$key because ${t.getMessage}".left }
+
+  /**
    * @return the lines of a text file on S3
    */
-  def readLines(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[Seq[String]] = {
-    try {
-      val result = client.getObject(bucket, key).getObjectContent
-      Source.fromInputStream(result).getLines.toSeq.right
-    } catch { case t: Throwable => s"can't read from $bucket/$key because ${t.getMessage}".left }
-  }
+  def readLines(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[Seq[String]] =
+    downloadFile(bucket, key, client).map(Source.fromInputStream(_).getLines.toSeq)
 
   /**
    * @return remove a file from S3
