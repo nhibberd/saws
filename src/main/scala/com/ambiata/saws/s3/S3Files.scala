@@ -87,6 +87,13 @@ trait S3Files {
     client.listObjects(bucket).getObjectSummaries.toList.collect {
       case s if filter(s.getKey) => deleteFile(bucket, s.getKey, client)
     }.sequenceU
+
+  /**
+   * @return true if a file exists for a given key filter
+   */
+  def exists(bucket: String, filter: String => Boolean = (s: String) => true, client: AmazonS3Client = new AmazonS3Client): EitherStr[Boolean] =
+    try client.listObjects(bucket).getObjectSummaries.toList.exists(s => filter(s.getKey)).right
+    catch { case t: Throwable => s"could not list $bucket: ${t.getMessage}".left }
 }
 
 trait S3Jar extends S3Files {
