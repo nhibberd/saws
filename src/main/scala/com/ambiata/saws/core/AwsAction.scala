@@ -5,17 +5,17 @@ import scalaz._, Scalaz._
 
 case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
   def map[C](f: B => C): AwsAction[A, C] =
-    flatMap(f andThen AwsAction.ok)
+    flatMap[C](f andThen AwsAction.ok).safe
 
   def flatMap[C](f: B => AwsAction[A, C]): AwsAction[A, C] =
-    AwsAction(a => run(a) match {
+    AwsAction[A, C](a => run(a) match {
       case (log, AwsAttempt(\/-(b))) =>
         f(b).run(a) match {
           case (log2, result) => (log ++ log2, result)
         }
       case (log, AwsAttempt(-\/(e))) =>
         (log, AwsAttempt(-\/(e)))
-    })
+    }).safe
 
   def attempt[C](f: B => AwsAttempt[C]): AwsAction[A, C] =
     flatMap(f andThen AwsAction.attempt)
