@@ -53,7 +53,10 @@ object Policy {
     Policy("ec2-full-access", doc)
   }
 
-  val allowEmrFullAccess: Policy = {
+  /** Policies for provisioning an EMR cluster. Includes full access to the EMR service
+    * as well as read-only access to the 'elasticmapreduce' S3 bucket for the purpose
+    * of running standard EMR bootstrap actions and steps. */
+  val allowEmrFullAccess: List[Policy] = {
     val doc =
       s"""|{
           |  "Version": "2012-10-17",
@@ -85,6 +88,10 @@ object Policy {
           |    }
           |  ]
           |}""".stripMargin
-    Policy("emr-full-access", doc)
+    List(
+      Policy("emr-full-access", doc),
+      allowS3ReadPath("elasticmapreduce"),
+      allowS3ReadPath("ap-southeast-2.elasticmapreduce")
+    )
   }
 }

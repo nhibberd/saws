@@ -105,6 +105,6 @@ class RolePolicySpec extends Specification with ThrownExpectations with Tables {
 
 
   def exEmr = {
-    iam.updateRolePolicies(CiRole, List(allowEmrFullAccess)) must beSuccessful
+    iam.updateRolePolicies(CiRole, allowEmrFullAccess) must beSuccessful
   }
 }
