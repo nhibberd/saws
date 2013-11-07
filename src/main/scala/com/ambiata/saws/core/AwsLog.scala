@@ -4,6 +4,10 @@ package core
 sealed trait AwsLog
 
 object AwsLog {
+  case class CreateVPC(name: String) extends AwsLog
+  case class CreateInternetGateway(name: String) extends AwsLog
+  case class CreateRouteTable(name: String) extends AwsLog
+  case class CreateSubnet(name: String) extends AwsLog
   case class CreateRole(name: String) extends AwsLog
   case class CreateBucket(name: String) extends AwsLog
   case class CreateInstanceProfile(name: String) extends AwsLog
