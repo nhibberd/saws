@@ -8,6 +8,7 @@ import specification._
 import matcher._
 import java.io._
 import java.util.UUID
+import java.security.MessageDigest
 import scala.io.Source
 
 class S3FilesSpec extends Specification with AfterExample with ThrownExpectations with S3Files { def is = isolated ^ s2"""
@@ -22,6 +23,7 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
    delete a file from S3          $e4
    delete multiple files from S3  $e5
    check existance of file on S3  $e6
+   get md5 of file from S3        $e7
                                   """
 
   val bucket = "ambiata-dist-test"
@@ -85,6 +87,16 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
     exists(bucket, key).toEither must beRight(===(true))
     exists(bucket, key + "does_not_exist").toEither must beRight(===(false))
   }
+
+  def e7 = {
+    val tmpFile = createFile("test7", "testing7")
+    val key = s3Key(tmpFile)
+    uploadFile(bucket, key, tmpFile).toOption must beSome
+    md5(bucket, key).toEither must beRight(===(md5Hex("testing7".getBytes)))
+  }
+
+  def md5Hex(bytes: Array[Byte]): String =
+    MessageDigest.getInstance("MD5").digest(bytes).map("%02X".format(_)).mkString.toLowerCase
 
   def s3Key(f: File, base: String = tmpPath.getName): String =
     base + "/" + f.getName

@@ -50,6 +50,12 @@ trait S3Files {
     try client.getObject(bucket, key).getObjectContent.right catch { case t: Throwable => s"can't read from $bucket/$key because ${t.getMessage}".left }
 
   /**
+   * @return S3 md5 hash of file
+   */
+  def md5(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[String] =
+    try client.getObjectMetadata(bucket, key).getETag.right catch { case t: Throwable => s"can't read from $bucket/$key because ${t.getMessage}".left }
+
+  /**
    * @return true if the object exists in S3
    */
   def exists(bucket: String, key: String, client: AmazonS3Client = new AmazonS3Client): EitherStr[Boolean] =
