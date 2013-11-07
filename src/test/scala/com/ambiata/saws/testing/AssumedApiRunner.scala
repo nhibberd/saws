@@ -17,6 +17,9 @@ case class AssumedApiRunner(assumedInstanceName: String, login: String, password
   def createBucket(bucket: String) =
     ssh(s"aws --region $region s3api create-bucket --bucket '$bucket'")
 
+  def listObjects(bucket: String) =
+    ssh(s"aws --region $region s3api list-objects --bucket $bucket")
+
   def putObject(bucket: String, key: String, value: String) =
     ssh(s"aws --region $region s3api put-object --bucket '$bucket' --key '$key'")
 

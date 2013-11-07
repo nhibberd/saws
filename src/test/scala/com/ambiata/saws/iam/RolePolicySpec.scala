@@ -88,9 +88,11 @@ class RolePolicySpec extends Specification with ThrownExpectations with Tables {
           apiRunner.getObject(OtherTestBucket, key1),
           apiRunner.putObject(TestBucket, key1, ""),
           apiRunner.putObject(TestBucket, key2, ""),
+          apiRunner.listObjects(TestBucket),
+          apiRunner.listObjects(OtherTestBucket),
           apiRunner.putObject(OtherTestBucket, key1, "")
         )
-        val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beDenied)
+        val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beGranted, beDenied, beDenied)
 
         (iam.updateRolePolicies(CiRole, List(policy))) must beSuccessful
         commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
