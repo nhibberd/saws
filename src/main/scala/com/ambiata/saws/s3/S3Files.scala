@@ -95,6 +95,13 @@ trait S3Files {
       case s if filter(s.getKey) => deleteFile(bucket, s.getKey, client)
     }.sequenceU
 
+  /**
+   * @return object summaries
+   */
+  def listFiles(bucket: String, filter: String => Boolean = (s: String) => true, client: AmazonS3Client = new AmazonS3Client): EitherStr[Seq[S3ObjectSummary]] =
+    try client.listObjects(bucket).getObjectSummaries.toList.filter(s => filter(s.getKey)).right
+    catch { case t: Throwable => s"could not list files in $bucket: ${t.getMessage}".left }
+
 }
 
 trait S3Jar extends S3Files {
