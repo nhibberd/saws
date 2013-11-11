@@ -7,6 +7,9 @@ case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
   def map[C](f: B => C): AwsAction[A, C] =
     flatMap[C](f andThen AwsAction.ok)
 
+  def contramap[C](f: C => A): AwsAction[C, B] =
+    AwsAction(c => run(f(c)))
+
   def flatMap[C](f: B => AwsAction[A, C]): AwsAction[A, C] =
     AwsAction[A, C](a => run(a) match {
       case (log, AwsAttempt(\/-(b))) =>
