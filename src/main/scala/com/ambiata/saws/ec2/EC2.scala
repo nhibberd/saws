@@ -9,7 +9,19 @@ import core.AwsAttempt, AwsAttempt.safe
 
 
 /** Wrapper for Java EC2 client. */
-case class EC2(client: AmazonEC2Client)
+case class EC2(client: AmazonEC2Client) {
+  def createSecurityGroup(group: SecurityGroup) =
+    EC2SecurityGroups.ensure(group).run(client) match {
+      case (_, attempt) => attempt
+    }
+
+  def updateSecurityGroupIngress(group: SecurityGroup) = (for {
+    sg <- EC2SecurityGroups.findByNameOrFail(group.name, None)
+    _  <- EC2SecurityGroups.rules(group, sg)
+  } yield ()).run(client) match {
+    case (_, attempt) => attempt
+  }
+}
 
 /** Sydney-region EC2 client. */
 object EC2 {
