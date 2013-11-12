@@ -33,6 +33,7 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
   def e1 = {
     val sg = SG()
     val attempt = ec2.createSecurityGroup(sg)
+    println(s"e1: $attempt")
     attempt must beSuccessful
     securityGroupMustExist(ec2.client, sg.name)
   }
@@ -40,6 +41,7 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
   def e2 = {
     val sg = SG()
     val attempt = ec2.createSecurityGroup(sg).replicateM(2)
+    println(s"e2: $attempt")
     attempt must beSuccessful
     securityGroupMustExist(ec2.client, sg.name)
   }
@@ -50,6 +52,8 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
     val attempt =
       ec2.createSecurityGroup(sg) >>
       ec2.updateSecurityGroupIngress(sg)
+
+    println(s"e3: $attempt")
 
     attempt must beSuccessful
     securityGroupMustExist(ec2.client, sg.name)
