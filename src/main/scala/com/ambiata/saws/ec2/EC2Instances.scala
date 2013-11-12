@@ -76,6 +76,7 @@ case object M1Small extends EC2InstanceSize("m1.small")
 case object M1Medium extends EC2InstanceSize("m1.medium")
 case object M1Large extends EC2InstanceSize("m1.large")
 case object M1XLarge extends EC2InstanceSize("m1.xlarge")
+case object M24XLarge extends EC2InstanceSize("m2.4xlarge")
 
 case class EC2Image(
   flavour: String,
