@@ -31,6 +31,7 @@ object EC2Instances {
         request.setSecurityGroupIds(List(group.getGroupId).asJava)
         image.profile.foreach(p => request.setIamInstanceProfile(new IamInstanceProfileSpecification().withName(p.name)))
         subnet.foreach(s => request.setSubnetId(s.getSubnetId))
+        image.configure.foreach(script => request.setUserData(s"#!/bin/sh\n$script"))
         request.setBlockDeviceMappings(image.devices.map({
           case (dev, virt) => new BlockDeviceMapping().withDeviceName(dev).withVirtualName(virt)
         }).asJava)
