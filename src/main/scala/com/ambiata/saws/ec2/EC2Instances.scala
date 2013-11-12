@@ -76,7 +76,12 @@ case object M1Small extends EC2InstanceSize("m1.small")
 case object M1Medium extends EC2InstanceSize("m1.medium")
 case object M1Large extends EC2InstanceSize("m1.large")
 case object M1XLarge extends EC2InstanceSize("m1.xlarge")
+case object M2XLarge extends EC2InstanceSize("m2.xlarge")
+case object M22XLarge extends EC2InstanceSize("m2.2xlarge")
+case object M23XLarge extends EC2InstanceSize("m2.3xlarge")
 case object M24XLarge extends EC2InstanceSize("m2.4xlarge")
+case object M3XLarge extends EC2InstanceSize("m3.xlarge")
+case object M32XLarge extends EC2InstanceSize("m3.2xlarge")
 
 case class EC2Image(
   flavour: String,
@@ -88,5 +93,6 @@ case class EC2Image(
   profile: Option[Role] = None,
   vpc: Option[String] = None,
   devices: List[(String, String)] = Nil,
-  elasticIp: Option[String] = None
+  elasticIp: Option[String] = None,
+  configure: Option[String] = None
 )
