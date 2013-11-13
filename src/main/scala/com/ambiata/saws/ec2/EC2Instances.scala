@@ -14,7 +14,7 @@ object EC2Instances {
   def run(env: String, image: EC2Image, count: Int, keypair: Option[String]): EC2Action[Reservation] = for {
     subnet      <- image.vpc.traverse(EC2Subnets.findByVpc).map(_.flatten)
     group       <- EC2SecurityGroups.findByNameOrFail(image.group, image.vpc)
-    reservation <- start(image, group, subnet, count)
+    reservation <- start(image, group, subnet, count, keypair)
     _           <- EC2Tags.tags(reservation.getInstances.asScala.toList.map(_.getInstanceId), image.tags ++ List(
                      "Name" -> s"${env}.${image.flavour}.${EC2Tags.stamp}"
                    ))
@@ -24,12 +24,13 @@ object EC2Instances {
     _           <- AwsAction.log(AwsLog.StartInstance(image.flavour))
   } yield reservation
 
-  def start(image: EC2Image, group: AwsSecurityGroup, subnet: Option[Subnet], count: Int): EC2Action[Reservation] =
+  def start(image: EC2Image, group: AwsSecurityGroup, subnet: Option[Subnet], count: Int, keypair: Option[String]): EC2Action[Reservation] =
     AwsAction.withClient((client: AmazonEC2Client) =>
       client.runInstances({
         val request = new RunInstancesRequest(image.ami, count, count)
         request.setInstanceType(image.size.size)
         request.setSecurityGroupIds(List(group.getGroupId).asJava)
+        keypair.foreach(request.setKeyName)
         image.profile.foreach(p => request.setIamInstanceProfile(new IamInstanceProfileSpecification().withName(p.name)))
         subnet.foreach(s => request.setSubnetId(s.getSubnetId))
         image.configure.foreach(script => request.setUserData(Base64.encode(s"#!/bin/sh\n$script".getBytes("UTF-8"), "UTF-8")))
