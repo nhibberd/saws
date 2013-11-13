@@ -5,6 +5,7 @@ import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.{SecurityGroup => AwsSecurityGroup, _}
 import com.ambiata.saws.core._
 import com.ambiata.saws.iam._
+import com.owtelse.codec.Base64
 
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
@@ -31,7 +32,7 @@ object EC2Instances {
         request.setSecurityGroupIds(List(group.getGroupId).asJava)
         image.profile.foreach(p => request.setIamInstanceProfile(new IamInstanceProfileSpecification().withName(p.name)))
         subnet.foreach(s => request.setSubnetId(s.getSubnetId))
-        image.configure.foreach(script => request.setUserData(s"#!/bin/sh\n$script"))
+        image.configure.foreach(script => request.setUserData(Base64.encode("#!/bin/sh\n$script".getBytes("UTF-8"), "UTF-8")))
         request.setBlockDeviceMappings(image.devices.map({
           case (dev, virt) => new BlockDeviceMapping().withDeviceName(dev).withVirtualName(virt)
         }).asJava)
