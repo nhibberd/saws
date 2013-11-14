@@ -9,6 +9,8 @@ import com.ambiata.saws.ec2._
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 
+// Note: these are created with the VPC.
+// So gateways are responsible for adding themselves to the RouteTable.
 object EC2RouteTables {
   def list: EC2Action[List[RouteTable]] =
     AwsAction.withClient(client =>
