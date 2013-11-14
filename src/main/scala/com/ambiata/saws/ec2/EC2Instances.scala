@@ -33,12 +33,22 @@ object EC2Instances {
         keypair.foreach(request.setKeyName)
         image.profile.foreach(p => request.setIamInstanceProfile(new IamInstanceProfileSpecification().withName(p.name)))
         subnet.foreach(s => request.setSubnetId(s.getSubnetId))
-        image.configure.foreach(script => request.setUserData(Base64.encode(s"#!/bin/sh\n$script".getBytes("UTF-8"), "UTF-8")))
+        image.configure.foreach(script => request.setUserData(userData(script)))
         request.setBlockDeviceMappings(image.devices.map({
           case (dev, virt) => new BlockDeviceMapping().withDeviceName(dev).withVirtualName(virt)
         }).asJava)
         request
        }).getReservation)
+
+  def userData(script: String) = {
+    val data = s"""MIME-Version: 1.0
+                  |Content-Type: text/x-shellscript
+                  |
+                  |#!/bin/sh
+                  |$script
+                  |""".stripMargin
+    Base64.encode(data.getBytes("UTF-8"), "UTF-8")
+  }
 
   def associate(image: EC2Image, reservation: Reservation): EC2Action[Unit] =
     (image.elasticIp, reservation.getInstances.asScala.toList) match {
