@@ -10,6 +10,7 @@ import com.owtelse.codec.Base64
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 
+// FIX split this. It is a mess. Sorry.
 object EC2Instances {
   def run(env: String, image: EC2Image, count: Int, keypair: Option[String]): EC2Action[Reservation] = for {
     subnet      <- image.vpc.traverse(EC2Subnets.findByVpc).map(_.flatten)

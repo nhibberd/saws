@@ -64,6 +64,22 @@ object Policy {
     Policy("ec2-full-access", doc)
   }
 
+  /** Create a policy allowing access to describe tags. */
+  val allowEc2DescribeTags: Policy = {
+    val doc =
+      s"""|{
+          |  "Version": "2012-10-17",
+          |  "Statement": [
+          |    {
+          |      "Agtion": "ec2:DescribeTags",
+          |      "Effect": "Allow",
+          |      "Resource": "*"
+          |    }
+          |  ]
+          |}""".stripMargin
+    Policy("ec2-describe-tags", doc)
+  }
+
   /** Create a policies for allowing full access to all EMR actions as well as read-only access
     * to the 'elasticmapreduce' S3 buckets (for the purpose of running standard EMR bootstrap
     * actions and steps). */
