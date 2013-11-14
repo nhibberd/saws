@@ -14,7 +14,8 @@ libraryDependencies ++= Seq(
     "org.mockito"         %  "mockito-all"        % "1.9.5"        % "test",
     "junit"               %  "junit"              % "4.11"         % "test",
     "org.pegdown"         %  "pegdown"            % "1.2.1"        % "test",
-    "org.specs2"          %  "classycle"          % "1.4.1"        % "test")
+    "org.specs2"          %  "classycle"          % "1.4.1"        % "test",
+    "com.ambiata"         %% "scrutiny"           % "0.1-SNAPSHOT" % "test")
 
 
 resolvers ++= Seq(

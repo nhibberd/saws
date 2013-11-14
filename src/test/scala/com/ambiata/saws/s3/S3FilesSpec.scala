@@ -10,8 +10,9 @@ import java.io._
 import java.util.UUID
 import java.security.MessageDigest
 import scala.io.Source
+import com.ambiata.scrutiny.files.LocalFiles
 
-class S3FilesSpec extends Specification with AfterExample with ThrownExpectations with S3Files { def is = isolated ^ s2"""
+class S3FilesSpec extends Specification with AfterExample with ThrownExpectations with S3Files with LocalFiles { def is = isolated ^ s2"""
 
  S3 file interactions
  ========================================
@@ -29,7 +30,7 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
   val bucket = "ambiata-dist-test"
 
   // when using "isolated" above, this is a new value per example
-  lazy val tmpPath = createTmpPath
+  lazy val basePath = mkRandomDir("CopyToS3Spec.")
   lazy val client = new AmazonS3Client
 
   def e1 = {
@@ -40,7 +41,7 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
   }
 
   def e2 = {
-    val tmpDir = createDir("e2")
+    val tmpDir = mkdir("e2")
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
     val key = s3Key(tmpDir)
@@ -66,7 +67,7 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
   }
 
   def e5 = {
-    val tmpDir = createDir("e5")
+    val tmpDir = mkdir("e5")
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
     val key = s3Key(tmpDir)
@@ -98,37 +99,11 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
   def md5Hex(bytes: Array[Byte]): String =
     MessageDigest.getInstance("MD5").digest(bytes).map("%02X".format(_)).mkString.toLowerCase
 
-  def s3Key(f: File, base: String = tmpPath.getName): String =
+  def s3Key(f: File, base: String = basePath.getName): String =
     base + "/" + f.getName
 
-  def createTmpPath(): File = {
-    val d = new File("target/CopyToS3Spec." + UUID.randomUUID())
-    d.mkdir()
-    d
-  }
-
-  def createDir(name: String, base: File = tmpPath): File = {
-    val d = new File(base, name)
-    d.mkdir()
-    d
-  }
-
-  def createFile(name: String, content: String, base: File = tmpPath): File = {
-    val t = new File(base, name)
-    val pw = new PrintWriter(t)
-    pw.print(content)
-    pw.close()
-    t
-  }
-
   def after {
-    deleteFiles(bucket, (_:String).startsWith(tmpPath.getName))
-    deleteDir(tmpPath)
+    deleteFiles(bucket, (_:String).startsWith(basePath.getName))
+    rmdir(basePath)
   }
-
-  def deleteDir(d: File) {
-    if(d.isDirectory) d.listFiles.foreach(deleteDir) else d.delete
-    d.delete
-  }
-
 }
