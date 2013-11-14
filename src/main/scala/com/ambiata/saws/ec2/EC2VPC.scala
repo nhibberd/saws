@@ -15,6 +15,14 @@ object EC2VPC {
   def findByName(name: String): EC2Action[Option[Vpc]] =
     list.map(_.find(_.getTags.asScala.toList.map(t => (t.getKey, t.getValue)).contains(("Name" -> name))))
 
+  def findByNameOrFail(name: String): EC2Action[Vpc] =
+    findByName(name).flatMap({
+      case None =>
+        AwsAction.fail(s"Could not locate vpc <$name>")
+      case Some(vpc) =>
+        vpc.pure[EC2Action]
+    })
+
   def ensure(name: String): EC2Action[Vpc] = for {
     current <- findByName(name)
     vpc     <- current match {
