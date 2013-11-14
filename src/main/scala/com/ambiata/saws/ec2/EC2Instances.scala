@@ -94,7 +94,8 @@ case object M22XLarge extends EC2InstanceSize("m2.2xlarge")
 case object M23XLarge extends EC2InstanceSize("m2.3xlarge")
 case object M24XLarge extends EC2InstanceSize("m2.4xlarge")
 case object M3XLarge extends EC2InstanceSize("m3.xlarge")
-case object M32XLarge extends EC2InstanceSize("m3.2xlarge")
+case class ExplicitEC2InstanceSize(s: String) extends EC2InstanceSize(s)
+
 
 case class EC2Image(
   flavour: String,
