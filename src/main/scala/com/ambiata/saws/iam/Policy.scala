@@ -71,7 +71,7 @@ object Policy {
           |  "Version": "2012-10-17",
           |  "Statement": [
           |    {
-          |      "Agtion": "ec2:DescribeTags",
+          |      "Action": "ec2:DescribeTags",
           |      "Effect": "Allow",
           |      "Resource": "*"
           |    }
