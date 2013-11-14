@@ -25,16 +25,26 @@ object EC2Gateways {
     }
   } yield subnet
 
-  // FIX should this also ensure that RouteTable has an entry for gateway?
+  // Question: should this also ensure that RouteTable has an entry for gateway? Yes.
   def create(name: String, vpc: Vpc): EC2Action[InternetGateway] = for {
+    routeTable <- EC2RouteTables.findByVpcOrFail(vpc.getVpcId())
     gateway <- AwsAction.withClient((client: AmazonEC2Client) => {
                  val gateway = client.createInternetGateway().getInternetGateway
                  client.attachInternetGateway(
                    (new AttachInternetGatewayRequest)
                      .withInternetGatewayId(gateway.getInternetGatewayId)
                      .withVpcId(vpc.getVpcId))
+                 // To get a 'vpc' the route table must be created
+                 client.createRoute(new CreateRouteRequest()
+                   .withDestinationCidrBlock("0.0.0.0/0") // TODO: different topologies may want to change this
+                   .withGatewayId(gateway.getInternetGatewayId)
+                   .withRouteTableId(routeTable.getRouteTableId()))
                  gateway})
+
     _      <- EC2Tags.tag(gateway.getInternetGatewayId, List("Name" -> name))
+
+    // Note: if we create more than one gateway, it will overwrite it. That's ok :)
+    _      <- EC2Tags.tag(routeTable.getRouteTableId, List("Name" -> name))
     _      <- AwsAction.log(AwsLog.CreateInternetGateway(name))
   } yield gateway
 
