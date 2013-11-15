@@ -46,6 +46,12 @@ object AwsAttempt {
   def error[A](message: String, t: Throwable): AwsAttempt[A] =
     AwsAttempt(Both(message, t).left)
 
+  def asString(these: These[String, Throwable]) = these match {
+    case (This(x)) => x
+    case (That(x)) => x.toString()
+    case (Both(x, _)) => x
+  }
+
   implicit def AwsAttemptMonad: Monad[AwsAttempt] = new Monad[AwsAttempt] {
     def point[A](v: => A) = ok(v)
     def bind[A, B](m: AwsAttempt[A])(f: A => AwsAttempt[B]) = m.flatMap(f)

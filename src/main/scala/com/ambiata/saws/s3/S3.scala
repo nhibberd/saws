@@ -8,6 +8,7 @@ import com.ambiata.mundane.io.Streams
 
 import java.io.InputStream
 
+import scala.io.Source
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 
@@ -31,6 +32,9 @@ object S3 {
 
   def getStream(bucket: String, key: String): S3Action[InputStream] =
     getObject(bucket, key).map(_.getObjectContent)
+
+  def readLines(bucket: String, key: String): S3Action[Seq[String]] =
+    getStream(bucket, key).map(Source.fromInputStream(_).getLines.toSeq)
 
   def listSummary(bucket: String, prefix: String): S3Action[List[S3ObjectSummary]] =
     AwsAction.withClient(client =>
