@@ -1,11 +1,14 @@
 package com.ambiata.saws
 package core
 
-import scalaz._, Scalaz._
+import scalaz._, Scalaz._, \&/._
 
 case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
   def map[C](f: B => C): AwsAction[A, C] =
     flatMap[C](f andThen AwsAction.ok)
+
+  def mapError[C](f: These[String, Throwable] => These[String, Throwable]): AwsAction[A, B] =
+    AwsAction[A, B](a => run(a) match { case (log, att) => (log, att.mapError(f)) })
 
   def contramap[C](f: C => A): AwsAction[C, B] =
     AwsAction(c => run(f(c)))

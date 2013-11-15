@@ -11,6 +11,9 @@ case class AwsAttempt[+A](run: These[String, Throwable] \/ A) {
   def flatMap[B](f: A => AwsAttempt[B]): AwsAttempt[B] =
     AwsAttempt(run.flatMap(a => f(a).run))
 
+  def mapError(f: These[String, Throwable] => These[String, Throwable]): AwsAttempt[A] =
+    AwsAttempt(run.leftMap(f))
+
   def isOk =
     run.isRight
 
