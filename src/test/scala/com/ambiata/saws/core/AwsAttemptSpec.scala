@@ -18,6 +18,18 @@ class AwsAttemptSpec extends Specification with ScalaCheck { def is = s2"""
  AwsAttempt Combinators
  ======================
 
+   isOk                           ${isOk}
+   isError                        ${isError}
+   isError != isOk                ${isOkExclusive}
+
 """
 
+   def isOk = prop((a: Int) =>
+     AwsAttempt.ok(a).isOk)
+
+   def isError = prop((a: These[String, Throwable]) =>
+     AwsAttempt.these(a).isError)
+
+   def isOkExclusive = prop((a: AwsAttempt[Int]) =>
+     a.isOk != a.isError)
 }

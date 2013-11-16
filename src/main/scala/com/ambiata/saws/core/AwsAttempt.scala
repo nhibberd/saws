@@ -47,7 +47,10 @@ object AwsAttempt {
     AwsAttempt(This(message).left)
 
   def error[A](message: String, t: Throwable): AwsAttempt[A] =
-    AwsAttempt(Both(message, t).left)
+    these(Both(message, t))
+
+  def these[A](both: These[String, Throwable]): AwsAttempt[A] =
+    AwsAttempt(both.left)
 
   def asString(these: These[String, Throwable]) = these match {
     case (This(x)) => x
