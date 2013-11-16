@@ -59,4 +59,9 @@ object AwsAttempt {
     def point[A](v: => A) = ok(v)
     def bind[A, B](m: AwsAttempt[A])(f: A => AwsAttempt[B]) = m.flatMap(f)
   }
+
+  implicit def AwsAttemptEqual[A: Equal]: Equal[AwsAttempt[A]] = {
+    implicit def ThrowableEqual = Equal.equalA[Throwable]
+    implicitly[Equal[These[String, Throwable] \/ A]].contramap(_.run)
+  }
 }
