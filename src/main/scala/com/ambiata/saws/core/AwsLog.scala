@@ -1,6 +1,8 @@
 package com.ambiata.saws
 package core
 
+import scalaz._, Scalaz._
+
 sealed trait AwsLog
 
 object AwsLog {
@@ -21,4 +23,7 @@ object AwsLog {
   case class Info(message: String) extends AwsLog
   case class Warn(message: String) extends AwsLog
   case class Debug(message: String) extends AwsLog
+
+  implicit def AwsLogEqual: Equal[AwsLog] =
+    Equal.equalA[AwsLog]
 }
