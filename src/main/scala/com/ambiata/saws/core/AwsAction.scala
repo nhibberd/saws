@@ -1,6 +1,9 @@
 package com.ambiata.saws
 package core
 
+import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
+import com.amazonaws.services.s3.AmazonS3Client
 import scalaz._, Scalaz._, \&/._
 
 case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
@@ -32,8 +35,44 @@ case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
       case AwsAttempt(\/-(ok))   => ok
     })
 
-  def runNoLog(a: A): AwsAttempt[B] =
+  def runS3(implicit ev: AmazonS3Client =:= A) =
+    run(Clients.s3)
+
+  def runEC2(implicit ev: AmazonEC2Client =:= A) =
+    run(Clients.ec2)
+
+  def runIAM(implicit ev: AmazonIdentityManagementClient =:= A) =
+    run(Clients.iam)
+
+  def runS3EC2(implicit ev: (AmazonS3Client, AmazonEC2Client) =:= A) =
+    run(Clients.s3 -> Clients.ec2)
+
+  def runEC2IAM(implicit ev: (AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    run(Clients.ec2 -> Clients.iam)
+
+  def runS3EC2IAM(implicit ev: (AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    run((Clients.s3, Clients.ec2, Clients.iam))
+
+  def execute(a: A) =
     run(a)._2
+
+  def executeS3(implicit ev: AmazonS3Client =:= A) =
+    runS3._2
+
+  def executeEC2(implicit ev: AmazonEC2Client =:= A) =
+    runEC2._2
+
+  def executeIAM(implicit ev: AmazonIdentityManagementClient =:= A) =
+    runIAM._2
+
+  def executeS3EC2(implicit ev: (AmazonS3Client, AmazonEC2Client) =:= A) =
+    runS3EC2._2
+
+  def executeEC2IAM(implicit ev: (AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    runEC2IAM._2
+
+  def executeS3EC2IAM(implicit ev: (AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    runS3EC2IAM._2
 }
 
 object AwsAction {
@@ -72,4 +111,19 @@ object AwsAction {
       def point[B](v: => B) = AwsAction.ok(v)
       def bind[B, C](m: AwsAction[A, B])(f: B => AwsAction[A, C]) = m.flatMap(f)
     }
+}
+
+object S3Action {
+  def apply[A](f: AmazonS3Client => A) =
+    AwsAction.withClient(f)
+}
+
+object EC2Action {
+  def apply[A](f: AmazonEC2Client => A) =
+    AwsAction.withClient(f)
+}
+
+object IAMAction {
+  def apply[A](f: AmazonIdentityManagementClient => A) =
+    AwsAction.withClient(f)
 }

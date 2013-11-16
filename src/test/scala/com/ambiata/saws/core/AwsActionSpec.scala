@@ -24,7 +24,7 @@ class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
   type Error = String \&/ Throwable
 
   def safe = prop((t: Throwable) =>
-    AwsAction.value[Int, Int](throw t).safe.runNoLog(0) == AwsAttempt.exception(t))
+    AwsAction.value[Int, Int](throw t).safe.execute(0) == AwsAttempt.exception(t))
 
   implicit def AwsActionEqual[A: Equal]: Equal[AwsAction[Int, A]] = new Equal[AwsAction[Int, A]] {
     def equal(a1: AwsAction[Int, A], a2: AwsAction[Int, A]): Boolean =
