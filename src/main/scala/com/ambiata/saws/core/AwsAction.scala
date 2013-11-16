@@ -31,6 +31,9 @@ case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
       case AwsAttempt(-\/(err)) => (Vector(), AwsAttempt(-\/(err)))
       case AwsAttempt(\/-(ok))   => ok
     })
+
+  def runNoLog(a: A): AwsAttempt[B] =
+    run(a)._2
 }
 
 object AwsAction {
