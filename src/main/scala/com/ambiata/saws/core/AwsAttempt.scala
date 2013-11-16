@@ -40,6 +40,21 @@ case class AwsAttempt[+A](run: These[String, Throwable] \/ A) {
 }
 
 object AwsAttempt {
+  object Ok {
+    def unapply[A](attempt: AwsAttempt[A]) =
+      attempt.toOption
+  }
+
+  object Error {
+    def unapply[A](attempt: AwsAttempt[A]) =
+      attempt.toOptionError
+  }
+
+  object ErrorMessage {
+    def unapply[A](attempt: AwsAttempt[A]) =
+      attempt.toOptionErrorMessage
+  }
+
   def safe[A](thunk: => A): AwsAttempt[A] =
     try ok(thunk) catch { case NonFatal(t) => exception(t) }
 
