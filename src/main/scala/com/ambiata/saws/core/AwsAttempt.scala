@@ -23,6 +23,12 @@ case class AwsAttempt[+A](run: These[String, Throwable] \/ A) {
   def toOption =
     run.toOption
 
+  def toOptionError =
+    run.swap.toOption
+
+  def toOptionErrorMessage =
+    run.swap.toOption.map(AwsAttempt.asString)
+
   def toDisjunction =
     run
 
