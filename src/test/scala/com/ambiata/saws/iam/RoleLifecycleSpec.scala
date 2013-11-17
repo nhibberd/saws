@@ -26,7 +26,7 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
     val steps =
       iam.createRole(role) >>
       iam.roleExists(role.name)
-    steps must beSuccessful
+    steps must beOk
     steps.run.toEither must beRight(true)
   }
 
@@ -34,12 +34,12 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
     val steps =
       iam.createRole(role).replicateM(2) >>
       iam.roleExists(role.name)
-    steps must beSuccessful
+    steps must beOk
     steps.run.toEither must beRight(true)
   }
 
   def e3 = {
-    iam.deleteRole(role.name) must beSuccessful.not
+    iam.deleteRole(role.name) must beOk.not
     iam.roleExists(role.name).run.toEither must beRight(false).eventually(retries = 8, sleep = 5.seconds)
   }.pendingUntilFixed("This breaks with timing issues, needs further investigation")
 
@@ -48,7 +48,7 @@ class RoleLifecycleSpec extends Specification with BeforeAfterExample with Throw
       (iam.createRole(role) >>
       iam.deleteRole(role.name) >>
       iam.roleExists(role.name)).map(println)
-    steps must beSuccessful
+    steps must beOk
     steps.run.toEither must beRight(false)
   }.pendingUntilFixed("This breaks with timing issues, needs further investigation")
 

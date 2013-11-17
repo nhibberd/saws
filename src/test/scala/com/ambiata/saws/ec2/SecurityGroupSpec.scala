@@ -33,14 +33,14 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
   def e1 = {
     val sg = SG()
     val attempt = ec2.createSecurityGroup(sg)
-    attempt must beSuccessful
+    attempt must beOk
     securityGroupMustExist(ec2.client, sg.name)
   }.pendingUntilFixed("This test makes bad assumptions about group name vs group id, need to revisit how we test end-to-end. Talk to Mark.")
 
   def e2 = {
     val sg = SG()
     val attempt = ec2.createSecurityGroup(sg).replicateM(2)
-    attempt must beSuccessful
+    attempt must beOk
     securityGroupMustExist(ec2.client, sg.name)
   }.pendingUntilFixed("This test makes bad assumptions about group name vs group id, need to revisit how we test end-to-end. Talk to Mark.")
 
@@ -51,7 +51,7 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
       ec2.createSecurityGroup(sg) >>
       ec2.updateSecurityGroupIngress(sg)
 
-    attempt must beSuccessful
+    attempt must beOk
     securityGroupMustExist(ec2.client, sg.name)
 
     val permissions = ipPermissions(ec2.client, sg.name)
@@ -68,7 +68,7 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
       groups.traverse(ec2.createSecurityGroup) >>
       groups.traverse(ec2.updateSecurityGroupIngress)
 
-    attempt must beSuccessful
+    attempt must beOk
     securityGroupMustExist(ec2.client, sg.name)
 
     val permissions = ipPermissions(ec2.client, sg.name)
@@ -87,7 +87,7 @@ class SecurityGroupSpec extends Specification with BeforeAfterExample with Throw
       groups.traverse(ec2.updateSecurityGroupIngress) >>
       ec2.updateSecurityGroupIngress(sg.copy(ingressRules = List(SecurityGroup.publicSshIngress)))
 
-    attempt must beSuccessful
+    attempt must beOk
     securityGroupMustExist(ec2.client, sg.name)
 
     val permissions = ipPermissions(ec2.client, sg.name)
