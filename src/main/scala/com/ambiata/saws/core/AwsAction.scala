@@ -6,7 +6,7 @@ import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.amazonaws.services.s3.AmazonS3Client
 import scalaz._, Scalaz._, \&/._
 
-case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
+case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
   def map[C](f: B => C): AwsAction[A, C] =
     flatMap[C](f andThen AwsAction.ok)
 
@@ -30,10 +30,13 @@ case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
     flatMap(f andThen AwsAction.attempt)
 
   def safe: AwsAction[A, B] =
-    AwsAction(a => AwsAttempt.safe(run(a)) match {
+    AwsAction(a => AwsAttempt.safe(unsafeRun(a)) match {
       case AwsAttempt(-\/(err)) => (Vector(), AwsAttempt(-\/(err)))
       case AwsAttempt(\/-(ok))   => ok
     })
+
+  def run(a: A): (Vector[AwsLog], AwsAttempt[B]) =
+    safe.unsafeRun(a)
 
   def runS3(implicit ev: AmazonS3Client =:= A) =
     run(Clients.s3)
@@ -54,25 +57,25 @@ case class AwsAction[A, +B](run: A => (Vector[AwsLog], AwsAttempt[B])) {
     run((Clients.s3, Clients.ec2, Clients.iam))
 
   def execute(a: A) =
-    run(a)._2
+    AwsAction.unlog(run(a))
 
   def executeS3(implicit ev: AmazonS3Client =:= A) =
-    runS3._2
+    AwsAction.unlog(runS3)
 
   def executeEC2(implicit ev: AmazonEC2Client =:= A) =
-    runEC2._2
+    AwsAction.unlog(runEC2)
 
   def executeIAM(implicit ev: AmazonIdentityManagementClient =:= A) =
-    runIAM._2
+    AwsAction.unlog(runIAM)
 
   def executeS3EC2(implicit ev: (AmazonS3Client, AmazonEC2Client) =:= A) =
-    runS3EC2._2
+    AwsAction.unlog(runS3EC2)
 
   def executeEC2IAM(implicit ev: (AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
-    runEC2IAM._2
+    AwsAction.unlog(runEC2IAM)
 
   def executeS3EC2IAM(implicit ev: (AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
-    runS3EC2IAM._2
+    AwsAction.unlog(runS3EC2IAM)
 }
 
 object AwsAction {
@@ -105,6 +108,10 @@ object AwsAction {
 
   def log[A](message: AwsLog): AwsAction[A, Unit] =
     AwsAction(_ => (Vector(message), AwsAttempt.ok(())))
+
+  def unlog[A](result: (Vector[AwsLog], AwsAttempt[A])): AwsAttempt[A] = result match {
+    case (log, attempt) => attempt
+  }
 
   implicit def AwsActionMonad[A]: Monad[({ type l[a] = AwsAction[A, a] })#l] =
     new Monad[({ type L[a] = AwsAction[A, a] })#L] {

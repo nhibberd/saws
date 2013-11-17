@@ -3,7 +3,10 @@ package core
 
 import scalaz._, Scalaz._
 
-sealed trait AwsLog
+sealed trait AwsLog {
+  def log[A]: AwsAction[A, Unit] =
+    AwsAction.log(this)
+}
 
 object AwsLog {
   case class CreateVPC(name: String) extends AwsLog

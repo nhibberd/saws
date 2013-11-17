@@ -5,7 +5,7 @@ import org.specs2._, specification._, matcher._, execute._
 import core.AwsAttempt
 
 
-object AwsAttemptMatcher extends MustMatchers with StandardResults {
+object AwsAttemptMatcher extends MustMatchers with StandardResults with ThrownExpectations {
   def beOk[A]: Matcher[AwsAttempt[A]] =
     beOkLike(_ => true)
 
@@ -17,6 +17,6 @@ object AwsAttemptMatcher extends MustMatchers with StandardResults {
       case AwsAttempt.Ok(actual) =>
         check(actual)
       case AwsAttempt.ErrorMessage(error) =>
-        failure
+        failure(s"AwsAttempt failed with <${error}>")
     }
 }
