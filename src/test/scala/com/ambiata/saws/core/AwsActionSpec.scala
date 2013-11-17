@@ -32,6 +32,7 @@ class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
    creating an EC2 Action                                   ${ec2}
    composing actions of same type                           ${composition}
    composing actions of same type w/scalaz monad            ${compositionMonad}
+   composing actions of same type w/scalaz monad anonymoys  ${compositionMonadAnon}
    composing actions of same type w/scalaz appplicative <*  ${compositionApplicativeLeft}
    composing actions of same type w/scalaz appplicative *>  ${compositionApplicativeRight}
    composing actions of different types                     ${compositionLift}
@@ -86,6 +87,19 @@ class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
 
     answer.executeEC2 must beOkValue(30)
   }
+
+  def compositionMonadAnon = {
+    val sideEffects = scala.collection.mutable.ListBuffer[String]()
+
+    val red = EC2Action(_ => { sideEffects += "red"; () })
+    val blue = EC2Action(_ => { sideEffects += "blue"; () })
+
+    /* Run both effects and ignore intermediate computed value. */
+    val answer = (red >> blue).executeEC2
+
+    sideEffects.toList must_== List("red", "blue")
+  }
+
 
   def compositionApplicativeLeft = {
     val sideEffects = scala.collection.mutable.ListBuffer[String]()
