@@ -94,7 +94,7 @@ class RolePolicySpec extends Specification with ThrownExpectations with Tables {
         )
         val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beGranted, beDenied, beDenied)
 
-        (iam.updateRolePolicies(CiRole, List(policy))) must beSuccessful
+        (iam.updateRolePolicies(CiRole, List(policy))) must beOk
         commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
       }
     }
@@ -102,11 +102,11 @@ class RolePolicySpec extends Specification with ThrownExpectations with Tables {
 
 
   def exEc2 = {
-    iam.updateRolePolicies(CiRole, List(allowEc2FullAccess)) must beSuccessful
+    iam.updateRolePolicies(CiRole, List(allowEc2FullAccess)) must beOk
   }
 
 
   def exEmr = {
-    iam.updateRolePolicies(CiRole, allowEmrFullAccess) must beSuccessful
+    iam.updateRolePolicies(CiRole, allowEmrFullAccess) must beOk
   }
 }
