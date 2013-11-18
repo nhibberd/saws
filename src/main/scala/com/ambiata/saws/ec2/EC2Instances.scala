@@ -78,6 +78,17 @@ object EC2Instances {
   def list: EC2Action[List[Instance]] =
     AwsAction.withClient((client: AmazonEC2Client) =>
      client.describeInstances.getReservations.asScala.toList.flatMap(_.getInstances.asScala))
+
+  def stop(instanceIds: List[String]): EC2Action[Unit] =
+    EC2Action(client => client.stopInstances((new StopInstancesRequest).withInstanceIds(instanceIds.asJava)))
+
+  def waitForStop(instanceIds: List[String]): EC2Action[Unit] = for {
+    statuses <- EC2Instances.status(instanceIds)
+    _        <- statuses.isEmpty.unlessM((for {
+      _ <- Thread.sleep(5000).pure[EC2Action]
+      _ <- waitForStop(instanceIds)
+    } yield ()): EC2Action[Unit])
+  } yield ()
 }
 
 sealed trait EC2ImageCardinality
