@@ -32,7 +32,7 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
   def safe: AwsAction[A, B] =
     AwsAction(a => AwsAttempt.safe(unsafeRun(a)) match {
       case AwsAttempt(-\/(err)) => (Vector(), AwsAttempt(-\/(err)))
-      case AwsAttempt(\/-(ok))   => ok
+      case AwsAttempt(\/-(ok))  => ok
     })
 
   def run(a: A): (Vector[AwsLog], AwsAttempt[B]) =

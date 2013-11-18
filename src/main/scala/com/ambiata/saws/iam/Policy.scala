@@ -48,6 +48,27 @@ object Policy {
         |}""".stripMargin
   }
 
+  /** Allow IAM account aliases to be listed. This is important for verifying environments. */
+  val allowIAMListAliasAccess: Policy = {
+    val doc =
+      s"""|{
+          |  "Version": "2012-10-17",
+          |  "Statement": [
+          |    {
+          |      "Sid": "Stmt1384734953000",
+          |      "Effect": "Allow",
+          |      "Action": [
+          |        "iam:ListAccountAliases"
+          |      ],
+          |      "Resource": [
+          |        "*"
+          |      ]
+          |    }
+          |  ]
+          |}""".stripMargin
+    Policy("iam-list-account-aliases", doc)
+  }
+
   /** Create a policy allowing full access to all EC2 actions. */
   val allowEc2FullAccess: Policy = {
     val doc =
