@@ -7,6 +7,7 @@ import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
 
 import java.io.InputStream
+import java.io.ByteArrayInputStream
 
 import scala.io.Source
 import scala.collection.JavaConverters._
@@ -35,6 +36,12 @@ object S3 {
 
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
     getStream(bucket, key).map(Source.fromInputStream(_).getLines.toSeq)
+
+  def putStream(bucket: String, key: String,  stream: InputStream): S3Action[Unit] =
+    AwsAction.withClient(_.putObject(bucket, key, stream, new ObjectMetadata()))
+
+  def writeLines(bucket: String, key: String, lines: Seq[String]): S3Action[Unit] =
+    putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes)) // TODO: Fix ram use
 
   def listSummary(bucket: String, prefix: String): S3Action[List[S3ObjectSummary]] =
     AwsAction.withClient(client =>
