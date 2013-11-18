@@ -3,10 +3,10 @@ libraryDependencies ++= Seq(
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
     "com.ambiata"         %% "mundane"                    % "1.0-SNAPSHOT",
-    "com.owtelse.codec"   %  "base64"                     % "1.0.6")
+    "com.owtelse.codec"   %  "base64"                     % "1.0.6",
+    "org.specs2"          %% "specs2"                     % "2.4-SNAPSHOT" % "optional")
 
 libraryDependencies ++= Seq(
-    "org.specs2"          %% "specs2"                     % "2.3.3"        % "test",
     "com.decodified"      %% "scala-ssh"                  % "0.6.4"        % "test",
     "org.scalacheck"      %% "scalacheck"                 % "1.11.0"       % "test",
     "org.hamcrest"        %  "hamcrest-all"               % "1.1"          % "test",
