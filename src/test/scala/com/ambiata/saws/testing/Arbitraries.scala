@@ -1,9 +1,8 @@
-package com.ambiata.saws
-package testing
+package com.ambiata.saws.testing
 
 import com.ambiata.saws.core._
-import org.scalacheck._, Arbitrary.arbitrary
-import scalaz._, Scalaz._, \&/._
+import org.scalacheck._, Arbitrary._
+import scalaz._, Scalaz._
 
 object Arbitraries {
   implicit def AwsAttemptArbitrary[A: Arbitrary]: Arbitrary[AwsAttempt[A]] =

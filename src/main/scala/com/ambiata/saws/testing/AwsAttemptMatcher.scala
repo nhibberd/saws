@@ -1,8 +1,7 @@
-package com.ambiata.saws
-package testing
+package com.ambiata.saws.testing
 
-import org.specs2._, specification._, matcher._, execute._
-import core.AwsAttempt
+import org.specs2._, specification._, org.specs2.matcher._, org.specs2.execute._
+import com.ambiata.saws.core.AwsAttempt
 
 
 object AwsAttemptMatcher extends MustMatchers with StandardResults with ThrownExpectations {
