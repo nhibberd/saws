@@ -102,6 +102,17 @@ trait S3Files {
     try client.listObjects(bucket).getObjectSummaries.toList.filter(s => filter(s.getKey)).right
     catch { case t: Throwable => s"could not list files in $bucket: ${t.getMessage}".left }
 
+  /**
+   * @return object summaries
+   */
+  def listFilesInPrefix(bucket: String, prefix: String, client: AmazonS3Client = new AmazonS3Client) : EitherStr[Seq[S3ObjectSummary]] =
+    try {
+      val rawObjects = client.listObjects(bucket, prefix)
+      if (!rawObjects.isTruncated()) rawObjects.getObjectSummaries.toList.right
+        // TODO: paginate so this doesn't happen
+      else s"list is truncated. Missing some files".left
+    } catch { case t: Throwable => s"could not list files in $bucket: ${t.getMessage}".left }
+
 }
 
 trait S3Jar extends S3Files {
