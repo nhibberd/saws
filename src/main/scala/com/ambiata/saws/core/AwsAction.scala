@@ -29,6 +29,12 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
   def attempt[C](f: B => AwsAttempt[C]): AwsAction[A, C] =
     flatMap(f andThen AwsAction.attempt)
 
+  def orElse[BB >: B](alt: => BB): AwsAction[A, BB] =
+    AwsAction[A, BB](a => run(a) match {
+      case (log, AwsAttempt.Ok(b))    => (log, AwsAttempt.ok(b))
+      case (log, AwsAttempt.Error(_)) => (log, AwsAttempt.ok(alt))
+    })
+
   def safe: AwsAction[A, B] =
     AwsAction(a => AwsAttempt.safe(unsafeRun(a)) match {
       case AwsAttempt(-\/(err)) => (Vector(), AwsAttempt(-\/(err)))
