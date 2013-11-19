@@ -94,6 +94,15 @@ object EC2Instances {
       _ <- waitForStop(instanceIds)
     } yield ()): EC2Action[Unit])
   } yield ()
+
+  def findById(instanceId: String): EC2Action[Option[Instance]] =
+    list.map(_.find(_.getInstanceId == instanceId))
+
+  def findByIdOrFail(instanceId: String): EC2Action[Instance] =
+    findById(instanceId).flatMap({
+      case None => AwsAction.fail(s"Could not locate instance <$instanceId>")
+      case Some(i) => i.pure[EC2Action]
+    })
 }
 
 sealed trait EC2ImageCardinality
