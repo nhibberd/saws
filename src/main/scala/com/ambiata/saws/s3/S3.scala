@@ -35,7 +35,13 @@ object S3 {
     getObject(bucket, key).map(_.getObjectContent)
 
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
-    getStream(bucket, key).map(Source.fromInputStream(_).getLines.toSeq)
+    getStream(bucket, key).map {x =>
+      val source = Source.fromInputStream(x)
+      val lines = source.getLines.toSeq
+      lines.length
+      source.close()
+      lines
+    }
 
   def putStream(bucket: String, key: String,  stream: InputStream): S3Action[Unit] =
     AwsAction.withClient(_.putObject(bucket, key, stream, new ObjectMetadata()))
