@@ -82,6 +82,9 @@ object EC2Instances {
   def stop(instanceIds: List[String]): EC2Action[Unit] =
     EC2Action(client => client.stopInstances((new StopInstancesRequest).withInstanceIds(instanceIds.asJava)))
 
+  def terminate(instanceIds: List[String]): EC2Action[Unit] =
+    EC2Action(client => client.terminateInstances((new TerminateInstancesRequest).withInstanceIds(instanceIds.asJava)))
+
   def waitForStop(instanceIds: List[String]): EC2Action[Unit] = for {
     statuses <- EC2Instances.status(instanceIds)
     _        <- statuses.isEmpty.unlessM((for {
