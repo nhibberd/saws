@@ -61,6 +61,7 @@ object EC2Instances {
         AwsAction.fail[AmazonEC2Client, Unit]("Something went wrong or is misconfigured, can't associate IP with multiple machines.")
     }
 
+  // FIX Build a general wait abstraction.
   def waitForReady(instanceIds: List[String]): EC2Action[Unit] = for {
     statuses <- status(instanceIds)
     _        <- (statuses.forall(_.getInstanceState.getName == "running") && statuses.length == instanceIds.length).unlessM((for {
@@ -85,6 +86,7 @@ object EC2Instances {
   def terminate(instanceIds: List[String]): EC2Action[Unit] =
     EC2Action(client => client.terminateInstances((new TerminateInstancesRequest).withInstanceIds(instanceIds.asJava)))
 
+  // FIX Build a general wait abstraction.
   def waitForStop(instanceIds: List[String]): EC2Action[Unit] = for {
     statuses <- EC2Instances.status(instanceIds)
     _        <- statuses.isEmpty.unlessM((for {
