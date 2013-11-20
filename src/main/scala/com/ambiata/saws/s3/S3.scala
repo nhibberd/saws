@@ -3,6 +3,7 @@ package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary}
+import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
 
@@ -55,6 +56,17 @@ object S3 {
 
   def listKeys(bucket: String, prefix: String): S3Action[List[String]] =
     listSummary(bucket, prefix).map(_.map(_.getKey))
+
+  def exists(bucket: String, key: String): S3Action[Boolean] =
+    AwsAction { client: AmazonS3Client =>
+      try {
+        client.getObject(bucket, key)
+        (Vector(), AwsAttempt.ok(true))
+      } catch {
+        case ase: AmazonServiceException => (Vector(), if (ase.getErrorCode == "NoSuchKey") AwsAttempt.ok(false) else AwsAttempt.exception(ase))
+        case t: Throwable                => (Vector(), AwsAttempt.exception(t))
+      }
+    }
 
   /** Object metadata that enables AES256 server-side encryption. */
   def ServerSideEncryption: ObjectMetadata = {
