@@ -46,6 +46,10 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
 
   def runS3(implicit ev: AmazonS3Client =:= A) =
     run(Clients.s3)
+    // TODO: returning the S3 client will mean streams to S3 will not be closed automatically
+    // need a better way then this:
+    // val cli = Clients.s3
+    // (cli, run(cli))
 
   def runEC2(implicit ev: AmazonEC2Client =:= A) =
     run(Clients.ec2)
