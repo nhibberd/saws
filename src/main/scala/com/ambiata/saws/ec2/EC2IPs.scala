@@ -36,4 +36,18 @@ object EC2IPs {
           .withAllocationId(allocationId)
           .withInstanceId(instance)))
 
+  def disassociate(address: Address): EC2Action[Unit] =
+    Option(address.getAssociationId) match {
+      case None => AwsAction.ok(())
+      case Some(a) => AwsAction.withClient(client => client.disassociateAddress(
+        (new DisassociateAddressRequest)
+          .withAssociationId(a)))
+    }
+
+  def allocate(): EC2Action[String] =
+    AwsAction.withClient(client =>
+      client.allocateAddress(
+        (new AllocateAddressRequest)
+          .withDomain(DomainType.Vpc)
+      ).getPublicIp)
 }
