@@ -44,11 +44,11 @@ object S3 {
       lines
     }
 
-  def putStream(bucket: String, key: String,  stream: InputStream): S3Action[Unit] =
-    AwsAction.withClient(_.putObject(bucket, key, stream, new ObjectMetadata()))
+  def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] =
+    AwsAction.withClient(_.putObject(bucket, key, stream, metadata))
 
-  def writeLines(bucket: String, key: String, lines: Seq[String]): S3Action[Unit] =
-    putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes)) // TODO: Fix ram use
+  def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] =
+    putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
   def listSummary(bucket: String, prefix: String): S3Action[List[S3ObjectSummary]] =
     AwsAction.withClient(client =>
