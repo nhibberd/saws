@@ -7,7 +7,7 @@ import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
 
-import java.io.InputStream
+import java.io.{InputStream, FileInputStream, File}
 import java.io.ByteArrayInputStream
 
 import scala.io.Source
@@ -47,6 +47,11 @@ object S3 {
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] =
     AwsAction.withClient(_.putObject(bucket, key, stream, metadata))
 
+  def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] = {
+    val fis = new FileInputStream(file)
+    try putStream(bucket, key, fis, metadata) finally fis.close()
+  }
+
   def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] =
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
@@ -67,6 +72,9 @@ object S3 {
         case t: Throwable                => (Vector(), AwsAttempt.exception(t))
       }
     }
+
+  def md5(bucket: String, key: String): S3Action[String] =
+    AwsAction.withClient(_.getObjectMetadata(bucket, key).getETag)
 
   /** Object metadata that enables AES256 server-side encryption. */
   def ServerSideEncryption: ObjectMetadata = {
