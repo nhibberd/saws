@@ -41,6 +41,14 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
       case AwsAttempt(\/-(ok))  => ok
     })
 
+  def retry(i: Int, lf: (Int, These[String, Throwable]) => Vector[AwsLog] = (_,_) => Vector()): AwsAction[A, B] =
+    AwsAction[A, B](a => run(a) match {
+      case (log, AwsAttempt.Ok(b))    => (log, AwsAttempt.ok(b))
+      case (log, AwsAttempt.Error(e)) => if(i > 0) retry(i - 1, lf).unsafeRun(a) match {
+        case (nlog, nattp) => (log ++ lf(i, e) ++ nlog, nattp)
+      } else (log ++ lf(i, e), AwsAttempt.these(e))
+    })
+
   def run(a: A): (Vector[AwsLog], AwsAttempt[B]) =
     safe.unsafeRun(a)
 

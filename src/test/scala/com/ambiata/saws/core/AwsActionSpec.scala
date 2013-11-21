@@ -22,6 +22,7 @@ class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
  =====================
 
    safe catches exceptions                                  ${safe}
+   retry                                                    ${retry}
 
 
  AwsAction Usage
@@ -51,6 +52,22 @@ class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
   def safe = prop((t: Throwable) =>
     AwsAction.value[Int, Int](throw t).safe.unsafeRun(0) == (Vector(), AwsAttempt.exception(t)))
 
+  def retry = {
+    var c = 5
+    def r(a: Int): (Vector[AwsLog], AwsAttempt[Int]) = {
+      val ret = if(c < 3) (Vector(), AwsAttempt.ok(a)) else (Vector(), AwsAttempt.fail("fail"))
+      c = c - 1
+      ret
+    }
+
+    def logf(n: Int)(i: Int, e: These[String, Throwable]) =
+      Vector(AwsLog.Warn(s"Attempt ${(n + 1) - i}/${n + 1} failed with err - ${AwsAttempt.asString(e)}"))
+
+    AwsAction[Int, Int](r).retry(5, logf(5)).unsafeRun(1) must_== (Vector(
+      AwsLog.Warn("Attempt 1/6 failed with err - fail"),
+      AwsLog.Warn("Attempt 2/6 failed with err - fail"),
+      AwsLog.Warn("Attempt 3/6 failed with err - fail")), AwsAttempt(\/-(1)))
+  }
 
   /*  AwsAction Usage */
 
