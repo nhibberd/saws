@@ -2,7 +2,7 @@ package com.ambiata.saws
 package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing}
+import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing, PutObjectResult}
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
@@ -45,18 +45,25 @@ object S3 {
       lines
     }
 
-  def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] =
+  def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     AwsAction.withClient(_.putObject(bucket, key, stream, metadata))
 
-  def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] = {
+  def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] = {
     val fis = new FileInputStream(file)
     try putStream(bucket, key, fis, metadata) finally fis.close()
   }
 
-  def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[Unit] =
+  /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
+  def putFiles(bucket: String, prefix: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[List[PutObjectResult]] =
+    if(file.isDirectory)
+      file.listFiles.toList.traverse(f => putFiles(bucket, prefix + "/" + f.getName, f, metadata)).map(_.flatten)
+    else
+      putFile(bucket, prefix, file, metadata).map(List(_))
+
+  def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
-  def listSummary(bucket: String, prefix: String): S3Action[List[S3ObjectSummary]] =
+  def listSummary(bucket: String, prefix: String = ""): S3Action[List[S3ObjectSummary]] =
     AwsAction.config[AmazonS3Client].flatMap(client => {
       @tailrec
       def allObjects(prevObjectsListing : => ObjectListing, objects : List[S3ObjectSummary]): S3Action[List[S3ObjectSummary]] = {
@@ -70,7 +77,7 @@ object S3 {
       allObjects(client.listObjects(bucket, prefix), List())
     })
 
-  def listKeys(bucket: String, prefix: String): S3Action[List[String]] =
+  def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
     listSummary(bucket, prefix).map(_.map(_.getKey))
 
   def exists(bucket: String, key: String): S3Action[Boolean] =
@@ -83,6 +90,9 @@ object S3 {
         case t: Throwable                => (Vector(), AwsAttempt.exception(t))
       }
     }
+
+  def existsInBucket(bucket: String, filter: String => Boolean): S3Action[Boolean] =
+    listSummary(bucket).map(_.exists(o => filter(o.getKey)))
 
   def deleteObject(bucket: String, key: String): S3Action[Unit] =
     AwsAction.withClient(_.deleteObject(bucket, key))
