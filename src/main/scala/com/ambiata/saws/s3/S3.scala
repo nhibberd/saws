@@ -84,6 +84,12 @@ object S3 {
       }
     }
 
+  def deleteObject(bucket: String, key: String): S3Action[Unit] =
+    AwsAction.withClient(_.deleteObject(bucket, key))
+
+  def deleteObjects(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
+    listSummary(bucket, "").flatMap(_.collect { case o if(f(o.getKey)) => deleteObject(bucket, o.getKey) }.sequence.map(_ => ()))
+
   def md5(bucket: String, key: String): S3Action[String] =
     AwsAction.withClient(_.getObjectMetadata(bucket, key).getETag)
 
