@@ -2,7 +2,7 @@ package com.ambiata.saws
 package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary}
+import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing}
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream
 import scala.io.Source
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
+import scala.annotation.tailrec
 
 /** Wrapper for Java S3 client. */
 case class S3(client: AmazonS3Client)
@@ -56,8 +57,18 @@ object S3 {
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
   def listSummary(bucket: String, prefix: String): S3Action[List[S3ObjectSummary]] =
-    AwsAction.withClient(client =>
-      client.listObjects(bucket, prefix).getObjectSummaries.asScala.toList)
+    AwsAction.config[AmazonS3Client].flatMap(client => {
+      @tailrec
+      def allObjects(prevObjectsListing : => ObjectListing, objects : List[S3ObjectSummary]): S3Action[List[S3ObjectSummary]] = {
+        val previousListing = prevObjectsListing
+        val previousObjects = previousListing.getObjectSummaries.asScala.toList
+        if (previousListing.isTruncated())
+          allObjects(client.listNextBatchOfObjects(previousListing), objects ++ previousObjects)
+        else
+          AwsAction.ok(objects ++ previousObjects)
+      }
+      allObjects(client.listObjects(bucket, prefix), List())
+    })
 
   def listKeys(bucket: String, prefix: String): S3Action[List[String]] =
     listSummary(bucket, prefix).map(_.map(_.getKey))
