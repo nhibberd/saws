@@ -13,6 +13,7 @@ package object core {
   type S3EC2Action[A] = AwsAction[(AmazonS3Client, AmazonEC2Client), A]
   type EC2IAMAction[A] = AwsAction[(AmazonEC2Client, AmazonIdentityManagementClient), A]
   type S3EC2IAMAction[A] = AwsAction[(AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient), A]
+  type AwsActionResult[A] = (Vector[AwsLog], AwsAttempt[A])
 
   implicit def S3EC2ActionInstances: MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] =
     new MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] {
@@ -42,4 +43,14 @@ package object core {
   implicit class IAMActionSyntax[A](action: IAMAction[A]) {
     def liftIAM[F[_]: MonadIAM] = implicitly[MonadIAM[F]].liftIAM(action)
   }
+
+  implicit def AwsActionResultMonad: Monad[AwsActionResult] =
+    new Monad[AwsActionResult] {
+      def point[A](a: =>A) = (Vector[AwsLog](), AwsAttempt.ok(a))
+      def bind[A, B](m: AwsActionResult[A])(f: A => AwsActionResult[B]) =
+        m match {
+          case (logs, AwsAttempt.Ok(a))    => val (l, r) = f(a); (logs ++ l, r)
+          case (logs, AwsAttempt.Error(e)) => (logs, AwsAttempt.these[B](e))
+        }
+      }
 }
