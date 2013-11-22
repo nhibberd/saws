@@ -12,6 +12,7 @@ import scala.collection.mutable
 import scala.collection.JavaConversions._
 import scala.io.Source
 import scalaz._, Scalaz._
+import scala.annotation.tailrec
 
 /**
  * Useful methods to read and write files on S3, including jar files
@@ -105,14 +106,22 @@ trait S3Files {
   /**
    * @return object summaries
    */
-  def listFilesInPrefix(bucket: String, prefix: String, client: AmazonS3Client = new AmazonS3Client) : EitherStr[Seq[S3ObjectSummary]] =
-    try {
-      val rawObjects = client.listObjects(bucket, prefix)
-      if (!rawObjects.isTruncated()) rawObjects.getObjectSummaries.toList.right
-        // TODO: paginate so this doesn't happen
-      else s"list is truncated. Missing some files".left
-    } catch { case t: Throwable => s"could not list files in $bucket: ${t.getMessage}".left }
+  def listFilesInPrefix(bucket: String, prefix: String, client: AmazonS3Client = new AmazonS3Client) : EitherStr[Seq[S3ObjectSummary]] = {
+    @tailrec
+    def allObjects(prevObjectsListing : => ObjectListing, objects : Seq[S3ObjectSummary]): Seq[S3ObjectSummary] = {
+      val previousListing = prevObjectsListing
+      val previousObjects = previousListing.getObjectSummaries.toList
+      if (previousListing.isTruncated())
+        allObjects(client.listNextBatchOfObjects(previousListing), objects ++ previousObjects)
+      else
+        objects ++ previousObjects
+    }
 
+    try {
+      val rawObjects = allObjects(client.listObjects(bucket, prefix), Seq())
+      rawObjects.right
+    } catch { case t: Throwable => s"could not list files in $bucket: ${t.getMessage}".left }
+  }
 }
 
 trait S3Jar extends S3Files {
