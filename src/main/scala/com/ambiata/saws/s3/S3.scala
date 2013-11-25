@@ -28,7 +28,8 @@ object S3 {
   }
 
   def getObject(bucket: String, key: String): S3Action[S3Object] =
-    AwsAction.withClient(_.getObject(bucket, key))
+    AwsAction.withClient[AmazonS3Client, S3Object](_.getObject(bucket, key))
+             .mapError(AwsAttempt.prependThis(_, s"Could not get S3://${bucket}/${key}"))
 
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
     getStream(bucket, key).map(Streams.bytes(_))
@@ -46,12 +47,16 @@ object S3 {
     }
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    AwsAction.withClient(_.putObject(bucket, key, stream, metadata))
+    AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(bucket, key, stream, metadata))
+             .mapError(AwsAttempt.prependThis(_, s"Could not put S3://${bucket}/${key}"))
 
-  def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] = {
-    val fis = new FileInputStream(file)
-    try putStream(bucket, key, fis, metadata) finally fis.close()
-  }
+  def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    AwsAction(client => {
+      val fis = new FileInputStream(file)
+      val ret = putStream(bucket, key, fis, metadata).run(client)
+      fis.close()
+      ret
+    })
 
   /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
   def putFiles(bucket: String, prefix: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[List[PutObjectResult]] =
@@ -95,13 +100,15 @@ object S3 {
     listSummary(bucket).map(_.exists(o => filter(o.getKey)))
 
   def deleteObject(bucket: String, key: String): S3Action[Unit] =
-    AwsAction.withClient(_.deleteObject(bucket, key))
+    AwsAction.withClient[AmazonS3Client, Unit](_.deleteObject(bucket, key))
+             .mapError(AwsAttempt.prependThis(_, s"Could not delete S3://${bucket}/${key}"))
 
   def deleteObjects(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
     listSummary(bucket, "").flatMap(_.collect { case o if(f(o.getKey)) => deleteObject(bucket, o.getKey) }.sequence.map(_ => ()))
 
   def md5(bucket: String, key: String): S3Action[String] =
-    AwsAction.withClient(_.getObjectMetadata(bucket, key).getETag)
+    AwsAction.withClient[AmazonS3Client, String](_.getObjectMetadata(bucket, key).getETag)
+             .mapError(AwsAttempt.prependThis(_, s"Could not get md5 of S3://${bucket}/${key}"))
 
   /** Object metadata that enables AES256 server-side encryption. */
   def ServerSideEncryption: ObjectMetadata = {
