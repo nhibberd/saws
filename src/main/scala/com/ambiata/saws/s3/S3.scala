@@ -5,7 +5,7 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing, PutObjectResult, PutObjectRequest}
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
-import com.ambiata.mundane.io.Streams
+import com.ambiata.mundane.io.{Files, Streams}
 
 import java.io.{InputStream, FileInputStream, File}
 import java.io.ByteArrayInputStream
@@ -36,6 +36,14 @@ object S3 {
 
   def getStream(bucket: String, key: String): S3Action[InputStream] =
     getObject(bucket, key).map(_.getObjectContent)
+
+  def storeObject(bucket: String, key: String, file: File): S3Action[File] = for {
+    is <- getStream(bucket, key)
+    s  <- Files.writeInputStreamToFile(is, file) match {
+      case -\/(e) => AwsAction.fail[AmazonS3Client, File](e)
+      case \/-(f) => AwsAction.ok[AmazonS3Client, File](f)
+    }
+  } yield s
 
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
     getStream(bucket, key).map {x =>
