@@ -133,7 +133,7 @@ object AwsAction {
 
   implicit def AwsActionMonad[A]: Monad[({ type l[a] = AwsAction[A, a] })#l] =
     new Monad[({ type L[a] = AwsAction[A, a] })#L] {
-      def point[B](v: => B) = AwsAction.ok(v)
+      def point[B](v: => B) = AwsAction.value(v)
       def bind[B, C](m: AwsAction[A, B])(f: B => AwsAction[A, C]) = m.flatMap(f)
     }
 }
