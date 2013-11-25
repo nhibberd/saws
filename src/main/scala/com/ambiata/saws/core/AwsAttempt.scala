@@ -23,6 +23,9 @@ case class AwsAttempt[+A](run: These[String, Throwable] \/ A) {
   def toOption =
     run.toOption
 
+  def toEither =
+    run.toEither
+
   def toOptionError =
     run.swap.toOption
 
@@ -78,6 +81,11 @@ object AwsAttempt {
     case (That(x)) => x.toString()
     case (Both(x, _)) => x
   }
+
+  def prependThis(these: These[String, Throwable], prepend: String): These[String, Throwable] =
+    these.fold(m      => This(prepend + " - " + m),
+               t      => Both(prepend, t),
+               (m, t) => Both(prepend + " - " + m, t))
 
   implicit def AwsAttemptMonad: Monad[AwsAttempt] = new Monad[AwsAttempt] {
     def point[A](v: => A) = ok(v)

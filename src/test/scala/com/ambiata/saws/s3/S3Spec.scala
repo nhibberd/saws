@@ -12,7 +12,7 @@ import java.security.MessageDigest
 import scala.io.Source
 import com.ambiata.scrutiny.files.LocalFiles
 
-class S3FilesSpec extends Specification with AfterExample with ThrownExpectations with S3Files with LocalFiles { def is = isolated ^ s2"""
+class S3Spec extends Specification with AfterExample with ThrownExpectations with LocalFiles { def is = isolated ^ s2"""
 
  S3 file interactions
  ========================================
@@ -36,8 +36,10 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
   def e1 = {
     val tmpFile = createFile("test", "testing")
     val key = s3Key(tmpFile)
-    uploadFile(bucket, key, tmpFile).toOption must beSome
-    readLines(bucket, key).toEither must beRight(===(Seq("testing")))
+    (for {
+      _ <- S3.putFile(bucket, key, tmpFile)
+      f <- S3.readLines(bucket, key)
+    } yield f).run(client)._2.toEither must beRight(===(Seq("testing")))
   }
 
   def e2 = {
@@ -45,25 +47,31 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
     val key = s3Key(tmpDir)
-    uploadFiles(bucket, key, tmpDir).toOption must beSome
-    readLines(bucket, s3Key(tmpFile2, key)).toEither must beRight(===(Seq("testing2")))
-    readLines(bucket, s3Key(tmpFile1, key)).toEither must beRight(===(Seq("testing1")))
+    (for {
+      _ <- S3.putFiles(bucket, key, tmpDir)
+      f <- S3.readLines(bucket, s3Key(tmpFile1, key))
+      s <- S3.readLines(bucket, s3Key(tmpFile2, key))
+    } yield (f, s)).executeS3.toEither must beRight(===((Seq("testing1"), Seq("testing2"))))
   }
 
   def e3 = {
     val tmpFile = createFile("test3", "testing")
     val key = s3Key(tmpFile)
-    uploadFile(bucket, key, tmpFile).toOption must beSome
-    downloadFile(bucket, key).map(Source.fromInputStream(_).getLines.toSeq).toEither must beRight(===(Seq("testing")))
+    (for {
+      _ <- S3.putFile(bucket, key, tmpFile)
+      f <- S3.getStream(bucket, key).map(Source.fromInputStream(_).getLines.toSeq)
+    } yield f).run(client)._2.toEither must beRight(===(Seq("testing")))
   }
 
   def e4 = {
     val tmpFile = createFile("test3", "testing3")
     val key = s3Key(tmpFile)
-    uploadFile(bucket, key, tmpFile).toOption must beSome
-    readLines(bucket, key).toEither must beRight(===(Seq("testing3")))
-    deleteFile(bucket, key).toOption must beSome
-    downloadFile(bucket, key).toOption must beNone
+    (for {
+      _ <- S3.putFile(bucket, key, tmpFile)
+      f <- S3.readLines(bucket, key)
+      _ <- S3.deleteObject(bucket, key)
+    } yield f).executeS3.toEither must beRight(===(Seq("testing3")))
+    S3.getObject(bucket, key).executeS3.toEither must beLeft
   }
 
   def e5 = {
@@ -73,27 +81,34 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
     val key = s3Key(tmpDir)
     val key1 = s3Key(tmpFile1, key)
     val key2 = s3Key(tmpFile2, key)
-    uploadFiles(bucket, key, tmpDir).toOption must beSome
-    readLines(bucket, key1).toEither must beRight(===(Seq("testing1")))
-    readLines(bucket, key2).toEither must beRight(===(Seq("testing2")))
-    deleteFiles(bucket, s => s == key1).toOption must beSome
-    readLines(bucket, key1).toOption must beNone
-    readLines(bucket, key2).toEither must beRight(===(Seq("testing2")))
+    (for {
+      _ <- S3.putFiles(bucket, key, tmpDir)
+      f <- S3.readLines(bucket, key1)
+      s <- S3.readLines(bucket, key2)
+      _ <- S3.deleteObjects(bucket, s => s == key1)
+    } yield (f, s)).executeS3.toEither must beRight(===((Seq("testing1")), Seq("testing2")))
+
+    S3.readLines(bucket, key1).executeS3.toEither must beLeft
+    S3.readLines(bucket, key2).executeS3.toEither must beRight(===(Seq("testing2")))
   }
 
   def e6 = {
     val tmpFile = createFile("test6", "testing6")
     val key = s3Key(tmpFile)
-    uploadFile(bucket, key, tmpFile).toOption must beSome
-    exists(bucket, key).toEither must beRight(===(true))
-    exists(bucket, key + "does_not_exist").toEither must beRight(===(false))
+    (for {
+      _  <- S3.putFile(bucket, key, tmpFile)
+      e1 <- S3.exists(bucket, key)
+      e2 <- S3.exists(bucket, key + "does_not_exist")
+    } yield (e1, e2)).executeS3.toEither must beRight(===((true, false)))
   }
 
   def e7 = {
     val tmpFile = createFile("test7", "testing7")
     val key = s3Key(tmpFile)
-    uploadFile(bucket, key, tmpFile).toOption must beSome
-    md5(bucket, key).toEither must beRight(===(md5Hex("testing7".getBytes)))
+    (for {
+      _ <- S3.putFile(bucket, key, tmpFile)
+      m <- S3.md5(bucket, key)
+    } yield m).executeS3.toEither must beRight(===(md5Hex("testing7".getBytes)))
   }
 
   def md5Hex(bytes: Array[Byte]): String =
@@ -103,7 +118,7 @@ class S3FilesSpec extends Specification with AfterExample with ThrownExpectation
     base + "/" + f.getName
 
   def after {
-    deleteFiles(bucket, (_:String).startsWith(basePath.getName))
+    S3.deleteObjects(bucket, (_:String).startsWith(basePath.getName)).executeS3
     rmdir(basePath)
   }
 }
