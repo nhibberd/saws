@@ -10,7 +10,7 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
   def map[C](f: B => C): AwsAction[A, C] =
     flatMap[C](f andThen AwsAction.ok)
 
-  def mapError[C](f: These[String, Throwable] => These[String, Throwable]): AwsAction[A, B] =
+  def mapError(f: These[String, Throwable] => These[String, Throwable]): AwsAction[A, B] =
     AwsAction[A, B](a => run(a) match { case (log, att) => (log, att.mapError(f)) })
 
   def contramap[C](f: C => A): AwsAction[C, B] =
