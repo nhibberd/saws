@@ -2,7 +2,7 @@ package com.ambiata.saws
 package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing, PutObjectResult}
+import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing, PutObjectResult, PutObjectRequest}
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.Streams
@@ -48,15 +48,11 @@ object S3 {
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(bucket, key, stream, metadata))
-             .mapError(AwsAttempt.prependThis(_, s"Could not put S3://${bucket}/${key}"))
+             .mapError(AwsAttempt.prependThis(_, s"Could not put stream to S3://${bucket}/${key}"))
 
   def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    AwsAction(client => {
-      val fis = new FileInputStream(file)
-      val ret = putStream(bucket, key, fis, metadata).run(client)
-      fis.close()
-      ret
-    })
+    AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(new PutObjectRequest(bucket, key, file).withMetadata(metadata)))
+             .mapError(AwsAttempt.prependThis(_, s"Could not put file to S3://${bucket}/${key}"))
 
   /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
   def putFiles(bucket: String, prefix: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[List[PutObjectResult]] =
