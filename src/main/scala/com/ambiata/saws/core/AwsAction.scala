@@ -141,6 +141,8 @@ object AwsAction {
 object S3Action {
   def apply[A](f: AmazonS3Client => A) =
     AwsAction.withClient(f)
+
+  implicit def S3ActionMonad: Monad[S3Action] = AwsAction.AwsActionMonad[AmazonS3Client]
 }
 
 object EC2Action {
