@@ -3,17 +3,14 @@ libraryDependencies ++= Seq(
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
     "com.ambiata"         %% "mundane"                    % "1.2.0-SNAPSHOT",
-    "com.owtelse.codec"   %  "base64"                     % "1.0.6",
-    "org.specs2"          %% "specs2"                     % "2.4-SNAPSHOT" % "optional")
+    "org.specs2"          %% "specs2-matcher"             % "2.3.4"        % "optional",
+    "com.owtelse.codec"   %  "base64"                     % "1.0.6")
 
 libraryDependencies ++= Seq(
+    "org.specs2"          %% "specs2-core"                % "2.3.4"        % "test",
+    "org.specs2"          %% "specs2-scalacheck"          % "2.3.4"        % "test",
     "com.decodified"      %% "scala-ssh"                  % "0.6.4"        % "test",
     "org.scalacheck"      %% "scalacheck"                 % "1.11.0"       % "test",
-    "org.hamcrest"        %  "hamcrest-all"               % "1.1"          % "test",
-    "org.mockito"         %  "mockito-all"                % "1.9.5"        % "test",
-    "junit"               %  "junit"                      % "4.11"         % "test",
-    "org.pegdown"         %  "pegdown"                    % "1.2.1"        % "test",
-    "org.specs2"          %  "classycle"                  % "1.4.1"        % "test",
     "com.ambiata"         %% "scrutiny"                   % "0.1-SNAPSHOT" % "test")
 
 
