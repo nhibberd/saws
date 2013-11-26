@@ -35,10 +35,12 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
       case (log, AwsAttempt.Error(_)) => (log, AwsAttempt.ok(alt))
     })
 
-  def onError(f: (Vector[AwsLog], These[String, Throwable]) => AwsAction[A, Unit]): AwsAction[A, Unit] =
+  def onError(f: These[String, Throwable] => AwsAction[A, Unit]): AwsAction[A, Unit] =
     AwsAction(a => run(a) match {
       case (log, AwsAttempt.Ok(_))    => (log, AwsAttempt.ok(()))
-      case (log, AwsAttempt.Error(e)) => f(log, e).run(a)
+      case (log, AwsAttempt.Error(e)) => f(e).run(a) match {
+        case (log2, attp) => (log ++ log2, attp)
+      }
     })
 
   def safe: AwsAction[A, B] =
