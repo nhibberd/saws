@@ -37,9 +37,9 @@ object S3 {
   def getStream(bucket: String, key: String): S3Action[InputStream] =
     getObject(bucket, key).map(_.getObjectContent)
 
-  def storeObject(bucket: String, key: String, file: File): S3Action[File] = for {
+  def storeObject(bucket: String, key: String, file: File, mkdirs: Boolean = false): S3Action[File] = for {
     is <- getStream(bucket, key)
-    s  <- Files.writeInputStreamToFile(is, file).toAwsAction
+    s  <- Files.writeInputStreamToFile(is, file, mkdirs).toAwsAction
   } yield s
 
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
