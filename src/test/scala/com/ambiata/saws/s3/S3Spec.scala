@@ -59,8 +59,8 @@ class S3Spec extends Specification with AfterExample with ThrownExpectations wit
     val key = s3Key(tmpFile)
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
-      f <- S3.getStream(bucket, key).map(Source.fromInputStream(_).getLines.toSeq)
-    } yield f).run(client)._2.toEither must beRight(===(Seq("testing")))
+      f <- S3.withStream(bucket, key, is => Source.fromInputStream(is).getLines.toList)
+    } yield f).run(client)._2.toEither must beRight(===(List("testing")))
   }
 
   def e4 = {

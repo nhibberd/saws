@@ -32,24 +32,24 @@ object S3 {
              .mapError(AwsAttempt.prependThis(_, s"Could not get S3://${bucket}/${key}"))
 
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
-    getStream(bucket, key).map(Streams.bytes(_))
+    withStream(bucket, key, is => Streams.bytes(is))
 
-  def getStream(bucket: String, key: String): S3Action[InputStream] =
-    getObject(bucket, key).map(_.getObjectContent)
+  def withStream[A](bucket: String, key: String, f: InputStream => A): S3Action[A] =
+    getObject(bucket, key).map(o => f(o.getObjectContent))
 
   def storeObject(bucket: String, key: String, file: File, mkdirs: Boolean = false): S3Action[File] = for {
-    is <- getStream(bucket, key)
+    is <- withStream(bucket, key, identity)
     s  <- Files.writeInputStreamToFile(is, file, mkdirs).toAwsAction
   } yield s
 
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
-    getStream(bucket, key).map {x =>
+    withStream(bucket, key, x => {
       val source = Source.fromInputStream(x)
       val lines = source.getLines.toSeq
       lines.length
       source.close()
       lines
-    }
+    })
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(bucket, key, stream, metadata))
