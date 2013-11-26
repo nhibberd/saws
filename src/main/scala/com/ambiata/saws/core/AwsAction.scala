@@ -35,6 +35,12 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
       case (log, AwsAttempt.Error(_)) => (log, AwsAttempt.ok(alt))
     })
 
+  def onError(f: (Vector[AwsLog], These[String, Throwable]) => AwsAction[A, Unit]): AwsAction[A, Unit] =
+    AwsAction(a => run(a) match {
+      case (log, AwsAttempt.Ok(_))    => (log, AwsAttempt.ok(()))
+      case (log, AwsAttempt.Error(e)) => f(log, e).run(a)
+    })
+
   def safe: AwsAction[A, B] =
     AwsAction(a => AwsAttempt.safe(unsafeRun(a)) match {
       case AwsAttempt(-\/(err)) => (Vector(), AwsAttempt(-\/(err)))
@@ -54,10 +60,6 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
 
   def runS3(implicit ev: AmazonS3Client =:= A) =
     run(Clients.s3)
-    // TODO: returning the S3 client will mean streams to S3 will not be closed automatically
-    // need a better way then this:
-    // val cli = Clients.s3
-    // (cli, run(cli))
 
   def runEC2(implicit ev: AmazonEC2Client =:= A) =
     run(Clients.ec2)
@@ -117,6 +119,9 @@ object AwsAction {
 
   def error[A, B](message: String, t: Throwable): AwsAction[A, B] =
     AwsAction(_ => (Vector(), AwsAttempt.error(message, t)))
+
+  def these[A, B](t: These[String, Throwable]): AwsAction[A, B] =
+    AwsAction(_ => (Vector(), AwsAttempt.these(t)))
 
   def withClient[A, B](f: A => B): AwsAction[A, B] =
     config[A].map(f)

@@ -53,4 +53,11 @@ package object core {
           case (logs, AwsAttempt.Error(e)) => (logs, AwsAttempt.these[B](e))
         }
       }
+
+  implicit class AwsActionDisjunctionSyntax[B](d: String \/ B) {
+    def toAwsAction[A] = d match {
+      case -\/(err) => AwsAction.fail[A, B](err)
+      case \/-(b)   => AwsAction.value[A, B](b)
+    }
+  }
 }

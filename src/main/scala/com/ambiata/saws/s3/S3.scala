@@ -39,10 +39,7 @@ object S3 {
 
   def storeObject(bucket: String, key: String, file: File): S3Action[File] = for {
     is <- getStream(bucket, key)
-    s  <- Files.writeInputStreamToFile(is, file) match {
-      case -\/(e) => AwsAction.fail[AmazonS3Client, File](e)
-      case \/-(f) => AwsAction.ok[AmazonS3Client, File](f)
-    }
+    s  <- Files.writeInputStreamToFile(is, file).toAwsAction
   } yield s
 
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
