@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
+import com.ambiata.promulgate.Plugin._
 
 object build extends Build {
   type Settings = Def.Setting[_]
@@ -12,7 +13,8 @@ object build extends Build {
                projectSettings          ++
                compilationSettings      ++
                testingSettings          ++
-               publishingSettings
+               publishingSettings       ++
+               promulgate.sources
     )
 
   lazy val projectSettings: Seq[Settings] = Seq(
