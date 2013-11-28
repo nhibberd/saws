@@ -13,12 +13,12 @@ object build extends Build {
                projectSettings          ++
                compilationSettings      ++
                testingSettings          ++
-               publishingSettings       ++
-               promulgate.sources
+               publishingSettings
     )
 
   lazy val projectSettings: Seq[Settings] = Seq(
     name := "saws",
+    version in ThisBuild := "1.2.1",
     organization := "com.ambiata",
     scalaVersion := "2.10.3")
 
@@ -29,6 +29,10 @@ object build extends Build {
     scalacOptions in Test ++= Seq("-Yrangepos")
   )
 
+  lazy val packageSettings: Seq[Settings] = promulgate.library ++ Seq(
+    promulgate.pkg := "com.ambiata.saws"
+  )
+  
   lazy val testingSettings: Seq[Settings] = Seq(
     initialCommands in console := "import org.specs2._",
     logBuffered := false,
