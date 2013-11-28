@@ -25,6 +25,7 @@ class S3Spec extends Specification with AfterExample with ThrownExpectations wit
    delete multiple files from S3  $e5
    check existance of file on S3  $e6
    get md5 of file from S3        $e7
+   copy an object in s3           $e8
                                   """
 
   val bucket = "ambiata-dist-test"
@@ -109,6 +110,17 @@ class S3Spec extends Specification with AfterExample with ThrownExpectations wit
       _ <- S3.putFile(bucket, key, tmpFile)
       m <- S3.md5(bucket, key)
     } yield m).executeS3.toEither must beRight(===(md5Hex("testing7".getBytes)))
+  }
+
+  def e8 = {
+    val tmpFileFrom = createFile("test8", "testing8")
+    val keyFrom = s3Key(tmpFileFrom)
+    val keyTo = "test8copy"
+    (for {
+      _ <- S3.putFile(bucket, keyFrom, tmpFileFrom)
+      _ <- S3.copyFile(bucket, keyFrom, bucket, keyTo)
+      f <- S3.withStream(bucket, keyTo, is => Source.fromInputStream(is).getLines.toList)
+    } yield f).run(client)._2.toEither must beRight(===(List("testing8")))
   }
 
   def md5Hex(bytes: Array[Byte]): String =

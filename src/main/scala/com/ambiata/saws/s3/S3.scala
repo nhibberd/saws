@@ -2,7 +2,7 @@ package com.ambiata.saws
 package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ObjectMetadata, S3Object, S3ObjectSummary, ObjectListing, PutObjectResult, PutObjectRequest}
+import com.amazonaws.services.s3.model._
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.{Files, Streams}
@@ -65,6 +65,12 @@ object S3 {
       file.listFiles.toList.traverse(f => putFiles(bucket, prefix + "/" + f.getName, f, metadata)).map(_.flatten)
     else
       putFile(bucket, prefix, file, metadata).map(List(_))
+
+  /** copy an object from s3 to s3, without downloading the object */
+  // metadata disabled, since it copies the old objects metadata
+  def copyFile(fromBucket: String, fromKey: String, toBucket: String, toKey: String /*, metadata: ObjectMetadata = S3.ServerSideEncryption*/): S3Action[CopyObjectResult] =
+    AwsAction.withClient[AmazonS3Client, CopyObjectResult](_.copyObject(new CopyObjectRequest(fromBucket, fromKey, toBucket, toKey)))/*.withNewObjectMetadata(metadata) */
+      .mapError(AwsAttempt.prependThis(_, s"Could not copy object from S3://${fromBucket}/${fromKey} to S3://${toBucket}/${toKey}"))
 
   def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
