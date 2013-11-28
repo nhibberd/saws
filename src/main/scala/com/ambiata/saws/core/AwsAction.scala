@@ -114,6 +114,8 @@ object AwsAction {
   def attemptWithClient[A, B](f: A => AwsAttempt[B]): AwsAction[A, B]  = actions[A].attemptWithClient(f)
   def log[A](message: AwsLog): AwsAction[A, Unit]                      = actions[A].log(message)
   def unlog[A](result: (Vector[AwsLog], AwsAttempt[A])): AwsAttempt[A] = actions[A].unlog(result)
+  def aggregateActions[A, B](as: List[AwsAction[A, B]], ef: These[String, Throwable] => Unit): AwsAction[A, List[B]] =
+    actions[A].aggregateActions(as, ef)
 
   implicit def AwsActionMonad[A]: Monad[({ type l[a] = AwsAction[A, a] })#l] =
     new Monad[({ type L[a] = AwsAction[A, a] })#L] {
@@ -162,6 +164,15 @@ trait AwsActions[A] {
   def unlog(result: (Vector[AwsLog], AwsAttempt[A])): AwsAttempt[A] = result match {
     case (log, attempt) => attempt
   }
+
+  /** Turn a List of AwsActions into an AwsAction of List, ignoring errors */
+  def aggregateActions[B](as: List[AwsAction[A, B]], ef: These[String, Throwable] => Unit): AwsAction[A, List[B]] =
+    AwsAction(a =>
+      as.map(_.run(a)).foldLeft((Vector[AwsLog](), AwsAttempt.ok(List[B]()))) {
+        case ((alog, aattp), (log, AwsAttempt.Ok(b)))    => (alog ++ log, aattp.map(_ :+ b))
+        case ((alog, aattp), (log, AwsAttempt.Error(e))) => { ef(e); (alog ++ log, aattp) }
+      })
+
 }
 
 object S3Action extends AwsActions[AmazonS3Client] {
