@@ -117,6 +117,9 @@ object S3 {
     AwsAction.withClient[AmazonS3Client, String](_.getObjectMetadata(bucket, key).getETag)
              .mapError(AwsAttempt.prependThis(_, s"Could not get md5 of S3://${bucket}/${key}"))
 
+  def extractTarball(bucket: String, key: String, local: File, stripLevels: Int = 0): S3Action[File] =
+    withStream(bucket, key, is => Files.extractTarballStream(is, local, stripLevels)).flatMap(_.toAwsAction)
+
   /** Object metadata that enables AES256 server-side encryption. */
   def ServerSideEncryption: ObjectMetadata = {
     val m = new ObjectMetadata
