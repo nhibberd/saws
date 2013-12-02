@@ -3,9 +3,10 @@ package core
 
 import testing.Arbitraries._
 import testing.Laws._
-import org.specs2._, specification._, matcher._
+import org.specs2._
+import testing._
 
-class AwsLogSpec extends Specification with ScalaCheck { def is = s2"""
+class AwsLogSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  AwsLog Laws
  ===========

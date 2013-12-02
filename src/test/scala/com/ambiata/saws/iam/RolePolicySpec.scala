@@ -11,12 +11,12 @@ import java.io.File
 import s3._
 import Policy._
 import testing._
-import testing.AssumedApiRunner._
-import testing.AwsAttemptMatcher._
+import AssumedApiRunner._
+import AwsAttemptMatcher._
 import com.decodified.scalassh._
 
 
-class RolePolicySpec extends Specification with ThrownExpectations with Tables { def is = sequential ^ s2"""
+  class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables { def is = sequential ^ s2"""
 
   S3 Policies
   ===========
@@ -36,13 +36,48 @@ class RolePolicySpec extends Specification with ThrownExpectations with Tables {
 
 """
 
-  val Ec2InstanceName = "ci.only.centos6"
-  val Login = "jenkins-ci"
-  val Password = "4jenkins,ci only"
-  val SydneyRegion = "ap-southeast-2"
-  val apiRunner = AssumedApiRunner(Ec2InstanceName, Login, Password, SydneyRegion)
+  def exS3 = {
+    "policy"                                    | "read key1" | "read key2" | "write key1" | "write key2" |
+    allowS3ReadPath(TestBucket)                 ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
+    allowS3ReadPath(s"$TestBucket/$path1")      ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
+    allowS3WritePath(TestBucket)                ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
+    allowS3WritePath(s"$TestBucket/$path1")     ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
+    allowS3ReadWritePath(TestBucket)            ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
+    allowS3ReadWritePath(s"$TestBucket/$path1") ! beGranted   ! beDenied    ! beGranted    ! beDenied     |> {
 
-  val TestBucket = "ambiata-dev-iam-test"
+      (policy, rk1, rk2, wk1, wk2) => {
+
+        def commandResults: Seq[Validated[CommandResult]] = Seq(
+          apiRunner.getObject(TestBucket, key1),
+          apiRunner.getObject(TestBucket, key2),
+          apiRunner.getObject(OtherTestBucket, key1),
+          apiRunner.putObject(TestBucket, key1, ""),
+          apiRunner.putObject(TestBucket, key2, ""),
+          apiRunner.listObjects(TestBucket),
+          apiRunner.listObjects(OtherTestBucket),
+          apiRunner.putObject(OtherTestBucket, key1, "")
+        )
+        val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beGranted, beDenied, beDenied)
+
+        iam.updateRolePolicies(CiRole, List(policy)) must beOk
+        commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
+      }
+    }
+  }
+
+
+  def exEc2 = iam.updateRolePolicies(CiRole, List(allowEc2FullAccess)) must beOk
+
+  def exEmr = iam.updateRolePolicies(CiRole, allowEmrFullAccess) must beOk
+
+
+  val Ec2InstanceName = "ci.only.centos6"
+  val Login           = "jenkins-ci"
+  val Password        = "4jenkins,ci only"
+  val SydneyRegion    = "ap-southeast-2"
+  val apiRunner       = AssumedApiRunner(Ec2InstanceName, Login, Password, SydneyRegion)
+
+  val TestBucket      = "ambiata-dev-iam-test"
   val OtherTestBucket = "ambiata-dev-iam-test-other"
 
   lazy val s3 = S3()
@@ -70,43 +105,4 @@ class RolePolicySpec extends Specification with ThrownExpectations with Tables {
     }
   }
 
-
-  def exS3 = {
-    "policy"                                    | "read key1" | "read key2" | "write key1" | "write key2" |
-    allowS3ReadPath(TestBucket)                 ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
-    allowS3ReadPath(s"$TestBucket/$path1")      ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
-    allowS3WritePath(TestBucket)                ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
-    allowS3WritePath(s"$TestBucket/$path1")     ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
-    allowS3ReadWritePath(TestBucket)            ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
-    allowS3ReadWritePath(s"$TestBucket/$path1") ! beGranted   ! beDenied    ! beGranted    ! beDenied     |> {
-
-      (policy, rk1, rk2, wk1, wk2) => {
-
-        def commandResults: Seq[Validated[CommandResult]] = Seq(
-          apiRunner.getObject(TestBucket, key1),
-          apiRunner.getObject(TestBucket, key2),
-          apiRunner.getObject(OtherTestBucket, key1),
-          apiRunner.putObject(TestBucket, key1, ""),
-          apiRunner.putObject(TestBucket, key2, ""),
-          apiRunner.listObjects(TestBucket),
-          apiRunner.listObjects(OtherTestBucket),
-          apiRunner.putObject(OtherTestBucket, key1, "")
-        )
-        val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beGranted, beDenied, beDenied)
-
-        (iam.updateRolePolicies(CiRole, List(policy))) must beOk
-        commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
-      }
-    }
-  }
-
-
-  def exEc2 = {
-    iam.updateRolePolicies(CiRole, List(allowEc2FullAccess)) must beOk
-  }
-
-
-  def exEmr = {
-    iam.updateRolePolicies(CiRole, allowEmrFullAccess) must beOk
-  }
 }

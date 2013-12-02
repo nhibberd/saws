@@ -9,10 +9,11 @@ import scala.collection.JavaConversions._
 import com.amazonaws.services.ec2.model.{IpPermission, DeleteSecurityGroupRequest}
 import com.amazonaws.services.ec2.AmazonEC2Client
 import scala.util.Try
-import testing.AwsAttemptMatcher._
+import testing._
+import AwsAttemptMatcher._
 
 // Skipping test as its randomly failing
-class SecurityGroupSpec extends Specification with BeforeAfterExample with ThrownExpectations { def is = skipAll ^ sequential ^ s2"""
+class SecurityGroupSpec extends IntegrationSpec with BeforeAfterExample with ThrownExpectations { def is = skipAll ^ sequential ^ s2"""
 
   Creation
   ========

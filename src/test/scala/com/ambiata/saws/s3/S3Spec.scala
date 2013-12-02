@@ -11,8 +11,9 @@ import java.util.UUID
 import java.security.MessageDigest
 import scala.io.Source
 import com.ambiata.scrutiny.files.LocalFiles
+import testing._
 
-class S3Spec extends Specification with AfterExample with ThrownExpectations with LocalFiles { def is = isolated ^ s2"""
+class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with LocalFiles { def is = isolated ^ s2"""
 
  S3 file interactions
  ========================================

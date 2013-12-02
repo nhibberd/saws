@@ -5,15 +5,16 @@ import com.ambiata.saws.core._
 import com.ambiata.saws.testing.AwsAttemptMatcher._
 import org.specs2._, specification._
 import scalaz._, Scalaz._
+import testing._
 
-class IAMAliasSpec extends Specification with ScalaCheck { def is = s2"""
+class IAMAliasSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  IAMAlias
  ========
 
-   Can list account aliases                       ${list}
-   Only test against ambiata account              ${isAmbiata}
-   Don't test against ambiata-prod account        ${isNotAmbiataProd}
+   Can list account aliases                       $list
+   Only test against ambiata account              $isAmbiata
+   Don't test against ambiata-prod account        $isNotAmbiataProd
 
 """
 

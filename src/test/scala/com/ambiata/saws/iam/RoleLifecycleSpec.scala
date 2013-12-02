@@ -2,13 +2,13 @@ package com.ambiata.saws
 package iam
 
 import scalaz._, Scalaz._
-import org.specs2.Specification
 import org.specs2.specification._
 import org.specs2.matcher._
 import testing.AwsAttemptMatcher._
+import testing._
 
 
-class RoleLifecycleSpec extends Specification with BeforeAfterExample with ThrownExpectations { def is = sequential ^ s2"""
+class RoleLifecycleSpec extends IntegrationSpec with BeforeAfterExample with ThrownExpectations { def is = sequential ^ s2"""
 
   Role Lifecycle
   ==============

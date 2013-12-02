@@ -10,7 +10,7 @@ import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
 
 
-class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
+class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  AwsAction Laws
  ==============
@@ -21,26 +21,26 @@ class AwsActionSpec extends Specification with ScalaCheck { def is = s2"""
  AwsAction Combinators
  =====================
 
-   safe catches exceptions                                  ${safe}
-   retry                                                    ${retry}
+   safe catches exceptions                                  $safe
+   retry                                                    $retry
 
 
  AwsAction Usage
  ===============
 
-   creating an IAM Action                                   ${iam}
-   creating an S3 Action                                    ${s3}
-   creating an EC2 Action                                   ${ec2}
-   composing actions of same type                           ${composition}
-   composing actions of same type w/scalaz monad            ${compositionMonad}
-   composing actions of same type w/scalaz monad anonymoys  ${compositionMonadAnon}
-   composing actions of same type w/scalaz appplicative <*  ${compositionApplicativeLeft}
-   composing actions of same type w/scalaz appplicative *>  ${compositionApplicativeRight}
-   composing actions of different types                     ${compositionLift}
-   composing actions of moar different types                ${compositionLiftAgain}
-   logging                                                  ${logging}
-   handling errors                                          ${errors}
-   handling errors just as an error message                 ${errorMessages}
+   creating an IAM Action                                   $iam
+   creating an S3 Action                                    $s3
+   creating an EC2 Action                                   $ec2
+   composing actions of same type                           $composition
+   composing actions of same type w/scalaz monad            $compositionMonad
+   composing actions of same type w/scalaz monad anonymoys  $compositionMonadAnon
+   composing actions of same type w/scalaz appplicative <*  $compositionApplicativeLeft
+   composing actions of same type w/scalaz appplicative *>  $compositionApplicativeRight
+   composing actions of different types                     $compositionLift
+   composing actions of moar different types                $compositionLiftAgain
+   logging                                                  $logging
+   handling errors                                          $errors
+   handling errors just as an error message                 $errorMessages
 
 
 """

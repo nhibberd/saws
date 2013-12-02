@@ -5,15 +5,16 @@ import com.ambiata.saws.core._
 import com.ambiata.saws.testing._, Arbitraries._, Laws._, AwsAttemptMatcher._
 import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
+import testing._
 
 
-class WaitSpec extends Specification with ScalaCheck { def is = s2"""
+class WaitSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  Wait Usage
  ==========
 
-   wait for an optional value                               ${waitForValue}
-   wait for a condition                                     ${waitFor}
+   wait for an optional value                               $waitForValue
+   wait for a condition                                     $waitFor
 
 """
 

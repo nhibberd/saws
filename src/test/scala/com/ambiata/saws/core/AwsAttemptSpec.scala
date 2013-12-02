@@ -5,8 +5,9 @@ import testing.Arbitraries._
 import testing.Laws._
 import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
+import testing._
 
-class AwsAttemptSpec extends Specification with ScalaCheck { def is = s2"""
+class AwsAttemptSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  AwsAttempt Laws
  ===============
@@ -18,18 +19,18 @@ class AwsAttemptSpec extends Specification with ScalaCheck { def is = s2"""
  AwsAttempt Combinators
  ======================
 
-   isOk                           ${isOk}
-   isError                        ${isError}
-   isError != isOk                ${isOkExclusive}
-   mapError                       ${mapError}
-   toOption Some case             ${okToOption}
-   toOption None case             ${errorToOption}
-   ||| ok case                    ${okOr}
-   ||| error case                 ${errorOr}
-   getOrElse ok case              ${okGetOrElse}
-   getOrElse error case           ${errorGetOrElse}
-   run                            ${run}
-   toDisjunction is alias of run  ${toDisjunction}
+   isOk                           $isOk
+   isError                        $isError
+   isError != isOk                $isOkExclusive
+   mapError                       $mapError
+   toOption Some case             $okToOption
+   toOption None case             $errorToOption
+   ||| ok case                    $okOr
+   ||| error case                 $errorOr
+   getOrElse ok case              $okGetOrElse
+   getOrElse error case           $errorGetOrElse
+   run                            $run
+   toDisjunction is alias of run  $toDisjunction
 
 """
    type Error = String \&/ Throwable
