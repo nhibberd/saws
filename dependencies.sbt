@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
     "org.specs2"          %% "specs2-scalacheck"          % "2.3.4"        % "test",
     "com.decodified"      %% "scala-ssh"                  % "0.6.4"        % "test",
     "org.scalacheck"      %% "scalacheck"                 % "1.11.0"       % "test",
-    "com.ambiata"         %% "scrutiny"                   % "0.1-SNAPSHOT" % "test")
+    "com.ambiata"         %% "scrutiny"                   % "1.0"          % "test")
 
 
 resolvers ++= Seq(
