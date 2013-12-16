@@ -56,7 +56,7 @@ object S3 {
              .mapError(AwsAttempt.prependThis(_, s"Could not put stream to S3://${bucket}/${key}"))
 
   def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(new PutObjectRequest(bucket, directory(key), file).withMetadata(metadata)))
+    AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(new PutObjectRequest(bucket, key, file).withMetadata(metadata)))
              .mapError(AwsAttempt.prependThis(_, s"Could not put file to S3://${bucket}/${key}"))
 
   /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
@@ -86,7 +86,7 @@ object S3 {
         else
           AwsAction.ok(objects ++ previousObjects)
       }
-      allObjects(client.listObjects(bucket, directory(prefix)), List())
+      allObjects(client.listObjects(bucket, prefix), List())
     })
 
   def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
