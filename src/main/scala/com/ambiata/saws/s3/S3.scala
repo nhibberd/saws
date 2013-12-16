@@ -86,7 +86,7 @@ object S3 {
         else
           AwsAction.ok(objects ++ previousObjects)
       }
-      allObjects(client.listObjects(bucket, directory(prefix)), List())
+      allObjects(client.listObjects(bucket, prefix), List())
     })
 
   def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
