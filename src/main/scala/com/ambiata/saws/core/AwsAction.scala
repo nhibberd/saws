@@ -57,6 +57,12 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], AwsAttempt[B])) {
       } else (log ++ lf(i, e), AwsAttempt.these(e))
     })
 
+  /** after running the action, print the last log message to the console */
+  def flush: AwsAction[A, B] =
+    AwsAction[A, B](a => run(a) match {
+      case (log, r) => { log.lastOption.foreach(println); (log, r) }
+    })
+
   def run(a: A): (Vector[AwsLog], AwsAttempt[B]) =
     safe.unsafeRun(a)
 
