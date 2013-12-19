@@ -3,7 +3,7 @@ libraryDependencies ++= Seq(
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.2-SNAPSHOT",
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
-    "com.ambiata"         %% "mundane"                    % "1.2.1-20131216003902-1dbd9d5",
+    "com.ambiata"         %% "mundane"                    % "1.2.1-20131219072028-903d7a9",
     "com.owtelse.codec"   %  "base64"                     % "1.0.6",
     "org.specs2"          %% "specs2-matcher"             % "2.3.4" % "optional")
 
