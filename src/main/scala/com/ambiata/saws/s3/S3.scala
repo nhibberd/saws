@@ -7,8 +7,7 @@ import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io.{Files, Streams}
 
-import java.io.{InputStream, FileInputStream, File}
-import java.io.ByteArrayInputStream
+import java.io._
 
 import scala.io.Source
 import scala.collection.JavaConverters._
@@ -45,10 +44,19 @@ object S3 {
   def readLines(bucket: String, key: String): S3Action[Seq[String]] =
     withStream(bucket, key, x => {
       val source = Source.fromInputStream(x)
-      val lines = source.getLines.toSeq
-      lines.length
-      source.close()
-      lines
+      try {
+        val lines = source.getLines.toSeq
+        lines.length
+        lines
+      } finally source.close()
+    })
+
+  def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] =
+    withStream(bucket, key, stream => {
+      val file = new File(to+"/"+key)
+      file.getParentFile.mkdirs
+      Streams.pipeToFile(stream, file)
+      file
     })
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =

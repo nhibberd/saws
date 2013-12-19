@@ -21,12 +21,13 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
  It is possible to
    upload a single file to S3     $e1
    upload multiple files to S3    $e2
-   download a file from S3        $e3
-   delete a file from S3          $e4
-   delete multiple files from S3  $e5
-   check existance of file on S3  $e6
-   get md5 of file from S3        $e7
-   copy an object in s3           $e8
+   get a stream  from S3          $e3
+   download a file from S3        $e4
+   delete a file from S3          $e5
+   delete multiple files from S3  $e6
+   check existance of file on S3  $e7
+   get md5 of file from S3        $e8
+   copy an object in s3           $e9
                                   """
 
   val bucket = "ambiata-dist-test"
@@ -65,7 +66,17 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     } yield f).run(client)._2.toEither must beRight(===(List("testing")))
   }
 
+
   def e4 = {
+    val tmpFile = createFile("test3", "testing")
+    val key = s3Key(tmpFile)
+    (for {
+      _ <- S3.putFile(bucket, key, tmpFile)
+      f <- S3.downloadFile(bucket, key, "target")
+    } yield f).run(client)._2.toEither must beRight(endWith("test3") ^^ ((_:File).getName))
+  }
+
+  def e5 = {
     val tmpFile = createFile("test3", "testing3")
     val key = s3Key(tmpFile)
     (for {
@@ -76,7 +87,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     S3.getObject(bucket, key).executeS3.toEither must beLeft
   }
 
-  def e5 = {
+  def e6 = {
     val tmpDir = mkdir("e5")
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
@@ -94,7 +105,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     S3.readLines(bucket, key2).executeS3.toEither must beRight(===(Seq("testing2")))
   }
 
-  def e6 = {
+  def e7 = {
     val tmpFile = createFile("test6", "testing6")
     val key = s3Key(tmpFile)
     (for {
@@ -104,7 +115,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     } yield (e1, e2)).executeS3.toEither must beRight(===((true, false)))
   }
 
-  def e7 = {
+  def e8 = {
     val tmpFile = createFile("test7", "testing7")
     val key = s3Key(tmpFile)
     (for {
@@ -113,7 +124,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     } yield m).executeS3.toEither must beRight(===(md5Hex("testing7".getBytes)))
   }
 
-  def e8 = {
+  def e9 = {
     val tmpFileFrom = createFile("test8", "testing8")
     val keyFrom = s3Key(tmpFileFrom)
     val keyTo = "test8copy"
