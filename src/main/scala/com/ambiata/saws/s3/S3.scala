@@ -52,11 +52,11 @@ object S3 {
       } finally source.close()
     })
 
-  def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] =
-    withStream(bucket, key, stream => {
-      val file = new File(to+"/"+key)
+  def downloadFile(bucket: String, key: String, to: String = "./"): S3Action[File] =
+    S3.withStream(bucket, key, stream => {
+      val file = new File(to+key)
       file.getParentFile.mkdirs
-      Streams.pipeToFile(stream, file)
+      Streams.pipeToFile(stream, new File(file.getCanonicalPath))
       file
     })
 
