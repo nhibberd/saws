@@ -53,8 +53,9 @@ object EC2SecurityGroups {
 
   def revoke(groupId: String, ipPermissions: List[IpPermission]): EC2Action[Unit] =
     AwsAction.withClient(client =>
-      client.revokeSecurityGroupIngress(
-        (new RevokeSecurityGroupIngressRequest)
+      if (!ipPermissions.isEmpty)
+        client.revokeSecurityGroupIngress(
+          (new RevokeSecurityGroupIngressRequest)
           .withGroupId(groupId)
           .withIpPermissions(ipPermissions.asJava)))
 
