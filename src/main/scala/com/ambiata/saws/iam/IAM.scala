@@ -5,19 +5,20 @@ import scalaz._, Scalaz._
 import scala.collection.JavaConversions._
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.amazonaws.services.identitymanagement.model.{InstanceProfile => AwsInstanceProfile, _}
-import core.AwsAttempt, AwsAttempt.safe
+import com.ambiata.mundane.control.Attempt
+import Attempt.safe
 
 
 /** Wrapper for Java IAM client. */
 case class IAM(client: AmazonIdentityManagementClient) {
 
   /** Returns true if a role with the specified name exists. */
-  def roleExists(roleName: String): AwsAttempt[Boolean] =
+  def roleExists(roleName: String): Attempt[Boolean] =
     safe { client.listRoles.getRoles.exists(_.getRoleName == roleName) }
 
 
   /** Creates a new EC2 assumed role and add its policies. */
-  def createRole(role: Role): AwsAttempt[Unit] = {
+  def createRole(role: Role): Attempt[Unit] = {
     val Ec2AssumedRolePolicy =
       """|{
          |  "Version": "2008-10-17",
@@ -44,7 +45,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
   }
 
   /** Delete an IAM role and all of its policies. */
-  def deleteRole(roleName: String): AwsAttempt[Unit] = {
+  def deleteRole(roleName: String): Attempt[Unit] = {
     clearRolePolicies(roleName) >>
     deleteInstanceProfile(roleName) >>
     safe { client.deleteRole((new DeleteRoleRequest).withRoleName(roleName)) }
@@ -52,7 +53,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
 
   /** Add a policy to an IAM role. */
-  def addRolePolicy(roleName: String, policy: Policy): AwsAttempt[Unit] = {
+  def addRolePolicy(roleName: String, policy: Policy): Attempt[Unit] = {
     val policyReq = (new PutRolePolicyRequest())
       .withRoleName(roleName)
       .withPolicyName(policy.name)
@@ -62,18 +63,18 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
 
   /** Add multiple policies to an IAM role. */
-  def addRolePolicies(roleName: String, policies: List[Policy]): AwsAttempt[Unit] =
+  def addRolePolicies(roleName: String, policies: List[Policy]): Attempt[Unit] =
     policies.traverse((p: Policy) => addRolePolicy(roleName, p)).map(_ => ())
 
 
   /** Remove all policies from a role then add a set of new policies. */
-  def updateRolePolicies(roleName: String, policies: List[Policy]): AwsAttempt[Unit] =
+  def updateRolePolicies(roleName: String, policies: List[Policy]): Attempt[Unit] =
     clearRolePolicies(roleName) >>
     addRolePolicies(roleName, policies)
 
 
   /** Remove all the policies from a given role. */
-  def clearRolePolicies(roleName: String): AwsAttempt[Unit] = {
+  def clearRolePolicies(roleName: String): Attempt[Unit] = {
     val listReq = (new ListRolePoliciesRequest).withRoleName(roleName)
     def deleteReq(p: String) = (new DeleteRolePolicyRequest()).withRoleName(roleName).withPolicyName(p)
 
@@ -84,7 +85,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
   }
 
   /** Create an instance profile with attached roles. */
-  def getInstanceProfile(name: String): AwsAttempt[Option[AwsInstanceProfile]] =
+  def getInstanceProfile(name: String): Attempt[Option[AwsInstanceProfile]] =
     safe {
       client
         .listInstanceProfiles(new ListInstanceProfilesRequest)
@@ -93,7 +94,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
     }
 
   /** Create an instance profile with attached roles. */
-  def instanceProfileExists(name: String): AwsAttempt[Boolean] =
+  def instanceProfileExists(name: String): Attempt[Boolean] =
     getInstanceProfile(name).map(_.isDefined)
 
   /** Create an instance profile with attached roles. */
@@ -114,7 +115,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
             .withInstanceProfileName(role.name)).getInstanceProfile
       }
       case Some(profile) =>
-        profile.point[AwsAttempt]
+        profile.point[Attempt]
     }
     _ <- profile.getRoles.exists(_.getRoleName == role.name).unlessM { safe {
       client.addRoleToInstanceProfile(

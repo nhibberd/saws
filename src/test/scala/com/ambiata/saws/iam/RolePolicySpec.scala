@@ -1,4 +1,5 @@
-package com.ambiata.saws
+package com.ambiata
+package saws
 package iam
 
 import scalaz._, Scalaz._
@@ -12,11 +13,11 @@ import s3._
 import Policy._
 import testing._
 import AssumedApiRunner._
-import AwsAttemptMatcher._
+import mundane.testing.AttemptMatcher._
 import com.decodified.scalassh._
 
 
-  class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables { def is = sequential ^ s2"""
+class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables { def is = sequential ^ s2"""
 
   S3 Policies
   ===========

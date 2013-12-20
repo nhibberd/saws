@@ -5,8 +5,6 @@ import scalaz._, Scalaz._
 import scala.collection.JavaConversions._
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.{SecurityGroup => AwsSecurityGroup, _}
-import core.AwsAttempt, AwsAttempt.safe
-
 
 /** Wrapper for Java EC2 client. */
 case class EC2(client: AmazonEC2Client) {

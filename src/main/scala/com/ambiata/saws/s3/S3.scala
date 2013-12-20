@@ -13,6 +13,7 @@ import scala.io.Source
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 import scala.annotation.tailrec
+import com.ambiata.mundane.control.Attempt
 
 /** Wrapper for Java S3 client. */
 case class S3(client: AmazonS3Client)
@@ -28,7 +29,7 @@ object S3 {
 
   def getObject(bucket: String, key: String): S3Action[S3Object] =
     AwsAction.withClient[AmazonS3Client, S3Object](_.getObject(bucket, key))
-             .mapError(AwsAttempt.prependThis(_, s"Could not get S3://${bucket}/${key}"))
+             .mapError(Attempt.prependThis(_, s"Could not get S3://${bucket}/${key}"))
 
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
     withStream(bucket, key, is => Streams.bytes(is))
@@ -61,11 +62,11 @@ object S3 {
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(bucket, key, stream, metadata))
-             .mapError(AwsAttempt.prependThis(_, s"Could not put stream to S3://${bucket}/${key}"))
+             .mapError(Attempt.prependThis(_, s"Could not put stream to S3://${bucket}/${key}"))
 
   def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     AwsAction.withClient[AmazonS3Client, PutObjectResult](_.putObject(new PutObjectRequest(bucket, key, file).withMetadata(metadata)))
-             .mapError(AwsAttempt.prependThis(_, s"Could not put file to S3://${bucket}/${key}"))
+             .mapError(Attempt.prependThis(_, s"Could not put file to S3://${bucket}/${key}"))
 
   /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
   def putFiles(bucket: String, prefix: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[List[PutObjectResult]] =
@@ -78,7 +79,7 @@ object S3 {
   // metadata disabled, since it copies the old objects metadata
   def copyFile(fromBucket: String, fromKey: String, toBucket: String, toKey: String /*, metadata: ObjectMetadata = S3.ServerSideEncryption*/): S3Action[CopyObjectResult] =
     AwsAction.withClient[AmazonS3Client, CopyObjectResult](_.copyObject(new CopyObjectRequest(fromBucket, fromKey, toBucket, toKey)))/*.withNewObjectMetadata(metadata) */
-      .mapError(AwsAttempt.prependThis(_, s"Could not copy object from S3://${fromBucket}/${fromKey} to S3://${toBucket}/${toKey}"))
+      .mapError(Attempt.prependThis(_, s"Could not copy object from S3://${fromBucket}/${fromKey} to S3://${toBucket}/${toKey}"))
 
   def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
@@ -107,10 +108,10 @@ object S3 {
     AwsAction { client: AmazonS3Client =>
       try {
         client.getObject(bucket, key)
-        (Vector(), AwsAttempt.ok(true))
+        (Vector(), Attempt.ok(true))
       } catch {
-        case ase: AmazonServiceException => (Vector(), if (ase.getErrorCode == "NoSuchKey") AwsAttempt.ok(false) else AwsAttempt.exception(ase))
-        case t: Throwable                => (Vector(), AwsAttempt.exception(t))
+        case ase: AmazonServiceException => (Vector(), if (ase.getErrorCode == "NoSuchKey") Attempt.ok(false) else Attempt.exception(ase))
+        case t: Throwable                => (Vector(), Attempt.exception(t))
       }
     }
 
@@ -119,14 +120,14 @@ object S3 {
 
   def deleteObject(bucket: String, key: String): S3Action[Unit] =
     AwsAction.withClient[AmazonS3Client, Unit](_.deleteObject(bucket, key))
-             .mapError(AwsAttempt.prependThis(_, s"Could not delete S3://${bucket}/${key}"))
+             .mapError(Attempt.prependThis(_, s"Could not delete S3://${bucket}/${key}"))
 
   def deleteObjects(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
     listSummary(bucket, "").flatMap(_.collect { case o if(f(o.getKey)) => deleteObject(bucket, o.getKey) }.sequence.map(_ => ()))
 
   def md5(bucket: String, key: String): S3Action[String] =
     AwsAction.withClient[AmazonS3Client, String](_.getObjectMetadata(bucket, key).getETag)
-             .mapError(AwsAttempt.prependThis(_, s"Could not get md5 of S3://${bucket}/${key}"))
+             .mapError(Attempt.prependThis(_, s"Could not get md5 of S3://${bucket}/${key}"))
 
   def extractTarball(bucket: String, key: String, local: File, stripLevels: Int = 0): S3Action[File] =
     withStream(bucket, key, is => Files.extractTarballStream(is, local, stripLevels)).flatMap(_.toAwsAction)

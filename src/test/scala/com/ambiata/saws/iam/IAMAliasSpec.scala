@@ -2,7 +2,7 @@ package com.ambiata.saws
 package iam
 
 import com.ambiata.saws.core._
-import com.ambiata.saws.testing.AwsAttemptMatcher._
+import com.ambiata.mundane.testing.AttemptMatcher._
 import org.specs2._, specification._
 import scalaz._, Scalaz._
 import testing._

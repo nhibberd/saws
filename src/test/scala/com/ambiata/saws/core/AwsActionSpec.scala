@@ -1,11 +1,17 @@
-package com.ambiata.saws
+package com.ambiata
+package saws
 package core
 
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 
-import com.ambiata.saws.testing._, Arbitraries._, Laws._, AwsAttemptMatcher._
+import mundane.control.Attempt
+import mundane.testing.Arbitraries._
+import mundane.testing.Laws._
+import mundane.testing.AttemptMatcher._
+
+import testing._, Arbitraries._
 import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
 
@@ -50,23 +56,23 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
   /*  AwsAction Combinators */
 
   def safe = prop((t: Throwable) =>
-    AwsAction.value[Int, Int](throw t).safe.unsafeRun(0) == (Vector(), AwsAttempt.exception(t)))
+    AwsAction.value[Int, Int](throw t).safe.unsafeRun(0) == (Vector(), Attempt.exception(t)))
 
   def retry = {
     var c = 5
-    def r(a: Int): (Vector[AwsLog], AwsAttempt[Int]) = {
-      val ret = if(c < 3) (Vector(), AwsAttempt.ok(a)) else (Vector(), AwsAttempt.fail("fail"))
+    def r(a: Int): (Vector[AwsLog], Attempt[Int]) = {
+      val ret = if(c < 3) (Vector(), Attempt.ok(a)) else (Vector(), Attempt.fail("fail"))
       c = c - 1
       ret
     }
 
     def logf(n: Int)(i: Int, e: These[String, Throwable]) =
-      Vector(AwsLog.Warn(s"Attempt ${(n + 1) - i}/${n + 1} failed with err - ${AwsAttempt.asString(e)}"))
+      Vector(AwsLog.Warn(s"Attempt ${(n + 1) - i}/${n + 1} failed with err - ${Attempt.asString(e)}"))
 
     AwsAction[Int, Int](r).retry(5, logf(5)).unsafeRun(1) must_== (Vector(
       AwsLog.Warn("Attempt 1/6 failed with err - fail"),
       AwsLog.Warn("Attempt 2/6 failed with err - fail"),
-      AwsLog.Warn("Attempt 3/6 failed with err - fail")), AwsAttempt(\/-(1)))
+      AwsLog.Warn("Attempt 3/6 failed with err - fail")), Attempt(\/-(1)))
   }
 
   /*  AwsAction Usage */
@@ -188,19 +194,19 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
   def errors = prop((message: String, throwable: Throwable) =>
     AwsAction.error[Int, Int](message, throwable).execute(0) match {
-      case AwsAttempt.Ok(result) =>
+      case Attempt.Ok(result) =>
         failure
-      case AwsAttempt.Error(error) =>
+      case Attempt.Error(error) =>
         error must_== Both(message, throwable): execute.Result
     })
 
   def errorMessages = prop((message: String, throwable: Throwable) =>
     AwsAction.error[Int, Int](message, throwable).execute(0) match {
-      case AwsAttempt.Ok(result) =>
+      case Attempt.Ok(result) =>
         failure
-      case AwsAttempt.ErrorMessage(error) =>
+      case Attempt.ErrorMessage(error) =>
         /* This match unifies the message and the exception to a single error. */
-        error must_== AwsAttempt.asString(Both(message, throwable)): execute.Result
+        error must_== Attempt.asString(Both(message, throwable)): execute.Result
     })
 
   /*  AwsAction Support (Instances specialized for law checking) */

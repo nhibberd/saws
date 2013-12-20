@@ -1,8 +1,10 @@
-package com.ambiata.saws
+package com.ambiata
+package saws
 package core
 
+import mundane.testing.Arbitraries._
+import mundane.testing.Laws._
 import testing.Arbitraries._
-import testing.Laws._
 import org.specs2._
 import testing._
 

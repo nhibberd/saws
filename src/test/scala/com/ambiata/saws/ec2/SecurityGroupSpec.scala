@@ -1,4 +1,5 @@
-package com.ambiata.saws
+package com.ambiata
+package saws
 package ec2
 
 import scalaz._, Scalaz._
@@ -10,7 +11,8 @@ import com.amazonaws.services.ec2.model.{IpPermission, DeleteSecurityGroupReques
 import com.amazonaws.services.ec2.AmazonEC2Client
 import scala.util.Try
 import testing._
-import AwsAttemptMatcher._
+import mundane.testing._
+import AttemptMatcher._
 
 // Skipping test as its randomly failing
 class SecurityGroupSpec extends IntegrationSpec with BeforeAfterExample with ThrownExpectations { def is = skipAll ^ sequential ^ s2"""

@@ -2,7 +2,7 @@ package com.ambiata.saws
 package tooling
 
 import com.ambiata.saws.core._
-import com.ambiata.saws.testing._, Arbitraries._, Laws._, AwsAttemptMatcher._
+import com.ambiata.mundane.testing._, Arbitraries._, Laws._, AttemptMatcher._
 import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
 import testing._

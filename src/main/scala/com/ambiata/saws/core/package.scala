@@ -5,6 +5,7 @@ import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 
 import scalaz._, Scalaz._
+import com.ambiata.mundane.control.Attempt
 
 package object core {
   type S3Action[A] = AwsAction[AmazonS3Client, A]
@@ -13,7 +14,7 @@ package object core {
   type S3EC2Action[A] = AwsAction[(AmazonS3Client, AmazonEC2Client), A]
   type EC2IAMAction[A] = AwsAction[(AmazonEC2Client, AmazonIdentityManagementClient), A]
   type S3EC2IAMAction[A] = AwsAction[(AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient), A]
-  type AwsActionResult[A] = (Vector[AwsLog], AwsAttempt[A])
+  type AwsActionResult[A] = (Vector[AwsLog], Attempt[A])
 
   implicit def S3EC2ActionInstances: MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] =
     new MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] {
@@ -46,11 +47,11 @@ package object core {
 
   implicit def AwsActionResultMonad: Monad[AwsActionResult] =
     new Monad[AwsActionResult] {
-      def point[A](a: =>A) = (Vector[AwsLog](), AwsAttempt.ok(a))
+      def point[A](a: =>A) = (Vector[AwsLog](), Attempt.ok(a))
       def bind[A, B](m: AwsActionResult[A])(f: A => AwsActionResult[B]) =
         m match {
-          case (logs, AwsAttempt.Ok(a))    => val (l, r) = f(a); (logs ++ l, r)
-          case (logs, AwsAttempt.Error(e)) => (logs, AwsAttempt.these[B](e))
+          case (logs, Attempt.Ok(a))    => val (l, r) = f(a); (logs ++ l, r)
+          case (logs, Attempt.Error(e)) => (logs, Attempt.these[B](e))
         }
       }
 

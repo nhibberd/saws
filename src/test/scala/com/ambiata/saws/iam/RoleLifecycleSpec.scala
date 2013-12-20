@@ -1,10 +1,12 @@
-package com.ambiata.saws
+package com.ambiata
+package saws
 package iam
 
 import scalaz._, Scalaz._
 import org.specs2.specification._
 import org.specs2.matcher._
-import testing.AwsAttemptMatcher._
+import mundane.control.Attempt
+import mundane.testing.AttemptMatcher._
 import testing._
 
 

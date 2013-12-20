@@ -1,13 +1,14 @@
-package com.ambiata.saws.testing
+package com.ambiata
+package saws
+package testing
 
 import com.ambiata.saws.core._
 import org.scalacheck._, Arbitrary._
 import scalaz._, Scalaz._
+import mundane.control.Attempt
+import mundane.testing.Arbitraries._
 
 object Arbitraries {
-  implicit def AwsAttemptArbitrary[A: Arbitrary]: Arbitrary[AwsAttempt[A]] =
-    Arbitrary(arbitrary[(String \&/ Throwable) \/ A].map(AwsAttempt.apply))
-
   implicit def AwsLogArbitrary: Arbitrary[AwsLog] = Arbitrary(Gen.oneOf(
     arbitrary[String].map(AwsLog.CreateVPC),
     arbitrary[String].map(AwsLog.CreateInternetGateway),
@@ -38,7 +39,7 @@ object Arbitraries {
     Arbitrary(for {
       logs  <- Gen.choose(0, 4).flatMap(n => Gen.listOfN(n, arbitrary[AwsLog]))
       f     <- func
-      base  <- arbitrary[AwsAttempt[Int]]
+      base  <- arbitrary[Attempt[Int]]
     } yield AwsAction[Int, Int => Int](a => (logs.toVector, base.map(n => f(n)))))
 
   def func: Gen[Int => Int => Int] = arbitrary[Int].flatMap(x => Gen.oneOf(
@@ -51,17 +52,4 @@ object Arbitraries {
     (m: Int) => (n: Int) => m * x
   ))
 
-  /** WARNING: can't use scalaz-scalacheck-binding because of specs/scalacheck/scalaz compatibility at the moment */
-  implicit def TheseArbitrary[A: Arbitrary, B: Arbitrary]: Arbitrary[A \&/ B] =
-    Arbitrary(Gen.oneOf(
-      arbitrary[(A, B)].map({ case (a, b) => \&/.Both(a, b) }),
-      arbitrary[A].map(\&/.This(_): A \&/ B),
-      arbitrary[B].map(\&/.That(_): A \&/ B)
-    ))
-
-  implicit def DisjunctionArbitrary[A: Arbitrary, B: Arbitrary]: Arbitrary[A \/ B] =
-    Arbitrary(Gen.oneOf(
-      arbitrary[A].map(-\/(_)),
-      arbitrary[B].map(\/-(_))
-    ))
 }
