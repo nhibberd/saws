@@ -107,6 +107,25 @@ object Policy {
     Policy("ec2-describe-tags", doc)
   }
 
+  /** Create a policy for allowing full acces to SQS.
+   */
+  val allowSqsFullAccess: Policy = {
+    val doc =
+      s"""{
+         |  "Version": "2012-10-17",
+         |  "Statement": [
+         |    {
+         |      "Action": [
+         |        "sqs:*"
+         |      ],
+         |      "Effect": "Allow",
+         |      "Resource": "*"
+         |    }
+         |  ]
+         |}""".stripMargin
+    Policy("sqs-full-access", doc)
+  }
+
   /** Create a policies for allowing full access to all EMR actions as well as read-only access
     * to the 'elasticmapreduce' S3 buckets (for the purpose of running standard EMR bootstrap
     * actions and steps). */
