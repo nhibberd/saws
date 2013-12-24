@@ -48,20 +48,20 @@ class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables
 
       (policy, rk1, rk2, wk1, wk2) => {
 
-        def commandResults: Seq[Validated[CommandResult]] = Seq(
-          apiRunner.getObject(TestBucket, key1),
-          apiRunner.getObject(TestBucket, key2),
-          apiRunner.getObject(OtherTestBucket, key1),
-          apiRunner.putObject(TestBucket, key1, ""),
-          apiRunner.putObject(TestBucket, key2, ""),
-          apiRunner.listObjects(TestBucket),
-          apiRunner.listObjects(OtherTestBucket),
-          apiRunner.putObject(OtherTestBucket, key1, "")
-        )
-        val expected = Seq(rk1, rk2, beDenied, wk1, wk2, beGranted, beDenied, beDenied)
+        def commandResults: Validated[List[CommandResult]] = apiRunner.sshCmds(List(
+          apiRunner.getObjectCmd(TestBucket, key1),
+          apiRunner.getObjectCmd(TestBucket, key2),
+          apiRunner.getObjectCmd(OtherTestBucket, key1),
+          apiRunner.putObjectCmd(TestBucket, key1, ""),
+          apiRunner.putObjectCmd(TestBucket, key2, ""),
+          apiRunner.listObjectsCmd(TestBucket),
+          apiRunner.listObjectsCmd(OtherTestBucket),
+          apiRunner.putObjectCmd(OtherTestBucket, key1, "")
+        ))
+        val expected = List(rk1, rk2, beDenied, wk1, wk2, beGranted, beDenied, beDenied)
 
         iam.updateRolePolicies(CiRole, List(policy)) must beOk
-        commandResults must contain(exactly(expected: _*)).inOrder.eventually(retries = 8, sleep = 5.seconds)
+        commandResults must beRight(contain(exactly(expected: _*)).inOrder).eventually(retries = 8, sleep = 5.seconds)
       }
     }
   }
