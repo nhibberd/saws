@@ -3,6 +3,7 @@ package com.ambiata.saws
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
+import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
 
 import scalaz._, Scalaz._
 import com.ambiata.mundane.control.Attempt
@@ -11,6 +12,7 @@ package object core {
   type S3Action[A] = AwsAction[AmazonS3Client, A]
   type EC2Action[A] = AwsAction[AmazonEC2Client, A]
   type IAMAction[A] = AwsAction[AmazonIdentityManagementClient, A]
+  type EMRAction[A] = AwsAction[AmazonElasticMapReduceClient, A]
   type S3EC2Action[A] = AwsAction[(AmazonS3Client, AmazonEC2Client), A]
   type EC2IAMAction[A] = AwsAction[(AmazonEC2Client, AmazonIdentityManagementClient), A]
   type S3EC2IAMAction[A] = AwsAction[(AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient), A]

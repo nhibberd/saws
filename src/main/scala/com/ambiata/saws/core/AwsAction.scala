@@ -4,6 +4,7 @@ package core
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
 import scalaz._, Scalaz._, \&/._
 import com.ambiata.mundane.control.Attempt
 
@@ -75,6 +76,9 @@ case class AwsAction[A, +B](unsafeRun: A => (Vector[AwsLog], Attempt[B])) {
 
   def runIAM(implicit ev: AmazonIdentityManagementClient =:= A) =
     run(Clients.iam)
+
+  def runEMR(implicit ev: AmazonElasticMapReduceClient =:= A) =
+    run(Clients.emr)
 
   def runS3EC2(implicit ev: (AmazonS3Client, AmazonEC2Client) =:= A) =
     run(Clients.s3 -> Clients.ec2)
