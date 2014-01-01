@@ -2,7 +2,10 @@ package com.ambiata.saws
 package iam
 
 import scalaz._, Scalaz._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import com.ambiata.saws.core._
+import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.amazonaws.services.identitymanagement.model.{InstanceProfile => AwsInstanceProfile, _}
 import com.ambiata.mundane.control.Attempt
@@ -14,7 +17,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
   /** Returns true if a role with the specified name exists. */
   def roleExists(roleName: String): Attempt[Boolean] =
-    safe { client.listRoles.getRoles.exists(_.getRoleName == roleName) }
+    safe { client.listRoles.getRoles.asScala.exists(_.getRoleName == roleName) }
 
 
   /** Creates a new EC2 assumed role and add its policies. */
@@ -79,7 +82,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
     def deleteReq(p: String) = (new DeleteRolePolicyRequest()).withRoleName(roleName).withPolicyName(p)
 
     for {
-      policies <- safe { client.listRolePolicies(listReq).getPolicyNames.toList }
+      policies <- safe { client.listRolePolicies(listReq).getPolicyNames.asScala.toList }
       _        <- policies.traverse(p => safe { client.deleteRolePolicy(deleteReq(p)) })
     } yield ()
   }
@@ -89,7 +92,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
     safe {
       client
         .listInstanceProfiles(new ListInstanceProfilesRequest)
-        .getInstanceProfiles
+        .getInstanceProfiles.asScala
         .find(_.getInstanceProfileName == name)
     }
 
@@ -117,7 +120,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
       case Some(profile) =>
         profile.point[Attempt]
     }
-    _ <- profile.getRoles.exists(_.getRoleName == role.name).unlessM { safe {
+    _ <- profile.getRoles.asScala.exists(_.getRoleName == role.name).unlessM { safe {
       client.addRoleToInstanceProfile(
         (new AddRoleToInstanceProfileRequest)
           .withInstanceProfileName(role.name)
@@ -136,6 +139,42 @@ object IAM {
     c.setEndpoint(IamEndpoint)
     IAM(c)
   }
+
+  /** Find a specific IAM user. */
+  def findUser(userName: String): IAMAction[Option[User]] =
+    IAMAction(_.listUsers.getUsers.asScala.find(_.getUserName == userName))
+
+  /** Check if a specific IAM user exists. */
+  def userExists(userName: String): IAMAction[Boolean] =
+    findUser(userName).map(_.isDefined)
+
+  /** Create an IAM user if it doesn't already exist. */
+  def createUser(userName: String): IAMAction[User] = for {
+    user <- findUser(userName)
+    u    <- user.map(_.pure[IAMAction]).getOrElse(IAMAction(_.createUser(new CreateUserRequest(userName)).getUser))
+  } yield u
+
+  /** Create an access and secret keys for an IAM user. */
+  def createAccessKey(userName: String): IAMAction[AWSCredentials] = IAMAction(client => {
+    val credentials = client.createAccessKey(new CreateAccessKeyRequest().withUserName(userName)).getAccessKey
+    new BasicAWSCredentials(credentials.getAccessKeyId, credentials.getSecretAccessKey)
+  })
+
+  /** List the access keys for a specific IAM user. */
+  def listAccessKeys(userName: String): IAMAction[List[String]] = IAMAction(client => {
+    client.listAccessKeys(new ListAccessKeysRequest().withUserName(userName)).getAccessKeyMetadata.asScala.toList.map(_.getAccessKeyId)
+  })
+
+    /** Delete the access key associated with an IAM user. */
+  def deleteAccessKey(userName: String, accessKey: String): IAMAction[Unit] =
+    IAMAction(client => client.deleteAccessKey(new DeleteAccessKeyRequest(accessKey).withUserName(userName)))
+
+  /** Delete all the access keys associated with an IAM user. */
+  def deleteAllAccessKeys(userName: String): IAMAction[Unit] = for {
+    credentials <- listAccessKeys(userName)
+    _           <- credentials.traverse(deleteAccessKey(userName, _))
+  } yield ()
+
 }
 
 
