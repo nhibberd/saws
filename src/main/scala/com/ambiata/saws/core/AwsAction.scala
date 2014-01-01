@@ -206,3 +206,10 @@ object IAMAction extends AwsActions[AmazonIdentityManagementClient] {
 
   def IAMActionMonad: Monad[IAMAction] = AwsAction.AwsActionMonad[AmazonIdentityManagementClient]
 }
+
+object EMRAction extends AwsActions[AmazonElasticMapReduceClient] {
+  def apply[A](f: AmazonElasticMapReduceClient => A) =
+    AwsAction.withClient(f)
+
+  def EMRActionMonad: Monad[EMRAction] = AwsAction.AwsActionMonad[AmazonElasticMapReduceClient]
+}

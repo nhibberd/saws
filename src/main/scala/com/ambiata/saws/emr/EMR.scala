@@ -88,6 +88,7 @@ case class Cluster(
       .withBootstrapActions(bootstrapActions.map(_.asBootstrapActionConfig).asJava)
       .withSteps(steps.map(_.asStepConfig).asJava)
       .withJobFlowRole(role.orNull)
+      .withVisibleToAllUsers(true)
 
     jobFlowReq
   }
@@ -97,7 +98,7 @@ case class Cluster(
 object EMR {
 
   def launchCluster(cluster: Cluster): EMRAction[String] = {
-    AwsAction.withClient[AmazonElasticMapReduceClient, String] { client =>
+    EMRAction { client =>
       val res = client.runJobFlow(cluster.asJobFlowRequest)
       res.getJobFlowId
     }
