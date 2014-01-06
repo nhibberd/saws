@@ -115,6 +115,50 @@ case class AwsAction[A, +B](action: A => IO[(Vector[AwsLog], Attempt[B])]) {
 
   def executeS3EC2IAM(implicit ev: (AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
     AwsAction.unlog(runS3EC2IAM)
+
+  // FIX In next step all these below here should get renamed to remove the IO and the above ones should be deleted.
+
+  def runIOS3(implicit ev: AmazonS3Client =:= A) =
+    runIO(Clients.s3)
+
+  def runIOEC2(implicit ev: AmazonEC2Client =:= A) =
+    runIO(Clients.ec2)
+
+  def runIOIAM(implicit ev: AmazonIdentityManagementClient =:= A) =
+    runIO(Clients.iam)
+
+  def runIOEMR(implicit ev: AmazonElasticMapReduceClient =:= A) =
+    runIO(Clients.emr)
+
+  def runIOS3EC2(implicit ev: (AmazonS3Client, AmazonEC2Client) =:= A) =
+    runIO(Clients.s3 -> Clients.ec2)
+
+  def runIOEC2IAM(implicit ev: (AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    runIO(Clients.ec2 -> Clients.iam)
+
+  def runIOS3EC2IAM(implicit ev: (AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    runIO((Clients.s3, Clients.ec2, Clients.iam))
+
+  def executeIO(a: A) =
+    runIO(a).map(AwsAction.unlog)
+
+  def executeIOS3(implicit ev: AmazonS3Client =:= A) =
+    runIOS3.map(AwsAction.unlog)
+
+  def executeIOEC2(implicit ev: AmazonEC2Client =:= A) =
+    runIOEC2.map(AwsAction.unlog)
+
+  def executeIOIAM(implicit ev: AmazonIdentityManagementClient =:= A) =
+    runIOIAM.map(AwsAction.unlog)
+
+  def executeIOS3EC2(implicit ev: (AmazonS3Client, AmazonEC2Client) =:= A) =
+    runIOS3EC2.map(AwsAction.unlog)
+
+  def executeIOEC2IAM(implicit ev: (AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    runIOEC2IAM.map(AwsAction.unlog)
+
+  def executeIOS3EC2IAM(implicit ev: (AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient) =:= A) =
+    runIOS3EC2IAM.map(AwsAction.unlog)
 }
 
 object AwsAction {
