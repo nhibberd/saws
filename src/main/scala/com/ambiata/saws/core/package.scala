@@ -21,21 +21,21 @@ package object core {
 
   implicit def S3EC2ActionInstances: MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] =
     new MonadS3[S3EC2Action] with MonadEC2[S3EC2Action] {
-      def liftS3[A](f: S3Action[A]) = AwsAction({ case (s3, ec2) => f.run(s3) })
-      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (s3, ec2) => f.run(ec2) })
+      def liftS3[A](f: S3Action[A]) = AwsAction({ case (s3, ec2) => f.unsafeRun(s3) })
+      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (s3, ec2) => f.unsafeRun(ec2) })
     }
 
   implicit def EC2IAMActionInstances: MonadIAM[EC2IAMAction] with MonadEC2[EC2IAMAction] =
     new MonadIAM[EC2IAMAction] with MonadEC2[EC2IAMAction] {
-      def liftIAM[A](f: IAMAction[A]) = AwsAction({ case (ec2, iam) => f.run(iam) })
-      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (ec2, iam) => f.run(ec2) })
+      def liftIAM[A](f: IAMAction[A]) = AwsAction({ case (ec2, iam) => f.unsafeRun(iam) })
+      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (ec2, iam) => f.unsafeRun(ec2) })
     }
 
   implicit def S3EC2IAMActionInstances: MonadS3[S3EC2IAMAction] with MonadIAM[S3EC2IAMAction] with MonadEC2[S3EC2IAMAction] =
     new MonadS3[S3EC2IAMAction] with MonadIAM[S3EC2IAMAction] with MonadEC2[S3EC2IAMAction] {
-      def liftS3[A](f: S3Action[A]) = AwsAction({ case (s3, ec2, iam) => f.run(s3) })
-      def liftIAM[A](f: IAMAction[A]) = AwsAction({ case (s3, ec2, iam) => f.run(iam) })
-      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (s3, ec2, iam) => f.run(ec2) })
+      def liftS3[A](f: S3Action[A]) = AwsAction({ case (s3, ec2, iam) => f.unsafeRun(s3) })
+      def liftIAM[A](f: IAMAction[A]) = AwsAction({ case (s3, ec2, iam) => f.unsafeRun(iam) })
+      def liftEC2[A](f: EC2Action[A]) =  AwsAction({ case (s3, ec2, iam) => f.unsafeRun(ec2) })
     }
 
   implicit class S3ActionSyntax[A](action: S3Action[A]) {
