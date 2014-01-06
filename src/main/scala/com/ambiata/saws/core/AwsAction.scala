@@ -11,20 +11,20 @@ import com.ambiata.mundane.control.Attempt
 
 // FIX Remove specialization of IO. This is the first step in making it AwsActionT,
 //     letting us add IO without breaking all the other code for now.
-case class AwsAction[A, +B](unsafeRun: A => IO[(Vector[AwsLog], Attempt[B])]) {
+case class AwsAction[A, +B](action: A => IO[(Vector[AwsLog], Attempt[B])]) {
   def map[C](f: B => C): AwsAction[A, C] =
     flatMap[C](f andThen AwsAction.ok)
 
   def mapError(f: These[String, Throwable] => These[String, Throwable]): AwsAction[A, B] =
-    AwsAction[A, B](a => unsafeRun(a).map(aa => aa match { case (log, att) => (log, att.mapError(f)) }))
+    AwsAction[A, B](a => action(a).map(aa => aa match { case (log, att) => (log, att.mapError(f)) }))
 
   def contramap[C](f: C => A): AwsAction[C, B] =
-    AwsAction(c => unsafeRun(f(c)))
+    AwsAction(c => action(f(c)))
 
   def flatMap[C](f: B => AwsAction[A, C]): AwsAction[A, C] =
-    AwsAction[A, C](a => unsafeRun(a).flatMap(aa => aa match {
+    AwsAction[A, C](a => action(a).flatMap(aa => aa match {
       case (log, Attempt(\/-(b))) =>
-        f(b).unsafeRun(a).map(bb => bb match {
+        f(b).action(a).map(bb => bb match {
           case (log2, result) => (log ++ log2, result)
         })
       case (log, Attempt(-\/(e))) =>
@@ -35,13 +35,13 @@ case class AwsAction[A, +B](unsafeRun: A => IO[(Vector[AwsLog], Attempt[B])]) {
     flatMap(f andThen AwsAction.attempt)
 
   def orElse[BB >: B](alt: => BB): AwsAction[A, BB] =
-    AwsAction[A, BB](a => unsafeRun(a).map(aa => aa match {
+    AwsAction[A, BB](a => action(a).map(aa => aa match {
       case (log, Attempt.Ok(b))    => (log, Attempt.ok(b))
       case (log, Attempt.Error(_)) => (log, Attempt.ok(alt))
     }))
 
   def onError(f: These[String, Throwable] => AwsAction[A, Unit]): AwsAction[A, Unit] =
-    AwsAction(a => unsafeRun(a).map(aa => aa match {
+    AwsAction(a => action(a).map(aa => aa match {
       case (log, Attempt.Ok(_))    => (log, Attempt.ok(()))
       case (log, Attempt.Error(e)) => f(e).run(a) match {
         case (log2, attp) => (log ++ log2, attp)
@@ -49,22 +49,22 @@ case class AwsAction[A, +B](unsafeRun: A => IO[(Vector[AwsLog], Attempt[B])]) {
     }))
 
   def safe: AwsAction[A, B] =
-    AwsAction(a => unsafeRun(a).map(aa => Attempt.safe(aa) match {
+    AwsAction(a => action(a).map(aa => Attempt.safe(aa) match {
       case Attempt(-\/(err)) => (Vector(), Attempt(-\/(err)))
       case Attempt(\/-(ok))  => ok
     }))
 
   def retry(i: Int, lf: (Int, These[String, Throwable]) => Vector[AwsLog] = (_,_) => Vector()): AwsAction[A, B] =
-    AwsAction[A, B](a => unsafeRun(a).flatMap(aa => aa match {
+    AwsAction[A, B](a => action(a).flatMap(aa => aa match {
       case (log, Attempt.Ok(b))    => (log, Attempt.ok(b)).pure[IO]
-      case (log, Attempt.Error(e)) => if(i > 0) retry(i - 1, lf).unsafeRun(a).map(rr => rr match {
+      case (log, Attempt.Error(e)) => if(i > 0) retry(i - 1, lf).action(a).map(rr => rr match {
         case (nlog, nattp) => (log ++ lf(i, e) ++ nlog, nattp)
       }) else (log ++ lf(i, e), Attempt.these(e)).pure[IO]
     }))
 
   /** after running the action, print the last log message to the console */
   def flush: AwsAction[A, B] =
-    AwsAction[A, B](a => unsafeRun(a).map(aa => aa match {
+    AwsAction[A, B](a => action(a).map(aa => aa match {
       case (log, r) => { log.lastOption.foreach(println); (log, r) }
     }))
 
@@ -72,7 +72,7 @@ case class AwsAction[A, +B](unsafeRun: A => IO[(Vector[AwsLog], Attempt[B])]) {
     runIO(a).unsafePerformIO
 
   def runIO(a: A): IO[(Vector[AwsLog], Attempt[B])] =
-    safe.unsafeRun(a)
+    safe.action(a)
 
   def runS3(implicit ev: AmazonS3Client =:= A) =
     run(Clients.s3)
