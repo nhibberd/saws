@@ -6,7 +6,7 @@ import com.ambiata.saws.core._
 import org.scalacheck._, Arbitrary._
 import scalaz._, Scalaz._
 import scalaz.effect.IO
-import mundane.control.Attempt
+import mundane.control._
 import mundane.testing.Arbitraries._
 
 object Arbitraries {
@@ -30,18 +30,22 @@ object Arbitraries {
     arbitrary[String].map(AwsLog.Debug)
   ))
 
-  implicit def AwsActionIntArbitrary: Arbitrary[AwsAction[Int, Int]] =
+  implicit def AwsIntArbitrary: Arbitrary[Aws[Int, Int]] =
     Arbitrary(for {
-      base  <- arbitrary[AwsAction[Int, Int => Int]]
+      base  <- arbitrary[Aws[Int, Int => Int]]
       m     <- arbitrary[Int]
     } yield base.map(_(m)))
 
-  implicit def AwsActionFuncArbitrary: Arbitrary[AwsAction[Int, Int => Int]] =
+  implicit def AwsFuncArbitrary: Arbitrary[Aws[Int, Int => Int]] =
     Arbitrary(for {
       logs  <- Gen.choose(0, 4).flatMap(n => Gen.listOfN(n, arbitrary[AwsLog]))
       f     <- func
-      base  <- arbitrary[Attempt[Int]]
-    } yield AwsAction[Int, Int => Int](a => IO { (logs.toVector, base.map(n => f(n))) }))
+      base  <- arbitrary[Result[Int]]
+    } yield  Aws(
+      ActionT(r =>
+        ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, Int => Int](
+          WriterT[IO, Vector[AwsLog], Result[Int => Int]](
+            IO { (logs.toVector, base.map(n => f(n))) })))))
 
   def func: Gen[Int => Int => Int] = arbitrary[Int].flatMap(x => Gen.oneOf(
     (m: Int) => (n: Int) => n,

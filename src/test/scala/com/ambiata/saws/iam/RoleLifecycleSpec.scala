@@ -5,8 +5,8 @@ package iam
 import scalaz._, Scalaz._
 import org.specs2.specification._
 import org.specs2.matcher._
-import mundane.control.Attempt
-import mundane.testing.AttemptMatcher._
+import mundane.control.Result
+import mundane.testing.ResultMatcher._
 import testing._
 
 
@@ -29,7 +29,7 @@ class RoleLifecycleSpec extends IntegrationSpec with BeforeAfterExample with Thr
       iam.createRole(role) >>
       iam.roleExists(role.name)
     steps must beOk
-    steps.run.toEither must beRight(true)
+    steps.toEither must beRight(true)
   }
 
   def e2 = {
@@ -37,12 +37,12 @@ class RoleLifecycleSpec extends IntegrationSpec with BeforeAfterExample with Thr
       iam.createRole(role).replicateM(2) >>
       iam.roleExists(role.name)
     steps must beOk
-    steps.run.toEither must beRight(true)
+    steps.toEither must beRight(true)
   }
 
   def e3 = {
     iam.deleteRole(role.name) must beOk.not
-    iam.roleExists(role.name).run.toEither must beRight(false).eventually(retries = 8, sleep = 5.seconds)
+    iam.roleExists(role.name).toEither must beRight(false).eventually(retries = 8, sleep = 5.seconds)
   }.pendingUntilFixed("This breaks with timing issues, needs further investigation")
 
   def e4 = {
@@ -51,7 +51,7 @@ class RoleLifecycleSpec extends IntegrationSpec with BeforeAfterExample with Thr
       iam.deleteRole(role.name) >>
       iam.roleExists(role.name)).map(println)
     steps must beOk
-    steps.run.toEither must beRight(false)
+    steps.toEither must beRight(false)
   }.pendingUntilFixed("This breaks with timing issues, needs further investigation")
 
   def before {

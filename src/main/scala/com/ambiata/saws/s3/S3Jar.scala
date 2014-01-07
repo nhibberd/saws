@@ -13,17 +13,17 @@ import com.ambiata.saws.core._
 object S3Jar {
   /** create and push a jar file to S3 */
   def pushJar(jarName: String, bucket: String, base: String = "target/scala-2.10"): S3Action[String] =
-    AwsAction.config[AmazonS3Client].flatMap(client => {
+    S3Action(client => {
       val jarFile = new File(base, jarName)
       (for {
         _ <- makeJar(jarFile)
         _ <- S3.putFile(bucket, jarName, jarFile)
       } yield s"pushed the jar file at ${jarFile.getPath} to the S3 bucket/key $bucket/$jarName")
         .mapError(t => This(s"couldn't push the jar file at ${jarFile.getPath} to the S3 bucket/key $bucket/$jarName - ${t}"))
-    })  
+    }).join
 
   /** @return add classes to the jar file */
-  def makeJar(jarFile: File): S3Action[File] = AwsAction.value {
+  def makeJar(jarFile: File): S3Action[File] = S3Action(_ => {
     val jars = getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs
     val jarBuilder = JarBuilder(jarFile.getPath)
     val exclude = Seq("JavaVirtualMachines", "jre/lib", "eclipse", "hadoop-client", "hadoop-hdfs", "hadoop-common", "hadoop-auth", "idea_rt")
@@ -40,7 +40,7 @@ object S3Jar {
     }
     jarBuilder.close
     jarFile
-  }.safe
+  })
 
   case class JarBuilder(jarPath: String) {
     private val jos = new JarOutputStream(new FileOutputStream(jarPath))

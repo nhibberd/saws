@@ -13,7 +13,7 @@ import scalaz._, Scalaz._
 // So gateways are responsible for adding themselves to the RouteTable.
 object EC2RouteTables {
   def list: EC2Action[List[RouteTable]] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       client.describeRouteTables.getRouteTables.asScala.toList)
 
   def findByVpc(vpc: String): EC2Action[Option[RouteTable]] =
@@ -21,7 +21,7 @@ object EC2RouteTables {
 
   def findByVpcOrFail(vpc: String): EC2Action[RouteTable] =
     findByVpc(vpc).flatMap({
-      case None         => AwsAction.fail(s"Could not locate route table in vpc <$vpc>")
+      case None         => EC2Action.fail(s"Could not locate route table in vpc <$vpc>")
       case Some(routes) => routes.pure[EC2Action]
     })
 }

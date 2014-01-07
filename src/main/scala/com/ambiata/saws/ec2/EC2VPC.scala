@@ -10,7 +10,7 @@ import scalaz._, Scalaz._
 
 object EC2VPC {
   def list: EC2Action[List[Vpc]] =
-    AwsAction.withClient(client => client.describeVpcs.getVpcs.asScala.toList)
+    EC2Action(client => client.describeVpcs.getVpcs.asScala.toList)
 
   def findByName(name: String): EC2Action[Option[Vpc]] =
     list.map(_.find(_.getTags.asScala.toList.map(t => (t.getKey, t.getValue)).contains(("Name" -> name))))
@@ -18,7 +18,7 @@ object EC2VPC {
   def findByNameOrFail(name: String): EC2Action[Vpc] =
     findByName(name).flatMap({
       case None =>
-        AwsAction.fail(s"Could not locate vpc <$name>")
+        EC2Action.fail(s"Could not locate vpc <$name>")
       case Some(vpc) =>
         vpc.pure[EC2Action]
     })
@@ -32,11 +32,11 @@ object EC2VPC {
   } yield vpc
 
   def create(name: String): EC2Action[Vpc] = for {
-    vpc     <- AwsAction.withClient((client: AmazonEC2Client) => client.createVpc(
+    vpc     <- EC2Action(client => client.createVpc(
                 (new CreateVpcRequest)
                   .withCidrBlock("10.0.0.0/16")
                   .withInstanceTenancy(Tenancy.Default)).getVpc)
     _       <- EC2Tags.tag(vpc.getVpcId, List("Name" -> name))
-    _       <- AwsAction.log(AwsLog.CreateVPC(name))
+    _       <- AwsLog.CreateVPC(name).log
   } yield vpc
 }

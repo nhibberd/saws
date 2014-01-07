@@ -2,7 +2,7 @@ package com.ambiata.saws
 package iam
 
 import com.ambiata.saws.core._
-import com.ambiata.mundane.testing.AttemptMatcher._
+import com.ambiata.mundane.testing.ResultMatcher._
 import org.specs2._, specification._
 import scalaz._, Scalaz._
 import testing._
@@ -19,11 +19,11 @@ class IAMAliasSpec extends UnitSpec with ScalaCheck { def is = s2"""
 """
 
   def list =
-    IAMAlias.list.executeIAM must beOkLike(_ contains ("ambiata"))
+    IAMAlias.list.eval.unsafePerformIO must beOkLike(_ contains ("ambiata"))
 
   def isAmbiata =
-    IAMAlias.isAmbiata.executeIAM must beOkValue(true)
+    IAMAlias.isAmbiata.eval.unsafePerformIO must beOkValue(true)
 
   def isNotAmbiataProd =
-    IAMAlias.isAmbiataProd.executeIAM must beOkValue(false)
+    IAMAlias.isAmbiataProd.eval.unsafePerformIO must beOkValue(false)
 }

@@ -10,8 +10,7 @@ import scalaz._, Scalaz._
 
 object EC2IPs {
   def list: EC2Action[List[Address]] =
-    AwsAction.withClient(client =>
-      client.describeAddresses.getAddresses.asScala.toList)
+    EC2Action(_.describeAddresses.getAddresses.asScala.toList)
 
   def findByIp(ip: String): EC2Action[Option[Address]] =
     list.map(_.find(_.getPublicIp == ip))
@@ -19,7 +18,7 @@ object EC2IPs {
   def findByIpOrFail(ip: String): EC2Action[Address] =
     findByIp(ip).flatMap({
       case None =>
-        AwsAction.fail(s"Could not locate elastic ip <$ip>")
+        EC2Action.fail(s"Could not locate elastic ip <$ip>")
       case Some(address) =>
         address.pure[EC2Action]
     })
@@ -30,7 +29,7 @@ object EC2IPs {
   } yield ()
 
   def associateWith(allocationId: String, instance: String): EC2Action[Unit] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       client.associateAddress(
         (new AssociateAddressRequest)
           .withAllocationId(allocationId)
@@ -38,14 +37,14 @@ object EC2IPs {
 
   def disassociate(address: Address): EC2Action[Unit] =
     Option(address.getAssociationId) match {
-      case None => AwsAction.ok(())
-      case Some(a) => AwsAction.withClient(client => client.disassociateAddress(
+      case None    => EC2Action.ok(())
+      case Some(a) => EC2Action(client => client.disassociateAddress(
         (new DisassociateAddressRequest)
           .withAssociationId(a)))
     }
 
   def allocate(): EC2Action[String] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       client.allocateAddress(
         (new AllocateAddressRequest)
           .withDomain(DomainType.Vpc)

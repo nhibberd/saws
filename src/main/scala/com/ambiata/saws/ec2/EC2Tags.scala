@@ -15,7 +15,7 @@ object EC2Tags {
     EC2Tags.tags(List(resource), tags)
 
   def tags(resource: List[String], tags: List[(String, String)]): EC2Action[Unit] =
-    AwsAction.withClient(client => client.createTags(
+    EC2Action(client => client.createTags(
       (new CreateTagsRequest)
         .withResources(resource.asJava)
         .withTags(tags.map({ case (key, value) => new Tag(key, value) }).asJava)))

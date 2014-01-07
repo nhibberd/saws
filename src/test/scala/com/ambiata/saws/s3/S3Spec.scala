@@ -34,7 +34,6 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
 
   // when using "isolated" above, this is a new value per example
   lazy val basePath = mkRandomDir("CopyToS3Spec.")
-  lazy val client = new AmazonS3Client
 
   def e1 = {
     val tmpFile = createFile("test", "testing")
@@ -42,7 +41,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
       f <- S3.readLines(bucket, key)
-    } yield f).run(client)._2.toEither must beRight(===(Seq("testing")))
+    } yield f).eval.unsafePerformIO.toEither must beRight(===(Seq("testing")))
   }
 
   def e2 = {
@@ -54,7 +53,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
       _ <- S3.putFiles(bucket, key, tmpDir)
       f <- S3.readLines(bucket, s3Key(tmpFile1, key))
       s <- S3.readLines(bucket, s3Key(tmpFile2, key))
-    } yield (f, s)).executeS3.toEither must beRight(===((Seq("testing1"), Seq("testing2"))))
+    } yield (f, s)).eval.unsafePerformIO.toEither must beRight(===((Seq("testing1"), Seq("testing2"))))
   }
 
   def e3 = {
@@ -63,7 +62,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
       f <- S3.withStream(bucket, key, is => Source.fromInputStream(is).getLines.toList)
-    } yield f).run(client)._2.toEither must beRight(===(List("testing")))
+    } yield f).eval.unsafePerformIO.toEither must beRight(===(List("testing")))
   }
 
 
@@ -73,7 +72,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
       f <- S3.downloadFile(bucket, key, "target")
-    } yield f).run(client)._2.toEither must beRight(endWith("test3") ^^ ((_:File).getName))
+    } yield f).eval.unsafePerformIO.toEither must beRight(endWith("test3") ^^ ((_:File).getName))
   }
 
   def e5 = {
@@ -84,8 +83,8 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
       k2 <- S3.listKeys(bucket, key)
       f <- S3.readLines(bucket, key)
       _ <- S3.deleteObject(bucket, key)
-    } yield f).executeS3.toEither must beRight(===(Seq("testing3")))
-    S3.getObject(bucket, key).executeS3.toEither must beLeft
+    } yield f).eval.unsafePerformIO.toEither must beRight(===(Seq("testing3")))
+    S3.getObject(bucket, key).eval.unsafePerformIO.toEither must beLeft
   }
 
   def e6 = {
@@ -100,10 +99,10 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
       f <- S3.readLines(bucket, key1)
       s <- S3.readLines(bucket, key2)
       _ <- S3.deleteObjects(bucket, s => s == key1)
-    } yield (f, s)).executeS3.toEither must beRight(===((Seq("testing1")), Seq("testing2")))
+    } yield (f, s)).eval.unsafePerformIO.toEither must beRight(===((Seq("testing1")), Seq("testing2")))
 
-    S3.readLines(bucket, key1).executeS3.toEither must beLeft
-    S3.readLines(bucket, key2).executeS3.toEither must beRight(===(Seq("testing2")))
+    S3.readLines(bucket, key1).eval.unsafePerformIO.toEither must beLeft
+    S3.readLines(bucket, key2).eval.unsafePerformIO.toEither must beRight(===(Seq("testing2")))
   }
 
   def e7 = {
@@ -113,7 +112,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
       _  <- S3.putFile(bucket, key, tmpFile)
       e1 <- S3.exists(bucket, key)
       e2 <- S3.exists(bucket, key + "does_not_exist")
-    } yield (e1, e2)).executeS3.toEither must beRight(===((true, false)))
+    } yield (e1, e2)).eval.unsafePerformIO.toEither must beRight(===((true, false)))
   }
 
   def e8 = {
@@ -122,7 +121,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
       m <- S3.md5(bucket, key)
-    } yield m).executeS3.toEither must beRight(===(md5Hex("testing7".getBytes)))
+    } yield m).eval.unsafePerformIO.toEither must beRight(===(md5Hex("testing7".getBytes)))
   }
 
   def e9 = {
@@ -133,7 +132,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
       _ <- S3.putFile(bucket, keyFrom, tmpFileFrom)
       _ <- S3.copyFile(bucket, keyFrom, bucket, keyTo)
       f <- S3.withStream(bucket, keyTo, is => Source.fromInputStream(is).getLines.toList)
-    } yield f).run(client)._2.toEither must beRight(===(List("testing8")))
+    } yield f).eval.unsafePerformIO.toEither must beRight(===(List("testing8")))
   }
 
   def md5Hex(bytes: Array[Byte]): String =
@@ -143,7 +142,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     base + "/" + f.getName
 
   def after {
-    S3.deleteObjects(bucket, (_:String).startsWith(basePath.getName)).executeS3
+    S3.deleteObjects(bucket, (_:String).startsWith(basePath.getName)).eval.unsafePerformIO
     rmdir(basePath)
   }
 }

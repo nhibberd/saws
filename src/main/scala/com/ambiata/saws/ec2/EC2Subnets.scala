@@ -11,7 +11,7 @@ import scalaz._, Scalaz._
 
 object EC2Subnets {
   def list: EC2Action[List[Subnet]] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       client.describeSubnets.getSubnets.asScala.toList)
 
   def findByVpc(vpc: String): EC2Action[Option[Subnet]] =
@@ -28,7 +28,7 @@ object EC2Subnets {
 
   def routing(subnet: Subnet, vpc: Vpc): EC2Action[Unit] = for {
     routes  <- EC2RouteTables.findByVpcOrFail(vpc.getVpcId)
-    _       <- AwsAction.withClient((client: AmazonEC2Client) =>
+    _       <- EC2Action((client: AmazonEC2Client) =>
                  client.associateRouteTable(
                    (new AssociateRouteTableRequest)
                      .withRouteTableId(routes.getRouteTableId)
@@ -36,8 +36,8 @@ object EC2Subnets {
   } yield ()
 
   def create(vpc: Vpc): EC2Action[Subnet] =
-    AwsAction.withClient((client: AmazonEC2Client) =>
+    EC2Action(client =>
       client.createSubnet(
         new CreateSubnetRequest(vpc.getVpcId, vpc.getCidrBlock)).getSubnet) <*
-      AwsAction.log(AwsLog.CreateSubnet(vpc.getVpcId))
+      AwsLog.CreateSubnet(vpc.getVpcId).log
 }

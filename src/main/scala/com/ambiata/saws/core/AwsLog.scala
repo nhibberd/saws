@@ -4,8 +4,8 @@ package core
 import scalaz._, Scalaz._
 
 sealed trait AwsLog {
-  def log[A]: AwsAction[A, Unit] =
-    AwsAction.log(this)
+  def log[R]: Aws[R, Unit] =
+    Aws.log[R](this)
 }
 
 object AwsLog {

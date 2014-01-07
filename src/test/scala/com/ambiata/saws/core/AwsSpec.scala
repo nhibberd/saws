@@ -1,27 +1,26 @@
-package com.ambiata
-package saws
+package com.ambiata.saws
 package core
 
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 
-import mundane.control.Attempt
-import mundane.testing.Arbitraries._
-import mundane.testing.Laws._
-import mundane.testing.AttemptMatcher._
+import com.ambiata.mundane.control._
+import com.ambiata.mundane.testing.Arbitraries._
+import com.ambiata.mundane.testing.Laws._
+import com.ambiata.saws.testing.AwsMatcher._
 
 import testing._, Arbitraries._
 import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
 import scalaz.effect.IO
 
-class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
+class AwsSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  AwsAction Laws
  ==============
 
-   monad laws                                               ${monad.laws[({ type l[a] = AwsAction[Int, a] })#l]}
+   monad laws                                               ${monad.laws[({ type l[a] = Aws[Int, a] })#l]}
 
 
  AwsAction Combinators
@@ -46,48 +45,43 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
    composing actions of moar different types                $compositionLiftAgain
    logging                                                  $logging
    handling errors                                          $errors
-   handling errors just as an error message                 $errorMessages
-
 
 """
 
   type Error = String \&/ Throwable
 
-  /*  AwsAction Combinators */
+  /*  Aws Combinators */
 
   def safe = prop((t: Throwable) =>
-    AwsAction.value[Int, Int](throw t).run(0) == (Vector(), Attempt.exception(t)))
+    Aws.safe[Int, Int](throw t).run(0).unsafePerformIO == (Vector(), Result.exception(t)))
 
   def retry = {
     var c = 5
-    def r(a: Int): IO[(Vector[AwsLog], Attempt[Int])] = {
-      val ret = if(c < 3) (Vector(), Attempt.ok(a)) else (Vector(), Attempt.fail("fail"))
+    val action = Aws.result((n: Int) => {
+      val ret = if (c < 3) Result.ok(1) else Result.fail("fail")
       c = c - 1
-      IO { ret }
-    }
+      ret
+    })
 
     def logf(n: Int)(i: Int, e: These[String, Throwable]) =
-      Vector(AwsLog.Warn(s"Attempt ${(n + 1) - i}/${n + 1} failed with err - ${Attempt.asString(e)}"))
+      Vector(AwsLog.Warn(s"Result ${(n + 1) - i}/${n + 1} failed with err - ${Result.asString(e)}"))
 
-    AwsAction[Int, Int](r).retry(5, logf(5)).run(1) must_== (Vector(
-      AwsLog.Warn("Attempt 1/6 failed with err - fail"),
-      AwsLog.Warn("Attempt 2/6 failed with err - fail"),
-      AwsLog.Warn("Attempt 3/6 failed with err - fail")), Attempt(\/-(1)))
+    action.retry(5, logf(5)) must runLogOkValue[Int, Int](_.run(1))(1, Vector(
+      AwsLog.Warn("Result 1/6 failed with err - fail"),
+      AwsLog.Warn("Result 2/6 failed with err - fail"),
+      AwsLog.Warn("Result 3/6 failed with err - fail")))
   }
 
-  /*  AwsAction Usage */
+  /*  Aws Usage */
 
   def iam =
-    IAMAction(client => client).executeIAM must
-      beOkLike(_ must beAnInstanceOf[AmazonIdentityManagementClient])
+    IAMAction(client => client) must beOkLike(_ must beAnInstanceOf[AmazonIdentityManagementClient])
 
   def s3 =
-    S3Action(client => client).executeS3 must
-      beOkLike(_ must beAnInstanceOf[AmazonS3Client])
+    S3Action(client => client) must beOkLike(_ must beAnInstanceOf[AmazonS3Client])
 
   def ec2 =
-    EC2Action(client => client).executeEC2 must
-      beOkLike(_ must beAnInstanceOf[AmazonEC2Client])
+    EC2Action(client => client) must beOkLike(_ must beAnInstanceOf[AmazonEC2Client])
 
   def composition = {
     val ten = EC2Action(_ => 10)
@@ -98,7 +92,7 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
       b <- twenty
     } yield a + b
 
-    answer.executeEC2 must beOkValue(30)
+    answer must beOkValue(30)
   }
 
   def compositionMonad = {
@@ -108,7 +102,7 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
     /* Run first effect, and use its result to run second effect. */
     val answer = ten >>= plusTwenty
 
-    answer.executeEC2 must beOkValue(30)
+    answer must beOkValue(30)
   }
 
   def compositionMonadAnon = {
@@ -118,7 +112,7 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
     val blue = EC2Action(_ => { sideEffects += "blue"; () })
 
     /* Run both effects and ignore intermediate computed value. */
-    val answer = (red >> blue).executeEC2
+    val answer = (red >> blue) must beOk
 
     sideEffects.toList must_== List("red", "blue")
   }
@@ -133,7 +127,7 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
     /* Run both effects, but take value computed on left. */
     val answer = red <* blue
 
-    (answer.executeEC2 must beOkValue("red")) and
+    (answer must beOkValue("red")) and
       (sideEffects.toList must_== List("red", "blue"))
   }
 
@@ -146,7 +140,7 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
     /* Run both effects, but take value computed on right. */
     val answer = red *> blue
 
-    (answer.executeEC2 must beOkValue("blue")) and
+    (answer must beOkValue("blue")) and
       (sideEffects.toList must_== List("red", "blue"))
   }
 
@@ -155,11 +149,11 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
     val twenty = S3Action(_ => 20)
 
     val answer: S3EC2Action[Int] = for {
-      a <- ten       .liftEC2[S3EC2Action]
-      b <- twenty    .liftS3[S3EC2Action]
+      a <- ten       .liftAws[S3EC2]
+      b <- twenty    .liftAws[S3EC2]
     } yield a + b
 
-    answer.executeS3EC2 must beOkValue(30)
+    answer must beOkValue(30)
   }
 
   def compositionLiftAgain = {
@@ -168,12 +162,12 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
     val thirty = IAMAction(_ => 30)
 
     val answer: S3EC2IAMAction[Int] = for {
-      a <- ten       .liftEC2[S3EC2IAMAction]
-      b <- twenty    .liftS3[S3EC2IAMAction]
-      c <- thirty    .liftIAM[S3EC2IAMAction]
+      a <- ten       .liftAws[S3EC2IAM]
+      b <- twenty    .liftAws[S3EC2IAM]
+      c <- thirty    .liftAws[S3EC2IAM]
     } yield a + b + c
 
-    answer.executeS3EC2IAM must beOkValue(60)
+    answer must beOkValue(60)
   }
 
   def logging = {
@@ -185,34 +179,23 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
       b <- twenty    <* AwsLog.Debug("adding 20").log
     } yield a + b
 
-    answer.runEC2 match {
-      case (log, attempt) =>
-        (attempt must beOkValue(30)) and
-          (log must_== Vector(AwsLog.Info("adding 10"), AwsLog.Debug("adding 20")))
-    }
+    answer must beLogOkValue(30, Vector(
+      AwsLog.Info("adding 10"),
+      AwsLog.Debug("adding 20")))
   }
 
   def errors = prop((message: String, throwable: Throwable) =>
-    AwsAction.error[Int, Int](message, throwable).execute(0) match {
-      case Attempt.Ok(result) =>
+    Aws.error[Int, Int](message, throwable).execute(0).unsafePerformIO match {
+      case Ok(result) =>
         failure
-      case Attempt.Error(error) =>
+      case Error(error) =>
         error must_== Both(message, throwable): execute.Result
     })
 
-  def errorMessages = prop((message: String, throwable: Throwable) =>
-    AwsAction.error[Int, Int](message, throwable).execute(0) match {
-      case Attempt.Ok(result) =>
-        failure
-      case Attempt.ErrorMessage(error) =>
-        /* This match unifies the message and the exception to a single error. */
-        error must_== Attempt.asString(Both(message, throwable)): execute.Result
-    })
+  /*  Aws Support (Instances specialized for law checking) */
 
-  /*  AwsAction Support (Instances specialized for law checking) */
-
-  implicit def AwsActionEqual[A: Equal]: Equal[AwsAction[Int, A]] = new Equal[AwsAction[Int, A]] {
-    def equal(a1: AwsAction[Int, A], a2: AwsAction[Int, A]): Boolean =
-      a1.run(0) === a2.run(0)
+  implicit def AwsEqual[A: Equal]: Equal[Aws[Int, A]] = new Equal[Aws[Int, A]] {
+    def equal(a1: Aws[Int, A], a2: Aws[Int, A]): Boolean =
+      a1.run(0).unsafePerformIO === a2.run(0).unsafePerformIO
   }
 }

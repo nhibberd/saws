@@ -21,11 +21,11 @@ object EC2Instances {
                    ))
     _           <- EC2Status.waitForReady(reservation.getInstances.asScala.toList.map(_.getInstanceId))
     _           <- associate(image, reservation)
-    _           <- AwsAction.log(AwsLog.StartInstance(image.flavour))
+    _           <- AwsLog.StartInstance(image.flavour).log
   } yield reservation
 
   def start(image: EC2Image, group: AwsSecurityGroup, subnet: Option[Subnet], count: Int, keypair: Option[String]): EC2Action[Reservation] =
-    AwsAction.withClient((client: AmazonEC2Client) =>
+    EC2Action(client =>
       client.runInstances({
         val r = new RunInstancesRequest(image.ami, count, count)
                   .withInstanceType(image.size.size)
@@ -43,7 +43,7 @@ object EC2Instances {
       }).getReservation)
 
   def list: EC2Action[List[Instance]] =
-    AwsAction.withClient((client: AmazonEC2Client) =>
+    EC2Action(client =>
      client.describeInstances.getReservations.asScala.toList.flatMap(_.getInstances.asScala))
 
   def stop(instanceIds: List[String]): EC2Action[Unit] =
@@ -63,7 +63,7 @@ object EC2Instances {
 
   def findByIdOrFail(instanceId: String): EC2Action[Instance] =
     findById(instanceId).flatMap({
-      case None => AwsAction.fail(s"Could not locate instance <$instanceId>")
+      case None => EC2Action.fail(s"Could not locate instance <$instanceId>")
       case Some(i) => i.pure[EC2Action]
     })
 
@@ -74,6 +74,6 @@ object EC2Instances {
       case (Some(ip), List(instance)) if image.cardinality == SingletonEC2Image =>
         EC2IPs.associate(ip, instance.getInstanceId).as(())
       case (Some(_),  _) =>
-        AwsAction.fail[AmazonEC2Client, Unit]("Something went wrong or is misconfigured, can't associate IP with multiple machines.")
+        EC2Action.fail[Unit]("Something went wrong or is misconfigured, can't associate IP with multiple machines.")
     }
 }

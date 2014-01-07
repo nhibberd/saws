@@ -11,8 +11,7 @@ import scalaz._, Scalaz._
 
 object EC2Gateways {
   def list: EC2Action[List[InternetGateway]] =
-    AwsAction.withClient(client =>
-      client.describeInternetGateways.getInternetGateways.asScala.toList)
+    EC2Action(_.describeInternetGateways.getInternetGateways.asScala.toList)
 
   def findByName(name: String): EC2Action[Option[InternetGateway]] =
     list.map(_.find(_.getTags.asScala.toList.map(t => (t.getKey, t.getValue)).contains(("Name" -> name))))
@@ -28,7 +27,7 @@ object EC2Gateways {
   // Question: should this also ensure that RouteTable has an entry for gateway? Yes.
   def create(name: String, vpc: Vpc): EC2Action[InternetGateway] = for {
     routeTable <- EC2RouteTables.findByVpcOrFail(vpc.getVpcId())
-    gateway <- AwsAction.withClient((client: AmazonEC2Client) => {
+    gateway <- EC2Action(client => {
                  val gateway = client.createInternetGateway().getInternetGateway
                  client.attachInternetGateway(
                    (new AttachInternetGatewayRequest)
@@ -45,7 +44,7 @@ object EC2Gateways {
 
     // Note: if we create more than one gateway, it will overwrite it. That's ok :)
     _      <- EC2Tags.tag(routeTable.getRouteTableId, List("Name" -> name))
-    _      <- AwsAction.log(AwsLog.CreateInternetGateway(name))
+    _      <- AwsLog.CreateInternetGateway(name).log
   } yield gateway
 
 }

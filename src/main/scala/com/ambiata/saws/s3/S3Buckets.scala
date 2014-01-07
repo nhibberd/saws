@@ -10,7 +10,7 @@ import scalaz._, Scalaz._
 
 object S3Buckets {
   def list: S3Action[List[Bucket]] =
-    AwsAction.withClient(client => client.listBuckets.asScala.toList)
+    S3Action(client => client.listBuckets.asScala.toList)
 
   def findByName(name: String): S3Action[Option[Bucket]] =
     list.map(_.find(_.getName == name))
@@ -24,6 +24,6 @@ object S3Buckets {
   } yield bucket
 
   def create(name: String): S3Action[Bucket] =
-    AwsAction.withClient((client: AmazonS3Client) => client.createBucket(name, Region.AP_Sydney)) <*
-      AwsAction.log(AwsLog.CreateBucket(name))
+    S3Action(client => client.createBucket(name, Region.AP_Sydney)) <*
+      AwsLog.CreateBucket(name).log
 }

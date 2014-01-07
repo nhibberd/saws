@@ -28,7 +28,7 @@ object EC2Status {
     status(instanceIds).map(statuses => statuses.isEmpty)
 
   def status(instanceIds: List[String]): EC2Action[List[InstanceStatus]] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       client.describeInstanceStatus(
         (new DescribeInstanceStatusRequest)
           .withInstanceIds(instanceIds.asJava)).getInstanceStatuses.asScala.toList)

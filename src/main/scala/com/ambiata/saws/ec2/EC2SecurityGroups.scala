@@ -10,7 +10,7 @@ import scalaz._, Scalaz._
 
 object EC2SecurityGroups {
   def list: EC2Action[List[AwsSecurityGroup]] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       client.describeSecurityGroups.getSecurityGroups.asScala.toList)
 
   def findByName(name: String, vpc: Option[String]): EC2Action[Option[AwsSecurityGroup]] =
@@ -19,7 +19,7 @@ object EC2SecurityGroups {
   def findByNameOrFail(name: String, vpc: Option[String]): EC2Action[AwsSecurityGroup] =
     findByName(name, vpc).flatMap({
       case None =>
-        AwsAction.fail(s"Could not locate security group <$name>")
+        EC2Action.fail(s"Could not locate security group <$name>")
       case Some(group) =>
         group.pure[EC2Action]
     })
@@ -34,13 +34,13 @@ object EC2SecurityGroups {
   } yield sg
 
   def create(group: SecurityGroup): EC2Action[AwsSecurityGroup] = for {
-    _  <- AwsAction.withClient((client: AmazonEC2Client) =>
+    _  <- EC2Action(client =>
             client.createSecurityGroup({
               val request = new CreateSecurityGroupRequest(group.name, group.desc)
               group.vpc.foreach(request.setVpcId(_))
               request
             }))
-    _  <- AwsAction.log(AwsLog.CreateSecurityGroup(group.name))
+    _  <- AwsLog.CreateSecurityGroup(group.name).log
     sg <- findByNameOrFail(group.name, group.vpc)
   } yield sg
 
@@ -48,11 +48,11 @@ object EC2SecurityGroups {
   def rules(group: SecurityGroup, sg: AwsSecurityGroup) = for {
     _ <- revoke(sg.getGroupId, sg.getIpPermissions.asScala.toList.map(safeIpPermissionCopy))
     _ <- authorize(sg.getGroupId, group.ingressRules, group.vpc)
-    _ <- AwsAction.log(AwsLog.UpdateSecurityGroup(group.name))
+    _ <- AwsLog.UpdateSecurityGroup(group.name).log
   } yield ()
 
   def revoke(groupId: String, ipPermissions: List[IpPermission]): EC2Action[Unit] =
-    AwsAction.withClient(client =>
+    EC2Action(client =>
       if (!ipPermissions.isEmpty)
         client.revokeSecurityGroupIngress(
           (new RevokeSecurityGroupIngressRequest)
@@ -78,7 +78,7 @@ object EC2SecurityGroups {
                    .withIpRanges(perm.getIpRanges)
                    .withUserIdGroupPairs(pairs.asJava))
              })
-    _     <- AwsAction.withClient((client: AmazonEC2Client) =>
+    _     <- EC2Action(client =>
               client.authorizeSecurityGroupIngress(
                 (new AuthorizeSecurityGroupIngressRequest)
                   .withGroupId(groupId)

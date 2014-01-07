@@ -13,7 +13,7 @@ import s3._
 import Policy._
 import testing._
 import AssumedApiRunner._
-import mundane.testing.AttemptMatcher._
+import mundane.testing.ResultMatcher._
 import com.decodified.scalassh._
 
 
