@@ -81,7 +81,7 @@ class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables
   val TestBucket      = "ambiata-dev-iam-test"
   val OtherTestBucket = "ambiata-dev-iam-test-other"
 
-  lazy val s3 = S3()
+  object s3 { val client = core.Clients.s3 }
   val (path1, path2) = ("path1", "path2")
   val (file1, file2) = ("foo", "bar")
   val (key1, key2) = (s"$path1/$file1", s"$path2/$file2")

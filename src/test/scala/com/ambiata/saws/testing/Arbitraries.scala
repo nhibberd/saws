@@ -5,6 +5,7 @@ package testing
 import com.ambiata.saws.core._
 import org.scalacheck._, Arbitrary._
 import scalaz._, Scalaz._
+import scalaz.effect.IO
 import mundane.control.Attempt
 import mundane.testing.Arbitraries._
 
@@ -40,7 +41,7 @@ object Arbitraries {
       logs  <- Gen.choose(0, 4).flatMap(n => Gen.listOfN(n, arbitrary[AwsLog]))
       f     <- func
       base  <- arbitrary[Attempt[Int]]
-    } yield AwsAction[Int, Int => Int](a => (logs.toVector, base.map(n => f(n)))))
+    } yield AwsAction[Int, Int => Int](a => IO { (logs.toVector, base.map(n => f(n))) }))
 
   def func: Gen[Int => Int => Int] = arbitrary[Int].flatMap(x => Gen.oneOf(
     (m: Int) => (n: Int) => n,

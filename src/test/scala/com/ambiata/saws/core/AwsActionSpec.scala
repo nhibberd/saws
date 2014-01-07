@@ -14,7 +14,7 @@ import mundane.testing.AttemptMatcher._
 import testing._, Arbitraries._
 import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
-
+import scalaz.effect.IO
 
 class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
@@ -56,20 +56,20 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
   /*  AwsAction Combinators */
 
   def safe = prop((t: Throwable) =>
-    AwsAction.value[Int, Int](throw t).safe.unsafeRun(0) == (Vector(), Attempt.exception(t)))
+    AwsAction.value[Int, Int](throw t).run(0) == (Vector(), Attempt.exception(t)))
 
   def retry = {
     var c = 5
-    def r(a: Int): (Vector[AwsLog], Attempt[Int]) = {
+    def r(a: Int): IO[(Vector[AwsLog], Attempt[Int])] = {
       val ret = if(c < 3) (Vector(), Attempt.ok(a)) else (Vector(), Attempt.fail("fail"))
       c = c - 1
-      ret
+      IO { ret }
     }
 
     def logf(n: Int)(i: Int, e: These[String, Throwable]) =
       Vector(AwsLog.Warn(s"Attempt ${(n + 1) - i}/${n + 1} failed with err - ${Attempt.asString(e)}"))
 
-    AwsAction[Int, Int](r).retry(5, logf(5)).unsafeRun(1) must_== (Vector(
+    AwsAction[Int, Int](r).retry(5, logf(5)).run(1) must_== (Vector(
       AwsLog.Warn("Attempt 1/6 failed with err - fail"),
       AwsLog.Warn("Attempt 2/6 failed with err - fail"),
       AwsLog.Warn("Attempt 3/6 failed with err - fail")), Attempt(\/-(1)))
@@ -213,6 +213,6 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
   implicit def AwsActionEqual[A: Equal]: Equal[AwsAction[Int, A]] = new Equal[AwsAction[Int, A]] {
     def equal(a1: AwsAction[Int, A], a2: AwsAction[Int, A]): Boolean =
-      a1.unsafeRun(0) === a2.unsafeRun(0)
+      a1.run(0) === a2.run(0)
   }
 }
