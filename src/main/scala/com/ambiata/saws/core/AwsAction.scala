@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
 import scalaz._, Scalaz._, \&/._
 import scalaz.effect._
+import scala.util.control.NonFatal
 import com.ambiata.mundane.control.Attempt
 
 // FIX Remove specialization of IO. This is the first step in making it AwsActionT,
@@ -49,10 +50,12 @@ case class AwsAction[A, +B](action: A => IO[(Vector[AwsLog], Attempt[B])]) {
     }))
 
   def safe: AwsAction[A, B] =
-    AwsAction(a => action(a).map(aa => Attempt.safe(aa) match {
+    AwsAction(a => try { action(a).map(aa => Attempt.safe(aa) match {
       case Attempt(-\/(err)) => (Vector(), Attempt(-\/(err)))
       case Attempt(\/-(ok))  => ok
-    }))
+    }) } catch {
+      case NonFatal(t) => IO { (Vector(), Attempt(-\/(That(t)))) }
+    })
 
   def retry(i: Int, lf: (Int, These[String, Throwable]) => Vector[AwsLog] = (_,_) => Vector()): AwsAction[A, B] =
     AwsAction[A, B](a => action(a).flatMap(aa => aa match {
@@ -200,7 +203,7 @@ trait AwsActions[A] {
     AwsAction(_ => (Vector(), value).pure[IO])
 
   def value[B](value: => B): AwsAction[A, B] =
-    AwsAction(_ => (Vector(), Attempt.ok(value)).pure[IO])
+    AwsAction(_ => (Vector(), Attempt.safe(value)).pure[IO])
 
   def exception[B](t: Throwable): AwsAction[A, B] =
     AwsAction(_ => (Vector(), Attempt.exception(t)).pure[IO])
