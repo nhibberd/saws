@@ -12,21 +12,11 @@ import java.io._
 import scala.io.Source
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
+import scalaz.effect._
 import scala.annotation.tailrec
 import com.ambiata.mundane.control.Attempt
 
-/** Wrapper for Java S3 client. */
-case class S3(client: AmazonS3Client)
-
-/** Sydney-region S3 client. */
 object S3 {
-  val S3Endpoint = "s3-ap-southeast-2.amazonaws.com"
-  def apply(): S3 = {
-    val c = new AmazonS3Client()
-    c.setEndpoint(S3Endpoint)
-    S3(c)
-  }
-
   def getObject(bucket: String, key: String): S3Action[S3Object] =
     AwsAction.withClient[AmazonS3Client, S3Object](_.getObject(bucket, key))
              .mapError(Attempt.prependThis(_, s"Could not get S3://${bucket}/${key}"))
@@ -105,7 +95,7 @@ object S3 {
   def directory(prefix: String) = prefix + (if (prefix.endsWith("/")) "" else "/")
 
   def exists(bucket: String, key: String): S3Action[Boolean] =
-    AwsAction { client: AmazonS3Client =>
+    AwsAction { client: AmazonS3Client => IO {
       try {
         client.getObject(bucket, key)
         (Vector(), Attempt.ok(true))
@@ -113,7 +103,7 @@ object S3 {
         case ase: AmazonServiceException => (Vector(), if (ase.getErrorCode == "NoSuchKey") Attempt.ok(false) else Attempt.exception(ase))
         case t: Throwable                => (Vector(), Attempt.exception(t))
       }
-    }
+    }}
 
   def existsInBucket(bucket: String, filter: String => Boolean): S3Action[Boolean] =
     listSummary(bucket).map(_.exists(o => filter(o.getKey)))

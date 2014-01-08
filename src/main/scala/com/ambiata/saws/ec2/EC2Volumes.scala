@@ -32,6 +32,4 @@ object EC2Volumes {
          .withInstanceId(instance.getInstanceId)
          .withDevice(device)
       ))
-
-
 }
