@@ -81,6 +81,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     val key = s3Key(tmpFile)
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
+      k2 <- S3.listKeys(bucket, key)
       f <- S3.readLines(bucket, key)
       _ <- S3.deleteObject(bucket, key)
     } yield f).executeS3.toEither must beRight(===(Seq("testing3")))
@@ -88,7 +89,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
   }
 
   def e6 = {
-    val tmpDir = mkdir("e5")
+    val tmpDir = mkdir("e6")
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
     val key = s3Key(tmpDir)

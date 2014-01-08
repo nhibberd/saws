@@ -50,12 +50,10 @@ case class AwsAction[A, +B](action: A => IO[(Vector[AwsLog], Attempt[B])]) {
     }))
 
   def safe: AwsAction[A, B] =
-    AwsAction(a => try { action(a).map(aa => Attempt.safe(aa) match {
-      case Attempt(-\/(err)) => (Vector(), Attempt(-\/(err)))
-      case Attempt(\/-(ok))  => ok
-    }) } catch {
-      case NonFatal(t) => IO { (Vector(), Attempt(-\/(That(t)))) }
-    })
+    AwsAction(a => action(a).map(aa => Attempt.safe(aa) match {
+      case Attempt(-\/(err)) =>  (Vector(), Attempt(-\/(err)))
+      case Attempt(\/-(ok))  =>  ok
+    }).except(t => IO { (Vector(), Attempt(-\/(That(t)))) }))
 
   def retry(i: Int, lf: (Int, These[String, Throwable]) => Vector[AwsLog] = (_,_) => Vector()): AwsAction[A, B] =
     AwsAction[A, B](a => action(a).flatMap(aa => aa match {
@@ -218,7 +216,7 @@ trait AwsActions[A] {
     AwsAction(_ => (Vector(), Attempt.these(t)).pure[IO])
 
   def withClient[B](f: A => B): AwsAction[A, B] =
-    config.map(f)
+    config.map(f).safe
 
   def attemptWithClient[B](f: A => Attempt[B]): AwsAction[A, B] =
     config.attempt(f)
