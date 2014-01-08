@@ -1,9 +1,10 @@
+libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140107134504-346a45d"
+
 libraryDependencies ++= Seq(
     "org.scalaz"          %% "scalaz-core"                % "7.0.4",
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.2-SNAPSHOT",
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
-    "com.ambiata"         %% "mundane"                    % "1.2.1-20140107030550-484e21d",
     "com.owtelse.codec"   %  "base64"                     % "1.0.6")
 
 libraryDependencies ++= Seq(
