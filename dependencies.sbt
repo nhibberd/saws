@@ -5,7 +5,8 @@ libraryDependencies ++= Seq(
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.2-SNAPSHOT",
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
-    "com.owtelse.codec"   %  "base64"                     % "1.0.6")
+    "com.owtelse.codec"   %  "base64"                     % "1.0.6",
+    "javax.mail"          %  "mail"                       % "1.4.7")
 
 libraryDependencies ++= Seq(
     "org.specs2"          %% "specs2-core"                % "2.3.4"        % "test",
