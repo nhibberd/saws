@@ -2,7 +2,7 @@ libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140113214215-db45b0
 
 libraryDependencies ++= Seq(
     "org.scalaz"          %% "scalaz-core"                % "7.0.4",
-    "org.scalaz.stream"   %% "scalaz-stream"              % "0.2-SNAPSHOT",
+    "org.scalaz.stream"   %% "scalaz-stream"              % "0.3"
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
     "com.owtelse.codec"   %  "base64"                     % "1.0.6")
@@ -15,12 +15,10 @@ libraryDependencies ++= Seq(
     "org.scalacheck"      %% "scalacheck"                 % "1.11.1"       % "test",
     "com.ambiata"         %% "scrutiny"                   % "1.0"          % "test")
 
-
 resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
-    Resolver.sonatypeRepo("snapshots"),
     Resolver.typesafeRepo("releases"),
     "cloudera"              at "https://repository.cloudera.com/content/repositories/releases",
     "spray"                 at "http://repo.spray.io",
     "artifactory"           at "http://etd-packaging.research.nicta.com.au/artifactory/libs-release-local",
-    "artifactory snapshot"  at "http://etd-packaging.research.nicta.com.au/artifactory/libs-snapshot-local")
+    "Scalaz Bintray Repo"   at "http://dl.bintray.com/scalaz/releases")
