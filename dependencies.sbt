@@ -4,7 +4,7 @@ libraryDependencies ++= Seq(
     "org.scalaz"          %% "scalaz-core"                % "7.0.4",
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.3",
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
-    "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
+    "com.amazonaws"       %  "aws-java-sdk"               % "1.6.12",
     "com.owtelse.codec"   %  "base64"                     % "1.0.6",
     "javax.mail"          %  "mail"                       % "1.4.7")
 
