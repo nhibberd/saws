@@ -2,7 +2,7 @@ package com.ambiata.saws
 package emr
 
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
-import com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, _}
+import com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, Instance => EMRInstance, _}
 import com.ambiata.saws.core._
 import com.ambiata.saws.core.EMRAction
 
@@ -106,4 +106,8 @@ object EMR {
 
   def describeCluster(id: String): EMRAction[EMRCluster] =
     EMRAction(client => client.describeCluster((new DescribeClusterRequest()).withClusterId(id)).getCluster)
+
+  def clusterInstances(id: String, groups: String*): EMRAction[List[EMRInstance]] =
+    EMRAction(client =>
+      client.listInstances((new ListInstancesRequest()).withClusterId(id).withInstanceGroupTypes(groups: _*)).getInstances.asScala.toList)
 }
