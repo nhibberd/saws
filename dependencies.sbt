@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
     "org.specs2"          %% "specs2-scalacheck"          % "2.3.4"        % "test",
     "com.decodified"      %% "scala-ssh"                  % "0.6.4"        % "test",
     "org.scalacheck"      %% "scalacheck"                 % "1.11.1"       % "test",
-    "com.ambiata"         %% "scrutiny"                   % "1.0"          % "test")
+    "com.ambiata"         %% "scrutiny"                   % "1.1-20131224033803-9095a20"          % "test")
 
 resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
