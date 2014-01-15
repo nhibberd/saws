@@ -114,8 +114,11 @@ object Aws {
   def fromDisjunctionThrowable[R, A](either: Throwable \/ A): Aws[R, A] =
     Aws(ActionT.fromDisjunctionThrowable(either))
 
-  def log[R](r: AwsLog): Aws[R, Unit] =
-    ???
+  def log[R](l: AwsLog): Aws[R, Unit] =
+    Aws(ActionT(r =>
+      ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, Unit](
+        WriterT[IO, Vector[AwsLog], Result[Unit]](
+          (Vector[AwsLog](l), Result.ok(())).pure[IO]))))
 
   def unlog[A, B](result: (A, B)): B =
     result._2
