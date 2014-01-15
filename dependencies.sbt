@@ -2,7 +2,7 @@ libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140115000415-1264e7
 
 libraryDependencies ++= Seq(
     "org.scalaz"          %% "scalaz-core"                % "7.0.4",
-    "org.scalaz.stream"   %% "scalaz-stream"              % "0.3"
+    "org.scalaz.stream"   %% "scalaz-stream"              % "0.3",
     "com.github.scopt"    %% "scopt"                      % "3.1.0",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.1",
     "com.owtelse.codec"   %  "base64"                     % "1.0.6",
