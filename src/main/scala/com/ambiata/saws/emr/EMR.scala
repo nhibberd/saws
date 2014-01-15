@@ -2,7 +2,7 @@ package com.ambiata.saws
 package emr
 
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
-import com.amazonaws.services.elasticmapreduce.model._
+import com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, _}
 import com.ambiata.saws.core._
 import com.ambiata.saws.core.EMRAction
 
@@ -103,4 +103,7 @@ object EMR {
       res.getJobFlowId
     }
   }
+
+  def describeCluster(id: String): EMRAction[EMRCluster] =
+    EMRAction(client => client.describeCluster((new DescribeClusterRequest()).withClusterId(id)).getCluster)
 }
