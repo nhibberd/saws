@@ -110,4 +110,8 @@ object EMR {
   def clusterInstances(id: String, groups: String*): EMRAction[List[EMRInstance]] =
     EMRAction(client =>
       client.listInstances((new ListInstancesRequest()).withClusterId(id).withInstanceGroupTypes(groups: _*)).getInstances.asScala.toList)
+
+  def terminateCluster(ids: String*): EMRAction[Unit] =
+    EMRAction(client =>
+      client.terminateJobFlows(new TerminateJobFlowsRequest(ids.asJava)))
 }
