@@ -140,43 +140,7 @@ object IAM {
     IAM(c)
   }
 
-  /** Find a specific IAM user. */
-  def findUser(userName: String): IAMAction[Option[User]] =
-    IAMAction(_.listUsers.getUsers.asScala.find(_.getUserName == userName))
-
-  /** Check if a specific IAM user exists. */
-  def userExists(userName: String): IAMAction[Boolean] =
-    findUser(userName).map(_.isDefined)
-
-  /** Create an IAM user if it doesn't already exist. */
-  def createUser(userName: String): IAMAction[User] = for {
-    user <- findUser(userName)
-    u    <- user.map(_.pure[IAMAction]).getOrElse(IAMAction(_.createUser(new CreateUserRequest(userName)).getUser))
-  } yield u
-
-  /** Create an access and secret keys for an IAM user. */
-  def createAccessKey(userName: String): IAMAction[AWSCredentials] = IAMAction(client => {
-    val credentials = client.createAccessKey(new CreateAccessKeyRequest().withUserName(userName)).getAccessKey
-    new BasicAWSCredentials(credentials.getAccessKeyId, credentials.getSecretAccessKey)
-  })
-
-  /** List the access keys for a specific IAM user. */
-  def listAccessKeys(userName: String): IAMAction[List[String]] = IAMAction(client => {
-    client.listAccessKeys(new ListAccessKeysRequest().withUserName(userName)).getAccessKeyMetadata.asScala.toList.map(_.getAccessKeyId)
-  })
-
-    /** Delete the access key associated with an IAM user. */
-  def deleteAccessKey(userName: String, accessKey: String): IAMAction[Unit] =
-    IAMAction(client => client.deleteAccessKey(new DeleteAccessKeyRequest(accessKey).withUserName(userName)))
-
-  /** Delete all the access keys associated with an IAM user. */
-  def deleteAllAccessKeys(userName: String): IAMAction[Unit] = for {
-    credentials <- listAccessKeys(userName)
-    _           <- credentials.traverse(deleteAccessKey(userName, _))
-  } yield ()
-
 }
-
 
 /** An IAM role. */
 case class Role(name: String, policies: List[Policy])
