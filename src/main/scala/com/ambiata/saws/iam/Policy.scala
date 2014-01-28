@@ -37,6 +37,7 @@ object Policy {
   def allowS3PathForActions(path: String, actions: Seq[String]) = {
     val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
     val bucket = path.takeWhile(_ != '/')
+    val key = path.drop(bucket.length + 1)
     s"""|{
         |  "Version": "2012-10-17",
         |  "Statement": [
@@ -48,6 +49,9 @@ object Policy {
         |    {
         |      "Action": [ "s3:ListBucket" ],
         |      "Resource": [ "arn:aws:s3:::$bucket" ],
+        |      "Condition": {
+        |        "StringLike": { "s3:prefix": ["$key/*"] }
+        |      },
         |      "Effect": "Allow"
         |    }
         |  ]
