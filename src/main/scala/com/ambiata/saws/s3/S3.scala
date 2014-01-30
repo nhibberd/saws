@@ -119,8 +119,11 @@ object S3 {
     S3Action(_.getObjectMetadata(bucket, key).getETag)
              .onResult(_.prependErrorMessage(s"Could not get md5 of S3://${bucket}/${key}"))
 
-  def extractTarball(bucket: String, key: String, local: File, stripLevels: Int = 0): S3Action[File] =
+  def extractTarball(bucket: String, key: String, local: File, stripLevels: Int): S3Action[File] =
     withStream(bucket, key, is => Files.extractTarballStream(is, local, stripLevels)).flatMap(Aws.fromDisjunctionString)
+
+    def extractTarballFlat(bucket: String, key: String, local: File): S3Action[File] =
+      withStream(bucket, key, is => Files.extractTarballStreamFlat(is, local)).flatMap(Aws.fromDisjunctionString)
 
   def extractGzip(bucket: String, key: String, local: File): S3Action[File] =
     withStream(bucket, key, is => Files.extractGzipStream(is, local)).flatMap(Aws.fromDisjunctionString)
