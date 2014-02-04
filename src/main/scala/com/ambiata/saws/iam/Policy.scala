@@ -10,34 +10,43 @@ case class Policy(name: String, document: String)
 object Policy {
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
-  def allowS3ReadPath(path: String): Policy = {
+  def allowS3ReadPath(path: String, constrainList: Boolean): Policy = {
     val name = s"ReadAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("GetObject")))
+    Policy(name, allowS3PathForActions(path, Seq("GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
-  def allowS3WritePath(path: String): Policy  = {
+  def allowS3WritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject")))
+    Policy(name, allowS3PathForActions(path, Seq("PutObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'GetObject' and 'ListBucket' for the specified S3 path. */
-  def allowS3ReadWritePath(path: String): Policy  = {
+  def allowS3ReadWritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject")))
+    Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
-  def allowS3ReadWriteDeletePath(path: String): Policy  = {
+  def allowS3ReadWriteDeletePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject", "DeleteObject")))
+    Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'ListBucket' and other S3 actions for the specified S3 path. */
-  def allowS3PathForActions(path: String, actions: Seq[String]) = {
+  def allowS3PathForActions(path: String, actions: Seq[String], constrainList: Boolean) = {
     val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
     val bucket = path.takeWhile(_ != '/')
     val key = path.drop(bucket.length + 1)
+
+    val listCondition =
+      if (!constrainList)
+        ""
+      else
+        s"""|"Condition": {
+            |  "StringLike": { "s3:prefix": ["$key/*"] }
+            |},""".stripMargin
+
     s"""|{
         |  "Version": "2012-10-17",
         |  "Statement": [
@@ -49,14 +58,14 @@ object Policy {
         |    {
         |      "Action": [ "s3:ListBucket" ],
         |      "Resource": [ "arn:aws:s3:::$bucket" ],
-        |      "Condition": {
-        |        "StringLike": { "s3:prefix": ["$key/*"] }
-        |      },
+        |      $listCondition
         |      "Effect": "Allow"
         |    }
         |  ]
         |}""".stripMargin
   }
+
+
 
   /** Allow IAM account aliases to be listed. This is important for verifying environments. */
   val allowIAMListAliasAccess: Policy = {
@@ -186,8 +195,8 @@ object Policy {
           |}""".stripMargin
     List(
       Policy("emr-full-access", doc),
-      allowS3ReadPath("elasticmapreduce"),
-      allowS3ReadPath("ap-southeast-2.elasticmapreduce")
+      allowS3ReadPath("elasticmapreduce", false),
+      allowS3ReadPath("ap-southeast-2.elasticmapreduce", false)
     )
   }
 }
