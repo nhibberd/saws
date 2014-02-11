@@ -10,6 +10,7 @@ import com.owtelse.codec.Base64
 
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
+import scala.concurrent._
 
 object EC2Instances {
   def run(env: String, image: EC2Image, count: Int, keypair: Option[String]): EC2Action[Reservation] = for {
@@ -44,7 +45,7 @@ object EC2Instances {
 
   def list: EC2Action[List[Instance]] =
     EC2Action(client =>
-     client.describeInstances.getReservations.asScala.toList.flatMap(_.getInstances.asScala))
+     client.describeInstances.getReservations.asScala.toList.par.flatMap(_.getInstances.asScala).toList)
 
   def stop(instanceIds: List[String]): EC2Action[Unit] =
     EC2Action(client =>
