@@ -104,14 +104,29 @@ object EMR {
     }
   }
 
-  def describeCluster(id: String): EMRAction[EMRCluster] =
-    EMRAction(client => client.describeCluster((new DescribeClusterRequest()).withClusterId(id)).getCluster)
+  def describeCluster(clusterId: String): EMRAction[EMRCluster] =
+    EMRAction(client => client.describeCluster(new DescribeClusterRequest().withClusterId(clusterId)).getCluster)
 
-  def clusterInstances(id: String, groups: String*): EMRAction[List[EMRInstance]] =
+  def clusterInstances(clusterId: String, groups: String*): EMRAction[List[EMRInstance]] =
     EMRAction(client =>
-      client.listInstances((new ListInstancesRequest()).withClusterId(id).withInstanceGroupTypes(groups: _*)).getInstances.asScala.toList)
+      client.listInstances(new ListInstancesRequest().withClusterId(clusterId).withInstanceGroupTypes(groups: _*)).getInstances.asScala.toList)
 
-  def terminateCluster(ids: String*): EMRAction[Unit] =
+  def terminateCluster(clusterIds: String*): EMRAction[Unit] =
     EMRAction(client =>
-      client.terminateJobFlows(new TerminateJobFlowsRequest(ids.asJava)))
+      client.terminateJobFlows(new TerminateJobFlowsRequest(clusterIds.asJava)))
+
+  /** Add steps to an existing cluster, returning the step IDs. */
+  def addSteps(clusterId: String, steps: List[Step]): EMRAction[List[String]] = {
+    EMRAction(client => {
+      val result = client.addJobFlowSteps(new AddJobFlowStepsRequest(clusterId, steps.map(_.asStepConfig).asJava))
+      result.getStepIds.asScala.toList
+    })
+  }
+
+  def describeStep(clusterId: String, stepId: String): EMRAction[StepStatus] = {
+    EMRAction(client => {
+      val result = client.describeStep(new DescribeStepRequest().withClusterId(clusterId).withStepId(stepId))
+      result.getStep.getStatus
+    })
+  }
 }
