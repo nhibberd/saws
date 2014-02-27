@@ -13,5 +13,6 @@ object ContentType {
   object application {
     def excel = ContentType("application/vnd.ms-excel")
     def json = ContentType("application/json")
+    def zip = ContentType("application/zip")
   }
 }
