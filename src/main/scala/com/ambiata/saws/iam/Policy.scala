@@ -139,7 +139,7 @@ object Policy {
     Policy("sqs-full-access", doc)
   }
 
-   /** Create a policy for allowing full acces to SES.
+   /** Create a policy for allowing full access to SES.
    */
   val allowSesFullAccess: Policy = {
     val doc =
@@ -156,6 +156,25 @@ object Policy {
          |  ]
          |}""".stripMargin
     Policy("ses-full-access", doc)
+  }
+
+  /** Create a policy for allowing send email access to SES.
+    */
+  val allowSesSendAccess: Policy = {
+    val doc =
+      s"""{
+         |  "Version": "2012-10-17",
+         |  "Statement": [
+         |    {
+         |      "Action": [
+         |        "ses:SendEmail", "ses:SendRawEmail"
+         |      ],
+         |      "Effect": "Allow",
+         |      "Resource": "*"
+         |    }
+         |  ]
+         |}""".stripMargin
+    Policy("ses-send-access", doc)
   }
 
   /** Create a policies for allowing full access to all EMR actions as well as read-only access
