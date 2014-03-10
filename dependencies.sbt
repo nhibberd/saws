@@ -1,4 +1,4 @@
-libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140131051113-cf38bff"
+libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140310003421-b90727a"
 
 libraryDependencies ++= Seq(
     "org.scalaz"          %% "scalaz-core"                % "7.0.4",
