@@ -31,7 +31,7 @@ object EC2Instances {
         val r = new RunInstancesRequest(image.ami, count, count)
                   .withInstanceType(image.size.size)
                   .withSecurityGroupIds(List(group.getGroupId).asJava)
-                  .withBlockDeviceMappings(image.devices.map({
+                  .withBlockDeviceMappings(image.size.devices.mapping.map({
                     case (dev, virt) => new BlockDeviceMapping().withDeviceName(dev).withVirtualName(virt)
                   }).asJava)
 
