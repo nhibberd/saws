@@ -10,7 +10,8 @@ import java.io._
 import java.util.UUID
 import java.security.MessageDigest
 import scala.io.Source
-import com.ambiata.scrutiny.files.LocalFiles
+import com.ambiata.scrutiny.files._
+import com.ambiata.scrutiny.files.Dirs._
 import testing._
 
 class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with LocalFiles { def is = isolated ^ s2"""
@@ -33,7 +34,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
   val bucket = "ambiata-dist-test"
 
   // when using "isolated" above, this is a new value per example
-  lazy val basePath = mkRandomDir("CopyToS3Spec.")
+  lazy val basePath = mkRandomDir("CopyToS3Spec.", new File(System.getProperty("java.io.tmpdir")))
 
   def e1 = {
     val tmpFile = createFile("test", "testing")
@@ -45,7 +46,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
   }
 
   def e2 = {
-    val tmpDir = mkdir("e2")
+    val tmpDir = mkdir("e2", new File(System.getProperty("java.io.tmpdir")))
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
     val key = s3Key(tmpDir)
@@ -88,7 +89,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
   }
 
   def e6 = {
-    val tmpDir = mkdir("e6")
+    val tmpDir = mkdir("e6", new File(System.getProperty("java.io.tmpdir")))
     val tmpFile1 = createFile("test1", "testing1", tmpDir)
     val tmpFile2 = createFile("test2", "testing2", tmpDir)
     val key = s3Key(tmpDir)

@@ -36,7 +36,6 @@ object ContentType {
     case "psv"                  => text.psv
     case "gif "                 => image.gif
     case "jpeg"                 => image.jpeg
-    case "gif "                 => image.gif
     case "png "                 => image.png
     case "tiff"                 => image.tiff
     case "doc" | "docx"         => application.word
