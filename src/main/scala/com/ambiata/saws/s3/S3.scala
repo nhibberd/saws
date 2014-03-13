@@ -22,6 +22,9 @@ object S3 {
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
     withStream(bucket, key, is => Streams.bytes(is))
 
+  def getString(bucket: String, key: String): S3Action[String] =
+    withStream(bucket, key, is => Streams.read(is))
+
   def withStream[A](bucket: String, key: String, f: InputStream => A): S3Action[A] =
     getObject(bucket, key).map(o => f(o.getObjectContent))
 
@@ -49,6 +52,9 @@ object S3 {
       Streams.pipeToFile(stream, new File(file.getCanonicalPath))
       file
     })
+
+  def putString(bucket: String, key: String,  data: String, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    putStream(bucket, key, new ByteArrayInputStream(data.getBytes("UTF-8")), metadata)
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     S3Action(_.putObject(bucket, key, stream, metadata))
