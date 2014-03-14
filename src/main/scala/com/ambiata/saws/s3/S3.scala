@@ -54,7 +54,10 @@ object S3 {
     })
 
   def putString(bucket: String, key: String,  data: String, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    putStream(bucket, key, new ByteArrayInputStream(data.getBytes("UTF-8")), metadata)
+    putBytes(bucket, key, data.getBytes("UTF-8"), metadata)
+
+  def putBytes(bucket: String, key: String,  data: Array[Byte], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    putStream(bucket, key, new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     S3Action(_.putObject(bucket, key, stream, metadata))
