@@ -5,7 +5,7 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model._
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
-import com.ambiata.mundane.io.{Files, Streams}
+import com.ambiata.mundane.io.{Directories, Files, Streams}
 
 import java.io._
 
@@ -131,11 +131,24 @@ object S3 {
   def extractTarball(bucket: String, key: String, local: File, stripLevels: Int): S3Action[File] =
     withStream(bucket, key, is => Files.extractTarballStream(is, local, stripLevels)).flatMap(Aws.fromDisjunctionString)
 
-    def extractTarballFlat(bucket: String, key: String, local: File): S3Action[File] =
-      withStream(bucket, key, is => Files.extractTarballStreamFlat(is, local)).flatMap(Aws.fromDisjunctionString)
+  def extractTarballFlat(bucket: String, key: String, local: File): S3Action[File] =
+    withStream(bucket, key, is => Files.extractTarballStreamFlat(is, local)).flatMap(Aws.fromDisjunctionString)
 
   def extractGzip(bucket: String, key: String, local: File): S3Action[File] =
     withStream(bucket, key, is => Files.extractGzipStream(is, local)).flatMap(Aws.fromDisjunctionString)
+
+  def mirror(base: File, bucket: String, keybase: String): S3Action[Unit] = for {
+    local <- S3Action.io(_ => Directories.list(base))
+    _     <- local.traverse({ source =>
+      val destination = source.getAbsolutePath.replace(base.getAbsolutePath, "")
+      S3.putStream(bucket, s"${keybase}/${destination}", new FileInputStream(source))
+    })
+  } yield ()
+
+  def deleteAll(bucket: String, keybase: String): S3Action[Unit] = for {
+    all <- listSummary(bucket, keybase)
+    _   <- all.traverse(obj => deleteObject(bucket, obj.getKey))
+  } yield ()
 
   /** Object metadata that enables AES256 server-side encryption. */
   def ServerSideEncryption: ObjectMetadata = {

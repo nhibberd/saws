@@ -145,6 +145,9 @@ trait AwsSupport[R] {
   def ok[A](a: => A): Aws[R, A] =
     Aws.ok[R, A](a)
 
+  def io[A](f: R => IO[A]): Aws[R, A] =
+    Aws.io[R, A](f)
+
   def exception[A](t: Throwable): Aws[R, A] =
     Aws.exception[R, A](t)
 
