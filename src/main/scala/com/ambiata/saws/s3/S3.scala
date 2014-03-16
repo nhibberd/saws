@@ -141,7 +141,7 @@ object S3 {
     local <- S3Action.io(_ => Directories.list(base))
     _     <- local.traverse({ source =>
       val destination = source.getAbsolutePath.replace(base.getAbsolutePath, "")
-      S3.putStream(bucket, s"${keybase}/${destination}", new FileInputStream(source))
+      S3.putFile(bucket, s"${keybase}/${destination}", source)
     })
   } yield ()
 
