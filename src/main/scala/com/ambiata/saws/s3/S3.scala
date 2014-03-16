@@ -140,7 +140,7 @@ object S3 {
   def mirror(base: File, bucket: String, keybase: String): S3Action[Unit] = for {
     local <- S3Action.io(_ => Directories.list(base))
     _     <- local.traverse({ source =>
-      val destination = source.getAbsolutePath.replace(base.getAbsolutePath, "")
+      val destination = source.getAbsolutePath.replace(base.getAbsolutePath + "/", "")
       S3.putFile(bucket, s"${keybase}/${destination}", source)
     })
   } yield ()

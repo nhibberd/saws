@@ -9,11 +9,11 @@ libraryDependencies ++= Seq(
     "com.chuusai"         %  "shapeless_2.10.3"           % "2.0.0-M1")
 
 libraryDependencies ++= Seq(
-    "org.specs2"          %% "specs2-core"                % "2.3.10"        % "test",
-    "org.specs2"          %% "specs2-junit"               % "2.3.10"        % "test",
-    "org.specs2"          %% "specs2-scalacheck"          % "2.3.10"        % "test",
-    "com.decodified"      %% "scala-ssh"                  % "0.6.4"        % "test",
-    "com.ambiata"         %% "scrutiny"                   % "1.1-20140310011617-8b48e71"          % "test")
+    "org.specs2"          %% "specs2-core"                % "2.3.10"               % "test",
+    "org.specs2"          %% "specs2-junit"               % "2.3.10"               % "test",
+    "org.specs2"          %% "specs2-scalacheck"          % "2.3.10"               % "test",
+    "com.decodified"      %% "scala-ssh"                  % "0.6.4"                % "test",
+    "com.ambiata"         %% "scrutiny"                   % "1.1-20140316092635-8dfec97"  % "test")
 
 resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
