@@ -7,6 +7,7 @@ import org.specs2.execute.{Result => SpecsResult, Error => SpecsError, _}
 
 import scalaz.{Success => _, Failure => _, _}, Scalaz._
 import scalaz.effect.IO
+import org.specs2.execute.Result.ResultMonoid
 
 object AwsMatcher extends ThrownExpectations {
   /*  *** automatic value matchers *** */
