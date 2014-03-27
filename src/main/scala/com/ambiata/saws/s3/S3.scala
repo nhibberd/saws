@@ -5,7 +5,8 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model._
 import com.amazonaws.AmazonServiceException
 import com.ambiata.saws.core._
-import com.ambiata.mundane.io.{Directories, Files, Streams}
+import com.ambiata.mundane.io._
+import com.ambiata.mundane.control._
 
 import java.io._
 
@@ -20,38 +21,25 @@ object S3 {
     S3Action(_.getObject(bucket, key)).onResult(_.prependErrorMessage(s"Could not get S3://${bucket}/${key}"))
 
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
-    withStream(bucket, key, is => Streams.bytes(is))
+    withStream(bucket, key, is => Streams.readBytes(is))
 
   def getString(bucket: String, key: String): S3Action[String] =
     withStream(bucket, key, is => Streams.read(is))
 
-  def withStream[A](bucket: String, key: String, f: InputStream => A): S3Action[A] =
+  def withStreamUnsafe[A](bucket: String, key: String, f: InputStream => A): S3Action[A] =
     getObject(bucket, key).map(o => f(o.getObjectContent))
 
-  def storeObject(bucket: String, key: String, file: File, mkdirs: Boolean = false): S3Action[File] = for {
-    is <- withStream(bucket, key, identity)
-    s  <- Aws.fromDisjunctionString(
-      Files.writeInputStreamToFile(is, file, mkdirs)
-    )
-  } yield s
+  def withStream[A](bucket: String, key: String, f: InputStream => ResultT[IO, A]): S3Action[A] =
+    getObject(bucket, key).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
 
-  def readLines(bucket: String, key: String): S3Action[Seq[String]] =
-    withStream(bucket, key, x => {
-      val source = Source.fromInputStream(x)
-      try {
-        val lines = source.getLines.toSeq
-        lines.length
-        lines
-      } finally source.close()
-    })
+  def storeObject(bucket: String, key: String, file: File, mkdirs: Boolean = false): S3Action[File] =
+    withStream(bucket, key, Files.writeStream(file.getAbsolutePath.toFilePath, _)).as(file)
 
-  def downloadFile(bucket: String, key: String, to: String = "./"): S3Action[File] =
-    S3.withStream(bucket, key, stream => {
-      val file = new File(to+key)
-      file.getParentFile.mkdirs
-      Streams.pipeToFile(stream, new File(file.getCanonicalPath))
-      file
-    })
+  def readLines(bucket: String, key: String): S3Action[List[String]] =
+    withStream(bucket, key, Streams.read(_)).map(_.lines.toList)
+
+  def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] =
+    S3.withStream(bucket, key, Files.writeStream(to </> key, _)).as((to </> key).toFile)
 
   def putString(bucket: String, key: String,  data: String, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putBytes(bucket, key, data.getBytes("UTF-8"), metadata)
@@ -129,19 +117,19 @@ object S3 {
              .onResult(_.prependErrorMessage(s"Could not get md5 of S3://${bucket}/${key}"))
 
   def extractTarball(bucket: String, key: String, local: File, stripLevels: Int): S3Action[File] =
-    withStream(bucket, key, is => Files.extractTarballStream(is, local, stripLevels)).flatMap(Aws.fromDisjunctionString)
+    withStream(bucket, key, Archive.extractTarballStream(_, local.getAbsolutePath.toFilePath, stripLevels)).as(local)
 
   def extractTarballFlat(bucket: String, key: String, local: File): S3Action[File] =
-    withStream(bucket, key, is => Files.extractTarballStreamFlat(is, local)).flatMap(Aws.fromDisjunctionString)
+    withStream(bucket, key, Archive.extractTarballStreamFlat(_, local.getAbsolutePath.toFilePath)).as(local)
 
   def extractGzip(bucket: String, key: String, local: File): S3Action[File] =
-    withStream(bucket, key, is => Files.extractGzipStream(is, local)).flatMap(Aws.fromDisjunctionString)
+    withStream(bucket, key, is => Archive.extractGzipStream(is, local.getAbsolutePath.toFilePath)).as(local)
 
   def mirror(base: File, bucket: String, keybase: String): S3Action[Unit] = for {
-    local <- S3Action.io(_ => Directories.list(base))
+    local <- S3Action.fromResultT { Directories.list(base.getAbsolutePath.toFilePath) }
     _     <- local.traverse({ source =>
-      val destination = source.getAbsolutePath.replace(base.getAbsolutePath + "/", "")
-      S3.putFile(bucket, s"${keybase}/${destination}", source)
+      val destination = source.toFile.getAbsolutePath.replace(base.getAbsolutePath + "/", "")
+      S3.putFile(bucket, s"${keybase}/${destination}", source.toFile)
     })
   } yield ()
 

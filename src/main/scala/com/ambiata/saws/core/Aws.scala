@@ -87,6 +87,9 @@ object Aws {
   def io[R, A](f: R => IO[A]): Aws[R, A] =
     Aws(ActionT(r => ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](f(r).map(a => (Vector[AwsLog](), Result.ok(a)))))))
 
+  def resultT[R, A](f: R => ResultT[IO, A]): Aws[R, A] =
+    Aws(ActionT.resultT(f))
+
   def safe[R, A](a: => A): Aws[R, A] =
     Aws(ActionT.safe[IO, Vector[AwsLog], R, A](a))
 
@@ -114,6 +117,15 @@ object Aws {
   def fromDisjunctionThrowable[R, A](either: Throwable \/ A): Aws[R, A] =
     Aws(ActionT.fromDisjunctionThrowable(either))
 
+  def fromIO[R, A](v: IO[A]): Aws[R, A] =
+    io(_ => v)
+
+  def fromIOResult[R, A](v: IO[Result[A]]): Aws[R, A] =
+    fromResultT(ResultT(v))
+
+  def fromResultT[R, A](v: ResultT[IO, A]): Aws[R, A] =
+    resultT(_ => v)
+
   def log[R](l: AwsLog): Aws[R, Unit] =
     Aws(ActionT(r =>
       ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, Unit](
@@ -139,14 +151,20 @@ trait AwsSupport[R] {
   def option[A](f: R => A): Aws[R, Option[A]] =
     Aws.option(f)
 
+  def result[A](f: R => Result[A]): Aws[R, A] =
+    Aws.result[R, A](f)
+
+  def io[A](f: R => IO[A]): Aws[R, A] =
+    Aws.io[R, A](f)
+
+  def resultT[A](f: R => ResultT[IO, A]): Aws[R, A] =
+    Aws.resultT[R, A](f)
+
   def safe[A](a: => A): Aws[R, A] =
     Aws.safe[R, A](a)
 
   def ok[A](a: => A): Aws[R, A] =
     Aws.ok[R, A](a)
-
-  def io[A](f: R => IO[A]): Aws[R, A] =
-    Aws.io[R, A](f)
 
   def exception[A](t: Throwable): Aws[R, A] =
     Aws.exception[R, A](t)
@@ -159,6 +177,15 @@ trait AwsSupport[R] {
 
   def these[A](both: These[String, Throwable]): Aws[R, A] =
     Aws.these[R, A](both)
+
+  def fromIO[A](v: IO[A]): Aws[R, A] =
+    Aws.fromIO[R, A](v)
+
+  def fromIOResult[A](v: IO[Result[A]]): Aws[R, A] =
+    Aws.fromIOResult[R, A](v)
+
+  def fromResultT[A](v: ResultT[IO, A]): Aws[R, A] =
+    Aws.fromResultT[R, A](v)
 }
 
 object EC2Action extends AwsSupport[AmazonEC2Client]

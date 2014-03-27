@@ -68,7 +68,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     val key = s3Key(tmpFile)
     (for {
       _ <- S3.putFile(bucket, key, tmpFile)
-      f <- S3.withStream(bucket, key, is => Source.fromInputStream(is).getLines.toList)
+      f <- S3.withStreamUnsafe(bucket, key, is => Source.fromInputStream(is).getLines.toList)
     } yield f).eval.unsafePerformIO.toEither must beRight(===(List("testing")))
   }
 
@@ -138,7 +138,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     (for {
       _ <- S3.putFile(bucket, keyFrom, tmpFileFrom)
       _ <- S3.copyFile(bucket, keyFrom, bucket, keyTo)
-      f <- S3.withStream(bucket, keyTo, is => Source.fromInputStream(is).getLines.toList)
+      f <- S3.withStreamUnsafe(bucket, keyTo, is => Source.fromInputStream(is).getLines.toList)
     } yield f).eval.unsafePerformIO.toEither must beRight(===(List("testing8")))
   }
 

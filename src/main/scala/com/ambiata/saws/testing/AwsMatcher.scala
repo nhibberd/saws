@@ -4,6 +4,7 @@ import com.ambiata.mundane.control._
 import com.ambiata.saws.core._
 import org.specs2.matcher._
 import org.specs2.execute.{Result => SpecsResult, Error => SpecsError, _}
+import org.specs2.execute.Result.ResultMonoid
 
 import scalaz.{Success => _, Failure => _, _}, Scalaz._
 import scalaz.effect.IO
