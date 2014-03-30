@@ -19,6 +19,9 @@ case class Aws[R, +A](runT: ActionIO[Vector[AwsLog], R, A]) {
   def flatMap[B](f: A => Aws[R, B]): Aws[R, B] =
     Aws(runT.flatMap(a => f(a).runT))
 
+  def flatMapError[AA >: A](f: These[String, Throwable] => Aws[R, AA]): Aws[R, AA] =
+    Aws(runT.flatMapError[AA](t => f(t).runT))
+
   def onResult[B](f: Result[A] => Result[B]): Aws[R, B] =
     Aws(runT.onResult(f))
 
