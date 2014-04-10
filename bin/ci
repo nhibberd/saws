@@ -1,0 +1,3 @@
+#!/bin/sh
+
+./sbt -Dsbt.log.noformat=true "; clean; stats; test-only -- exclude integration -- console junitxml html; publish;  echo-version"

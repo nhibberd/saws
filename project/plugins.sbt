@@ -1,7 +1,7 @@
-resolvers += Resolver.url("artifactory-plugins", new URL("http://etd-packaging.research.nicta.com.au/artifactory/libs-release-local"))(Patterns("[organization]/[module]_[scalaVersion]_[sbtVersion]/[revision]/[artifact](-[classifier])-[revision].[ext]"))
+scalacOptions += "-deprecation"
 
-addSbtPlugin("com.ambiata" % "promulgate" % "0.9.0")
+resolvers += Resolver.url("ambiata-oss", new URL("https://ambiata-oss.s3.amazonaws.com"))(Resolver.ivyStylePatterns)
 
-addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.7.1")
+addSbtPlugin("com.ambiata" % "promulgate" % "0.11.0-20140410040932-7b5bc30")
 
 addSbtPlugin("com.orrsella" % "sbt-stats" % "1.0.5")
