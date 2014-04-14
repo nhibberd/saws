@@ -1,4 +1,4 @@
-libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140407054440-f9fca3a"
+libraryDependencies += "com.ambiata" %% "mundane" % "1.2.1-20140414023851-a7fcbf9"
 
 libraryDependencies ++= Seq(
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.3",
@@ -12,13 +12,12 @@ libraryDependencies ++= Seq(
     "org.specs2"          %% "specs2-core"                % "2.3.10"               % "test",
     "org.specs2"          %% "specs2-junit"               % "2.3.10"               % "test",
     "org.specs2"          %% "specs2-scalacheck"          % "2.3.10"               % "test",
-    "com.decodified"      %% "scala-ssh"                  % "0.6.4"                % "test",
-    "com.ambiata"         %% "scrutiny"                   % "1.1-20140316092635-8dfec97"  % "test")
+    "com.decodified"      %% "scala-ssh"                  % "0.6.4"                % "test")
 
 resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
     Resolver.typesafeRepo("releases"),
     "cloudera"              at "https://repository.cloudera.com/content/repositories/releases",
     "spray"                 at "http://repo.spray.io",
-    "artifactory"           at "http://etd-packaging.research.nicta.com.au/artifactory/libs-release-local",
+    Resolver.url("ambiata-oss", new URL("https://ambiata-oss.s3.amazonaws.com"))(Resolver.ivyStylePatterns),
     "Scalaz Bintray Repo"   at "http://dl.bintray.com/scalaz/releases")

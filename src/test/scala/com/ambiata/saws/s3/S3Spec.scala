@@ -4,8 +4,7 @@ package s3
 import com.amazonaws.services.s3.AmazonS3Client
 import com.ambiata.mundane.testing.ResultMatcher._
 import com.ambiata.saws.testing._
-import com.ambiata.scrutiny.files._
-import com.ambiata.scrutiny.files.Dirs._
+import com.ambiata.mundane.testing._, Dirs._
 
 import java.io._
 import java.util.UUID
