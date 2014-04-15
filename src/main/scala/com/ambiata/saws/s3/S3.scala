@@ -23,8 +23,8 @@ object S3 {
   def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
     withStream(bucket, key, is => Streams.readBytes(is))
 
-  def getString(bucket: String, key: String): S3Action[String] =
-    withStream(bucket, key, is => Streams.read(is))
+  def getString(bucket: String, key: String, encoding: String = "UTF-8"): S3Action[String] =
+    withStream(bucket, key, is => Streams.read(is, encoding))
 
   def withStreamUnsafe[A](bucket: String, key: String, f: InputStream => A): S3Action[A] =
     getObject(bucket, key).map(o => f(o.getObjectContent))
@@ -41,8 +41,8 @@ object S3 {
   def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] =
     S3.withStream(bucket, key, Files.writeStream(to </> key, _)).as((to </> key).toFile)
 
-  def putString(bucket: String, key: String,  data: String, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    putBytes(bucket, key, data.getBytes("UTF-8"), metadata)
+  def putString(bucket: String, key: String,  data: String, encoding: String = "UTF-8", metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    putBytes(bucket, key, data.getBytes(encoding), metadata)
 
   def putBytes(bucket: String, key: String,  data: Array[Byte], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putStream(bucket, key, new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
