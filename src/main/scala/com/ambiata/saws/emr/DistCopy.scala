@@ -19,7 +19,7 @@ object DistCopy {
   def step(args: List[String]): Step = Step(
     "weiv-distcp",
     ActionOnFailure.CONTINUE,
-    "s3://elasticmapreduce/libs/s3distcp/role/s3distcp.jar",
+    "/home/hadoop/lib/emr-s3distcp-1.0.jar",
     "",
     args,
     Map.empty
