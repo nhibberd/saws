@@ -19,7 +19,7 @@ object DistCopy {
   def step(args: List[String]): Step = Step(
     "weiv-distcp",
     ActionOnFailure.CONTINUE,
-    "/home/hadoop/lib/emr-s3distcp-1.0.jar",
+    "s3://ambiata-dist/hadoop/lib/emr-s3distcp-1.0.jar",
     "",
     args,
     Map.empty
