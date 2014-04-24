@@ -1,4 +1,4 @@
-package com.ambiata.saws.s3
+ package com.ambiata.saws.s3
 
 import scala.io.Codec
 import scalaz.{Store => _, _}, Scalaz._, \&/._, effect.IO
@@ -12,6 +12,7 @@ import com.ambiata.mundane.testing._, ResultTIOMatcher._
 import java.io.{File, FileOutputStream, ByteArrayInputStream}
 import java.util.UUID
 
+// FIX Workout how this test can be pulled out and shared with posix/s3/hdfs.
 class S3StoreSpec extends Specification with ScalaCheck { def is = args.execute(threadsNb = 10) ^ s2"""
   S3 Store Usage
   ==============
