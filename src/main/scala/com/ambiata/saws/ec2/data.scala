@@ -68,10 +68,15 @@ object EC2InstanceSize {
     , C38XLarge
     , C1Medium
     , C1XLarge
+    , R3Large
+    , R3XLarge
+    , R32XLarge
+    , R34XLarge
+    , R38XLarge
     , M2XLarge
     , M22XLarge
     , M24XLarge
-    ).map(x => (x.size -> x)).toMap
+    ).map(x => x.size -> x).toMap
   }
 
   def apply(size: String): Option[EC2InstanceSize] =
@@ -105,6 +110,13 @@ case object C1Medium extends EC2InstanceSize("c1.medium", EC2Devices1)
 case object C1XLarge extends EC2InstanceSize("c1.xlarge", EC2Devices4)
 
 // Memory Optimised - Current Generation
+case object R3Large extends EC2InstanceSize("r3.large", EC2Devices1)
+case object R3XLarge extends EC2InstanceSize("r3.xlarge", EC2Devices1)
+case object R32XLarge extends EC2InstanceSize("r3.2xlarge", EC2Devices1)
+case object R34XLarge extends EC2InstanceSize("r3.4xlarge", EC2Devices1)
+case object R38XLarge extends EC2InstanceSize("r3.8xlarge", EC2Devices2)
+
+// Memory Optimised - Previous Generation
 case object M2XLarge extends EC2InstanceSize("m2.xlarge", EC2Devices2)
 case object M22XLarge extends EC2InstanceSize("m2.2xlarge", EC2Devices2)
 case object M24XLarge extends EC2InstanceSize("m2.4xlarge", EC2Devices2)
