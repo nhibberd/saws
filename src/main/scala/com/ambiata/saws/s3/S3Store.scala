@@ -232,9 +232,16 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 }
 
 object S3Store {
+  def createReadOnly(path: FilePath): S3Action[S3ReadOnlyStore] =
+    createReadOnly(path.rootname.path, path.fromRoot)
+
   def createReadOnly(bucket: String, base: FilePath): S3Action[S3ReadOnlyStore] =
     S3Action.client.map(c => S3ReadOnlyStore(bucket, base, c))
 
+  def create(path: FilePath, cache: FilePath): S3Action[S3Store] =
+    create(path.rootname.path, path.fromRoot, cache)
+
   def create(bucket: String, base: FilePath, cache: FilePath): S3Action[S3Store] =
     S3Action.client.map(c => S3Store(bucket, base, c, cache))
+
 }
