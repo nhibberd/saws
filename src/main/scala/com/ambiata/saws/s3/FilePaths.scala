@@ -19,6 +19,6 @@ object FilePaths {
   }
 
   def filePath(bucket: String, key: String): FilePath =
-    FilePath(s"s3://$bucket/$key")
+    FilePath(s"$bucket/$key")
 
 }
