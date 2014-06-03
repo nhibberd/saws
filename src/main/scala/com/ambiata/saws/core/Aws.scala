@@ -147,6 +147,9 @@ object Aws {
 }
 
 trait AwsSupport[R] {
+  def client: Aws[R, R] =
+    apply(identity)
+
   def apply[A](f: R => A): Aws[R, A] =
     Aws.withClient[R, A](f)
 

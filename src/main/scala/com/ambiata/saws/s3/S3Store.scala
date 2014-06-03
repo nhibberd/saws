@@ -13,16 +13,7 @@ import scala.io.Codec
 import scalaz.{Store => _, _}, Scalaz._, scalaz.stream._, scalaz.concurrent._, effect.IO, effect.Effect._, \&/._
 import scodec.bits.ByteVector
 
-case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache: FilePath) extends Store[ResultTIO] with ReadOnlyStore[ResultTIO] {
-  def local =
-    PosixStore(cache)
-
-  def readOnly: ReadOnlyStore[ResultTIO] =
-    this
-
-  def normalize(key: String): String =
-    key.replace(base.path + "/", "")
-
+case class S3ReadOnlyStore(bucket: String, base: FilePath, client: AmazonS3Client) extends ReadOnlyStore[ResultTIO] {
   def list(prefix: FilePath): ResultT[IO, List[FilePath]] =
     S3.listKeys(bucket, (base </> prefix).path).executeT(client).map(_.map(normalize).sorted).map(_.map(_.toFilePath))
 
@@ -35,28 +26,11 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
   def exists(path: FilePath): ResultT[IO, Boolean] =
     S3.exists(bucket, (base </> path).path).executeT(client)
 
-  def delete(path: FilePath): ResultT[IO, Unit] =
-    S3.deleteObject(bucket, (base </> path).path).executeT(client)
+  def checksum(path: FilePath, algorithm: ChecksumAlgorithm): ResultT[IO, Checksum] =
+    S3.withStream(bucket, (base </> path).path, in => Checksum.stream(in, algorithm)).executeT(client)
 
-  def deleteAll(prefix: FilePath): ResultT[IO, Unit] =
-    list(prefix).flatMap(_.traverseU(delete)).void
-
-  def move(in: FilePath, out: FilePath): ResultT[IO, Unit] =
-    copy(in, out) >> delete(in)
-
-  def copy(in: FilePath, out: FilePath): ResultT[IO, Unit] =
-    S3.copyFile(bucket, (base </> in).path, bucket, (base </> out).path).executeT(client).void
-
-  def mirror(in: FilePath, out: FilePath): ResultT[IO, Unit] = for {
-    paths <- list(in)
-    _     <- paths.traverseU({ source =>
-      val destination = out </> source.path.replace(in.path + "/", "")
-      copy(source, destination)
-    })
-  } yield ()
-
-  def moveTo(store: Store[ResultTIO], src: FilePath, dest: FilePath): ResultT[IO, Unit] =
-    copyTo(store, src, dest) >> delete(src)
+  def normalize(key: String): String =
+    key.replace(base.path + "/", "")
 
   def copyTo(store: Store[ResultTIO], src: FilePath, dest: FilePath): ResultT[IO, Unit] =
     unsafe.withInputStream(src) { in =>
@@ -71,18 +45,115 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
     })
   } yield ()
 
-  def checksum(path: FilePath, algorithm: ChecksumAlgorithm): ResultT[IO, Checksum] =
-    S3.withStream(bucket, (base </> path).path, in => Checksum.stream(in, algorithm)).executeT(client)
-
-  val bytes: StoreBytes[ResultTIO] = new StoreBytes[ResultTIO] {
+  val bytes: StoreBytesRead[ResultTIO] = new StoreBytesRead[ResultTIO] {
     def read(path: FilePath): ResultT[IO, ByteVector] =
       s3 { S3.getBytes(bucket, (base </> path).path).map(ByteVector.apply) }
 
-    def write(path: FilePath, data: ByteVector): ResultT[IO, Unit] =
-      s3 { S3.putBytes(bucket, (base </> path).path, data.toArray).void }
-
     def source(path: FilePath): Process[Task, ByteVector] =
       scalaz.stream.io.chunkR(client.getObject(bucket, (base </> path).path).getObjectContent).evalMap(_(1024 * 1024))
+  }
+
+  val strings: StoreStringsRead[ResultTIO] = new StoreStringsRead[ResultTIO] {
+    def read(path: FilePath, codec: Codec): ResultT[IO, String] =
+      s3 { S3.getString(bucket, (base </> path).path, codec.name) }
+  }
+
+  val utf8: StoreUtf8Read[ResultTIO] = new StoreUtf8Read[ResultTIO] {
+    def read(path: FilePath): ResultT[IO, String] =
+      strings.read(path, Codec.UTF8)
+
+    def source(path: FilePath): Process[Task, String] =
+      bytes.source(path) |> scalaz.stream.text.utf8Decode
+  }
+
+  val lines: StoreLinesRead[ResultTIO] = new StoreLinesRead[ResultTIO] {
+    def read(path: FilePath, codec: Codec): ResultT[IO, List[String]] =
+      strings.read(path, codec).map(_.lines.toList)
+
+    def source(path: FilePath, codec: Codec): Process[Task, String] =
+      scalaz.stream.io.linesR(client.getObject(bucket, (base </> path).path).getObjectContent)(codec)
+  }
+
+  val linesUtf8: StoreLinesUtf8Read[ResultTIO] = new StoreLinesUtf8Read[ResultTIO] {
+    def read(path: FilePath): ResultT[IO, List[String]] =
+      lines.read(path, Codec.UTF8)
+
+    def source(path: FilePath): Process[Task, String] =
+      lines.source(path, Codec.UTF8)
+  }
+
+  val unsafe: StoreUnsafeRead[ResultTIO] = new StoreUnsafeRead[ResultTIO] {
+    def withInputStream(path: FilePath)(f: InputStream => ResultT[IO, Unit]): ResultT[IO, Unit] =
+      ResultT.using(S3.getObject(bucket, (base </> path).path).executeT(client).map(_.getObjectContent: InputStream))(f)
+  }
+
+  def s3[A](thunk: => S3Action[A]): ResultT[IO, A] =
+    thunk.executeT(client)
+}
+
+case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache: FilePath) extends Store[ResultTIO] with ReadOnlyStore[ResultTIO] {
+  def local =
+    PosixStore(cache)
+
+  val readOnly: ReadOnlyStore[ResultTIO] =
+    S3ReadOnlyStore(bucket, base, client)
+
+  def list(prefix: FilePath): ResultT[IO, List[FilePath]] =
+    readOnly.list(prefix)
+
+  def filter(prefix: FilePath, predicate: FilePath => Boolean): ResultT[IO, List[FilePath]] =
+    readOnly.filter(prefix, predicate)
+
+  def find(prefix: FilePath, predicate: FilePath => Boolean): ResultT[IO, Option[FilePath]] =
+    readOnly.find(prefix, predicate)
+
+  def exists(path: FilePath): ResultT[IO, Boolean] =
+    readOnly.exists(path)
+
+  def normalize(key: String): String =
+    key.replace(base.path + "/", "")
+
+  def checksum(path: FilePath, algorithm: ChecksumAlgorithm): ResultT[IO, Checksum] =
+    readOnly.checksum(path, algorithm)
+
+  def delete(path: FilePath): ResultT[IO, Unit] =
+    S3.deleteObject(bucket, (base </> path).path).executeT(client)
+
+  def deleteAll(prefix: FilePath): ResultT[IO, Unit] =
+    list(prefix).flatMap(_.traverseU(delete)).void
+
+  def move(in: FilePath, out: FilePath): ResultT[IO, Unit] =
+    copy(in, out) >> delete(in)
+
+  def moveTo(store: Store[ResultTIO], src: FilePath, dest: FilePath): ResultT[IO, Unit] =
+    copyTo(store, src, dest) >> delete(src)
+
+  def copy(in: FilePath, out: FilePath): ResultT[IO, Unit] =
+    S3.copyFile(bucket, (base </> in).path, bucket, (base </> out).path).executeT(client).void
+
+  def mirror(in: FilePath, out: FilePath): ResultT[IO, Unit] = for {
+    paths <- list(in)
+    _     <- paths.traverseU({ source =>
+      val destination = out </> source.path.replace(in.path + "/", "")
+      copy(source, destination)
+    })
+  } yield ()
+
+  def copyTo(store: Store[ResultTIO], src: FilePath, dest: FilePath): ResultT[IO, Unit] =
+    readOnly.copyTo(store, src, dest)
+
+  def mirrorTo(store: Store[ResultTIO], in: FilePath, out: FilePath): ResultT[IO, Unit] =
+    readOnly.mirrorTo(store, in, out)
+
+  val bytes: StoreBytes[ResultTIO] = new StoreBytes[ResultTIO] {
+    def read(path: FilePath): ResultT[IO, ByteVector] =
+      readOnly.bytes.read(path)
+
+    def source(path: FilePath): Process[Task, ByteVector] =
+      readOnly.bytes.source(path)
+
+    def write(path: FilePath, data: ByteVector): ResultT[IO, Unit] =
+      s3 { S3.putBytes(bucket, (base </> path).path, data.toArray).void }
 
     def sink(path: FilePath): Sink[Task, ByteVector] =
       io.resource(Task.delay(new PipedOutputStream))(out => Task.delay(out.close))(
@@ -92,7 +163,7 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
   val strings: StoreStrings[ResultTIO] = new StoreStrings[ResultTIO] {
     def read(path: FilePath, codec: Codec): ResultT[IO, String] =
-      s3 { S3.getString(bucket, (base </> path).path, codec.name) }
+      readOnly.strings.read(path, codec)
 
     def write(path: FilePath, data: String, codec: Codec): ResultT[IO, Unit] =
       s3 { S3.putString(bucket, (base </> path).path, data, codec.name).void }
@@ -100,13 +171,14 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
   val utf8: StoreUtf8[ResultTIO] = new StoreUtf8[ResultTIO] {
     def read(path: FilePath): ResultT[IO, String] =
-      strings.read(path, Codec.UTF8)
-
-    def write(path: FilePath, data: String): ResultT[IO, Unit] =
-      strings.write(path, data, Codec.UTF8)
+      readOnly.utf8.read(path)
 
     def source(path: FilePath): Process[Task, String] =
-      bytes.source(path) |> scalaz.stream.text.utf8Decode
+      readOnly.utf8.source(path)
+
+    def write(path: FilePath, data: String): ResultT[IO, Unit] =
+    strings.write(path, data, Codec.UTF8)
+
 
     def sink(path: FilePath): Sink[Task, String] =
       bytes.sink(path).map(_.contramap(s => ByteVector.view(s.getBytes("UTF-8"))))
@@ -114,13 +186,13 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
   val lines: StoreLines[ResultTIO] = new StoreLines[ResultTIO] {
     def read(path: FilePath, codec: Codec): ResultT[IO, List[String]] =
-      strings.read(path, codec).map(_.lines.toList)
-
-    def write(path: FilePath, data: List[String], codec: Codec): ResultT[IO, Unit] =
-      strings.write(path, Lists.prepareForFile(data), codec)
+      readOnly.lines.read(path, codec)
 
     def source(path: FilePath, codec: Codec): Process[Task, String] =
-      scalaz.stream.io.linesR(client.getObject(bucket, (base </> path).path).getObjectContent)(codec)
+      readOnly.lines.source(path, codec)
+
+    def write(path: FilePath, data: List[String], codec: Codec): ResultT[IO, Unit] =
+    strings.write(path, Lists.prepareForFile(data), codec)
 
     def sink(path: FilePath, codec: Codec): Sink[Task, String] =
       bytes.sink(path).map(_.contramap(s => ByteVector.view(s"$s\n".getBytes(codec.name))))
@@ -128,13 +200,13 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
   val linesUtf8: StoreLinesUtf8[ResultTIO] = new StoreLinesUtf8[ResultTIO] {
     def read(path: FilePath): ResultT[IO, List[String]] =
-      lines.read(path, Codec.UTF8)
+      readOnly.linesUtf8.read(path)
+
+    def source(path: FilePath): Process[Task, String] =
+      readOnly.linesUtf8.source(path)
 
     def write(path: FilePath, data: List[String]): ResultT[IO, Unit] =
       lines.write(path, data, Codec.UTF8)
-
-    def source(path: FilePath): Process[Task, String] =
-      lines.source(path, Codec.UTF8)
 
     def sink(path: FilePath): Sink[Task, String] =
       lines.sink(path, Codec.UTF8)
@@ -142,7 +214,7 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
   val unsafe: StoreUnsafe[ResultTIO] = new StoreUnsafe[ResultTIO] {
     def withInputStream(path: FilePath)(f: InputStream => ResultT[IO, Unit]): ResultT[IO, Unit] =
-      ResultT.using(S3.getObject(bucket, (base </> path).path).executeT(client).map(_.getObjectContent: InputStream))(f)
+      readOnly.unsafe.withInputStream(path)(f)
 
     def withOutputStream(path: FilePath)(f: OutputStream => ResultT[IO, Unit]): ResultT[IO, Unit] = {
       val unique = UUID.randomUUID.toString.toFilePath
@@ -157,4 +229,12 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
   def s3[A](thunk: => S3Action[A]): ResultT[IO, A] =
     thunk.executeT(client)
+}
+
+object S3Store {
+  def createReadOnly(bucket: String, base: FilePath): S3Action[S3ReadOnlyStore] =
+    S3Action.client.map(c => S3ReadOnlyStore(bucket, base, c))
+
+  def create(bucket: String, base: FilePath, cache: FilePath): S3Action[S3Store] =
+    S3Action.client.map(c => S3Store(bucket, base, c, cache))
 }
