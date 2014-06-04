@@ -2,31 +2,25 @@ package com.ambiata.saws.s3
 
 import com.ambiata.mundane.io.FilePath
 
-/**
- * Conversion methods between bucket/key and FilePath
- */
-object FilePaths {
+object S3Path {
+  def unapply(path: String): Option[FilePath] =
+    if (path.startsWith("s3://")) Some(FilePath(path.replace("s3://", "")))
+    else None
 
+  /**
+   * Conversion methods between bucket/key and FilePath
+   */
   def bucket(path: FilePath) =
     bucketAndKey(path)._1
 
   def key(path: FilePath) =
     bucketAndKey(path)._2
 
-  def bucketAndKey(path: FilePath): (String, String) = {
-    val withoutS3 = new FilePath(path.path.replace("s3://", ""))
-    (withoutS3.rootname.path, withoutS3.fromRoot.path)
-  }
+  def bucketAndKey(path: FilePath): (String, String) =
+    (path.rootname.path, path.fromRoot.path)
 
   def filePath(bucket: String, key: String): FilePath =
     FilePath(s"$bucket/$key")
-
-}
-
-object S3Path {
-  def unapply(path: String): Option[FilePath] =
-    if (path.startsWith("s3://")) Some(FilePath(path.replace("s3://", "")))
-    else None
 }
 
 object HdfsPath {

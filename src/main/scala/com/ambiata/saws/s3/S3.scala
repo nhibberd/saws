@@ -15,7 +15,7 @@ import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 import scalaz.effect._
 import scala.annotation.tailrec
-import FilePaths._
+import S3Path._
 
 object S3 {
   def getObject(path: FilePath): S3Action[S3Object] =
