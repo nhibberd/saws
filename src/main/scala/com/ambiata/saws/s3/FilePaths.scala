@@ -22,3 +22,21 @@ object FilePaths {
     FilePath(s"$bucket/$key")
 
 }
+
+object S3Path {
+  def unapply(path: String): Option[FilePath] =
+    if (path.startsWith("s3://")) Some(FilePath(path.replace("s3://", "")))
+    else None
+}
+
+object HdfsPath {
+  def unapply(path: String): Option[FilePath] =
+    if (path.startsWith("hdfs://")) Some(FilePath(path.replace("hdfs://", "")))
+    else None
+}
+
+object LocalPath {
+  def unapply(path: String): Option[FilePath] =
+    if (path.startsWith("file://")) Some(FilePath(path.replace("file://", "")))
+    else                            Some(FilePath(path))
+}
