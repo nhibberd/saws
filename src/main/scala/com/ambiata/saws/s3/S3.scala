@@ -16,8 +16,10 @@ import scalaz._, Scalaz._
 import scalaz.effect._
 import scala.annotation.tailrec
 import S3Path._
+import scala.collection.JavaConversions._
 
 object S3 {
+
   def getObject(path: FilePath): S3Action[S3Object] =
     getObject(bucket(path), key(path))
 
@@ -166,6 +168,12 @@ object S3 {
 
   def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
     listSummary(bucket, prefix).map(_.map(_.getKey))
+
+  def listBuckets: S3Action[List[Bucket]] =
+    S3Action(_.listBuckets.toList).onResult(_.prependErrorMessage(s"Could access the buckets list"))
+
+  def isS3Accessible: S3Action[Unit] =
+    listBuckets.map(_ => ()).orElse(S3Action.fail("S3 is not accessible"))
 
   /** use this method to make sure that a prefix ends with a slash */
   def directory(prefix: String) = prefix + (if (prefix.endsWith("/")) "" else "/")
