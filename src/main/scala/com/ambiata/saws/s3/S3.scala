@@ -10,6 +10,8 @@ import com.ambiata.mundane.control._
 
 import java.io._
 
+import scodec.bits.ByteVector
+
 import scala.io.Source
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
@@ -17,6 +19,10 @@ import scalaz.effect._
 import scala.annotation.tailrec
 import S3Path._
 import scala.collection.JavaConversions._
+import scalaz.stream._
+import scalaz.concurrent.Task
+import Task._
+import ResultT._
 
 object S3 {
 
@@ -24,7 +30,7 @@ object S3 {
     getObject(bucket(path), key(path))
 
   def getObject(bucket: String, key: String): S3Action[S3Object] =
-    S3Action(_.getObject(bucket, key)).onResult(_.prependErrorMessage(s"Could not get S3://${bucket}/${key}"))
+    S3Action(_.getObject(bucket, key)).onResult(_.prependErrorMessage(s"Could not get S3://$bucket/$key"))
 
   def getBytes(path: FilePath): S3Action[Array[Byte]] =
     getBytes(bucket(path), key(path))
@@ -52,6 +58,17 @@ object S3 {
 
   def withStream[A](bucket: String, key: String, f: InputStream => ResultT[IO, A]): S3Action[A] =
     getObject(bucket, key).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
+
+  def withStreamMultipart(bucket: String, key: String, maxPartSizeInBytes: Long, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] = for {
+    client   <- S3Action.client
+    requests <- createRequests(bucket, key, maxPartSizeInBytes)
+    task = Process.emitAll(requests)
+      .map(request => Task.delay(client.getObject(request)))
+      .sequence(Runtime.getRuntime.availableProcessors)
+      .to(objectContentSink(f)).run
+    result <- S3Action.fromTask(task)
+  } yield result
+
 
   def storeObject(path: FilePath, file: File): S3Action[File] =
     storeObject(bucket(path), key(path), file)
@@ -103,7 +120,7 @@ object S3 {
 
   def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     S3Action(_.putObject(bucket, key, stream, metadata))
-             .onResult(_.prependErrorMessage(s"Could not put stream to S3://${bucket}/${key}"))
+             .onResult(_.prependErrorMessage(s"Could not put stream to S3://$bucket/$key"))
 
   def putFile(path: FilePath, file: File): S3Action[PutObjectResult] =
     putFile(bucket(path), key(path), file)
@@ -113,7 +130,7 @@ object S3 {
 
   def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     S3Action(_.putObject(new PutObjectRequest(bucket, key, file).withMetadata(metadata)))
-             .onResult(_.prependErrorMessage(s"Could not put file to S3://${bucket}/${key}"))
+             .onResult(_.prependErrorMessage(s"Could not put file to S3://$bucket/$key"))
 
   /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
   def putFiles(path: FilePath, file: File): S3Action[List[PutObjectResult]] =
@@ -255,4 +272,23 @@ object S3 {
     m.setServerSideEncryption(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
     m
   }
+
+  /** create a list of multipart requests */
+  def createRequests(bucket: String, key: String, maxPartSizeInBytes: Long): S3Action[Seq[GetObjectRequest]] = for {
+    client <- S3Action.client
+    metadata = client.getObjectMetadata(bucket, key)
+    parts = partition(metadata.getContentLength, maxPartSizeInBytes)
+  } yield parts.map { case (start, end) => new GetObjectRequest(bucket, key).withRange(start, end) }
+
+  /** partition a number of bytes, going from 0 to totalSize - 1 into parts of size partSize. The last part might be smaller */
+  def partition(totalSize: Long, partSize: Long): Seq[(Long, Long)] = {
+    val numberOfParts = totalSize / partSize
+    val lastPartSize = totalSize % partSize
+    (0 until numberOfParts.toInt).map(part => (part * partSize, (part+1) * partSize - 1)) ++
+    (if (lastPartSize == 0) Seq() else Seq((totalSize - lastPartSize, totalSize - 1)))
+  }
+
+  def objectContentSink(f: InputStream => ResultT[IO, Unit]): Sink[Task, S3Object] =
+    io.channel((s3Object: S3Object) => toTask(f(s3Object.getObjectContent)))
+
 }

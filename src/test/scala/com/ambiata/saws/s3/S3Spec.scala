@@ -2,7 +2,11 @@ package com.ambiata.saws
 package s3
 
 import com.amazonaws.services.s3.AmazonS3Client
+import com.ambiata.mundane.control.ResultT
+import com.ambiata.mundane.io.{FilePath, Files, Streams}
 import com.ambiata.mundane.testing.ResultMatcher._
+import com.ambiata.mundane.testing.ResultTIOMatcher
+import com.ambiata.saws.core.S3Action
 import com.ambiata.saws.testing._
 import com.ambiata.mundane.testing._, Dirs._
 
@@ -14,6 +18,8 @@ import org.specs2._, specification._, matcher._
 
 import scala.io.Source
 import scalaz._, Scalaz._
+import scalaz.effect.IO
+import ResultT._
 
 
 class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with LocalFiles { def is = isolated ^ s2"""
@@ -33,6 +39,11 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
    copy an object in s3                $e9
    mirror a local directory to a path  $e10
    delete all files from a base path   $e11
+   download a file from S3 in parts    $e12
+
+ Support functions
+ =========================================
+ A range of longs from 0 to size can be partitioned in n ranges of size m (the last range might be shorter) $f1
 
  """
 
@@ -160,6 +171,38 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     action.eval.unsafePerformIO must beOkValue(Nil)
   }
 
+  def e12 = {
+    val tmpFile = createFile("test12", "testing"*120)
+    val key = s3Key(tmpFile)
+    val result = createFile("test12-result", "")
+    val out = new FileOutputStream(result)
+
+    val action: S3Action[Unit] =
+      S3.putFile(bucket, key, tmpFile) >>
+      S3.withStreamMultipart(bucket, key, 50, (in: InputStream) => Streams.pipe(in, out))
+
+    try action.evalT must ResultTIOMatcher.beOk
+    finally out.close
+
+    result.exists must beTrue
+
+    val bothLines =
+      for {
+        lines1 <- Files.readLines(FilePath(tmpFile.toString))
+        lines2 <- Files.readLines(FilePath(result.toString))
+      } yield (lines1, lines2)
+
+    bothLines must ResultTIOMatcher.beOkLike { case (lines1, lines2) => (lines1 must_== lines2).toResult }
+  }
+
+
+
+  def f1 = {
+    S3.partition(10, 5) must_== Seq((0, 4), (5, 9))
+    S3.partition(10, 4) must_== Seq((0, 3), (4, 7), (8, 9))
+  }
+
+
   def md5Hex(bytes: Array[Byte]): String =
     MessageDigest.getInstance("MD5").digest(bytes).map("%02X".format(_)).mkString.toLowerCase
 
@@ -168,6 +211,6 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
 
   def after {
     S3.deleteObjects(bucket, (_:String).startsWith(basePath.getName)).eval.unsafePerformIO
-    rmdir(basePath)
+    //rmdir(basePath)
   }
 }

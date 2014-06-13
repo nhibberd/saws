@@ -6,6 +6,7 @@ import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
 import scalaz._, Scalaz._, \&/._
+import scalaz.concurrent.Task
 import scalaz.effect._
 import com.ambiata.mundane.control._
 
@@ -191,6 +192,9 @@ trait AwsSupport[R] {
 
   def fromResultT[A](v: ResultT[IO, A]): Aws[R, A] =
     Aws.fromResultT[R, A](v)
+
+  def fromTask[A](task: Task[A]): Aws[R, A] =
+    task.attemptRun.fold(exception, a => ok(a))
 }
 
 object EC2Action extends AwsSupport[AmazonEC2Client]
