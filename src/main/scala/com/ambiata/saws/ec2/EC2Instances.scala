@@ -76,7 +76,7 @@ object EC2Instances {
 
   def completeOrFault(reqIds: List[String]): EC2Action[Boolean] =
     spots(reqIds).map(reqs =>
-      reqs.forall(x => x.getInstanceId != null || x.getFault != null))
+      reqs.forall(x => x.getInstanceId != null || x.getFault != null)).orElse(false)
 
   def spots(reqIds: List[String]): EC2Action[List[SpotInstanceRequest]] =
     EC2Action(client =>
