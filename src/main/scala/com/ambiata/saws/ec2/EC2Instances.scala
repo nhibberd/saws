@@ -20,7 +20,6 @@ object EC2Instances {
       case None => start(image, group, subnet, count, keypair)
       case Some(b) => spot(image, group, subnet, count, keypair, b)
     }
-    _  =        println("ids: " + ids)
     _           <- EC2Tags.tags(ids, image.tags ++ List(
                      "Name" -> s"${env}.${image.flavour}.${EC2Tags.stamp}"
                    ))
@@ -47,8 +46,8 @@ object EC2Instances {
         r
       }).getReservation.getInstances.asScala.toList.map(_.getInstanceId))
 
-  def spot(image: EC2Image, group: AwsSecurityGroup, subnet: Option[Subnet], count: Int, keypair: Option[String], bid: String): EC2Action[List[String]] =
-    EC2Action(client =>
+  def spot(image: EC2Image, group: AwsSecurityGroup, subnet: Option[Subnet], count: Int, keypair: Option[String], bid: String): EC2Action[List[String]] = for {
+    reqIds <- EC2Action(client =>
       client.requestSpotInstances(
         new RequestSpotInstancesRequest(bid)
           .withInstanceCount(count)
@@ -66,8 +65,25 @@ object EC2Instances {
             image.configure.foreach(script => spec.setUserData(EC2UserData.script(script)))
             spec
           })
-      ).getSpotInstanceRequests.asScala.toList.map(_.getInstanceId))
+      ).getSpotInstanceRequests.asScala.toList.map(_.getSpotInstanceRequestId))
+    _ <- waitForInstancesOrFault(reqIds)
+    reqs <- spots(reqIds)
+  } yield reqs.map(r => Option(r.getInstanceId)).flatten
 
+  def waitForInstancesOrFault(reqIds: List[String]): EC2Action[Unit] =
+    Wait.waitFor(completeOrFault(reqIds),
+      Some(s"""Waiting for spot requests ${reqIds.mkString("")}"""))
+
+  def completeOrFault(reqIds: List[String]): EC2Action[Boolean] =
+    spots(reqIds).map(reqs =>
+      reqs.forall(x => x.getInstanceId != null || x.getFault != null))
+
+  def spots(reqIds: List[String]): EC2Action[List[SpotInstanceRequest]] =
+    EC2Action(client =>
+      client.describeSpotInstanceRequests(
+        new DescribeSpotInstanceRequestsRequest()
+          .withSpotInstanceRequestIds(reqIds.asJava))
+        .getSpotInstanceRequests.asScala.toList)
 
   def list: EC2Action[List[Instance]] =
     EC2Action(client =>
