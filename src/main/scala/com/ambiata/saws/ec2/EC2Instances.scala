@@ -20,6 +20,7 @@ object EC2Instances {
       case None => start(image, group, subnet, count, keypair)
       case Some(b) => spot(image, group, subnet, count, keypair, b)
     }
+    _  =        println("ids: " + ids)
     _           <- EC2Tags.tags(ids, image.tags ++ List(
                      "Name" -> s"${env}.${image.flavour}.${EC2Tags.stamp}"
                    ))
