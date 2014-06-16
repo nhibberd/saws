@@ -55,7 +55,7 @@ object EC2Instances {
             val spec = new LaunchSpecification()
               .withImageId(image.ami)
               .withInstanceType(image.size.size)
-              .withSecurityGroups(List(group.getGroupId).asJava)
+              .withAllSecurityGroups(List(new GroupIdentifier().withGroupId(group.getGroupId)).asJava)
               .withBlockDeviceMappings(image.size.devices.mapping.map({
                 case (dev, virt) => new BlockDeviceMapping().withDeviceName(dev).withVirtualName(virt)
               }).asJava)
