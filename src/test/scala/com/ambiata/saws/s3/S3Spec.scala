@@ -20,6 +20,7 @@ import scala.io.Source
 import scalaz._, Scalaz._
 import scalaz.effect.IO
 import ResultT._
+import com.ambiata.mundane.io.MemoryConversions._
 
 
 class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with LocalFiles { def is = isolated ^ s2"""
@@ -180,7 +181,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
 
     val action: S3Action[Unit] =
       S3.putFile(bucket, key, tmpFile) >>
-      S3.withStreamMultipart(bucket, key, 50, (in: InputStream) => Streams.pipe(in, out))
+      S3.withStreamMultipart(bucket, key, 50.bytes, (in: InputStream) => Streams.pipe(in, out))
 
     try     action.evalT must ResultTIOMatcher.beOk
     finally out.close
@@ -201,7 +202,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     val key = s3Key(tmpFile)
 
     val action: S3Action[List[String]] =
-        S3.putFileMultiPart(bucket, key, 50, FilePath(tmpFile.getPath)) >>
+        S3.putFileMultiPart(bucket, key, 50.bytes, FilePath(tmpFile.getPath)) >>
         S3.readLines(bucket, key)
 
     action.evalT must ResultTIOMatcher.beOkValue(List.fill(120)("testing"))

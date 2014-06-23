@@ -1,4 +1,5 @@
-libraryDependencies ++= Seq("com.ambiata" %% "mundane-store"   % "1.2.1-20140603064529-a563586",
+libraryDependencies ++= Seq("com.ambiata" %% "mundane-io"      % "1.2.1-20140623062607-c00eebe",
+                            "com.ambiata" %% "mundane-store"   % "1.2.1-20140603064529-a563586",
                             "com.ambiata" %% "mundane-control" % "1.2.1-20140613071625-928f1ba",
                             "com.ambiata" %% "mundane-testing" % "1.2.1-20140603064529-a563586")
 

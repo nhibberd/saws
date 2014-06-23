@@ -61,9 +61,9 @@ object S3 {
   def withStream[A](bucket: String, key: String, f: InputStream => ResultT[IO, A]): S3Action[A] =
     getObject(bucket, key).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
 
-  def withStreamMultipart(bucket: String, key: String, maxPartSizeInBytes: Long, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] = for {
+  def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] = for {
     client   <- S3Action.client
-    requests <- createRequests(bucket, key, maxPartSizeInBytes)
+    requests <- createRequests(bucket, key, maxPartSize)
     task = Process.emitAll(requests)
       .map(request => Task.delay(client.getObject(request)))
       .sequence(Runtime.getRuntime.availableProcessors)
@@ -114,38 +114,38 @@ object S3 {
   def putBytes(bucket: String, key: String,  data: Array[Byte], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putStream(bucket, key, new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
 
-  def putFileMultiPart(path: FilePath, maxPartSizeInBytes: Int, filePath: FilePath): S3Action[UploadResult] =
-    putFileMultiPart(bucket(path), key(path), maxPartSizeInBytes, filePath)
+  def putFileMultiPart(path: FilePath, maxPartSize: BytesQuantity, filePath: FilePath): S3Action[UploadResult] =
+    putFileMultiPart(bucket(path), key(path), maxPartSize, filePath)
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
    * to avoid having the stream materialised fully in memory
    */
-  def putStreamWithMetadataMultiPart(path: FilePath, maxPartSizeInBytes: Int, stream: InputStream, metadata: ObjectMetadata): S3Action[UploadResult] =
-    putStreamMultiPart(bucket(path), key(path), maxPartSizeInBytes, stream, metadata)
+  def putStreamWithMetadataMultiPart(path: FilePath, maxPartSize: BytesQuantity, stream: InputStream, metadata: ObjectMetadata): S3Action[UploadResult] =
+    putStreamMultiPart(bucket(path), key(path), maxPartSize, stream, metadata)
 
-  def putFileWithMetadataMultiPart(path: FilePath, maxPartSizeInBytes: Int, filePath: FilePath, metadata: ObjectMetadata): S3Action[UploadResult] =
-    putFileMultiPart(bucket(path), key(path), maxPartSizeInBytes, filePath, metadata)
+  def putFileWithMetadataMultiPart(path: FilePath, maxPartSize: BytesQuantity, filePath: FilePath, metadata: ObjectMetadata): S3Action[UploadResult] =
+    putFileMultiPart(bucket(path), key(path), maxPartSize, filePath, metadata)
 
-  def putFileMultiPart(bucket: String, key: String, maxPartSizeInBytes: Int, filePath: FilePath, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
+  def putFileMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, filePath: FilePath, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
     val file = new File(filePath.path)
     val input = new FileInputStream(file)
     // only set the content length if > 10Mb. Otherwise an error will be thrown by AWS because
     // the minimum upload size will be too small
     if (file.length > 10000) metadata.setContentLength(file.length)
-    putStreamMultiPart(bucket, key, maxPartSizeInBytes, input, metadata)
+    putStreamMultiPart(bucket, key, maxPartSize, input, metadata)
   }
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
    * to avoid having the stream materialised fully in memory
    */
-  def putStreamMultiPart(bucket: String, key: String, maxPartSizeInBytes: Int, stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
+  def putStreamMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
     S3Action { client : AmazonS3Client =>
       // create a transfer manager
       val configuration = new TransferManagerConfiguration
-      configuration.setMinimumUploadPartSize(maxPartSizeInBytes)
-      configuration.setMultipartUploadThreshold(maxPartSizeInBytes)
+      configuration.setMinimumUploadPartSize(maxPartSize.toBytes.value)
+      configuration.setMultipartUploadThreshold(maxPartSize.toBytes.value.toInt)
       val transferManager = new TransferManager(client)
       transferManager.setConfiguration(configuration)
 
@@ -317,10 +317,10 @@ object S3 {
   }
 
   /** create a list of multipart requests */
-  def createRequests(bucket: String, key: String, maxPartSizeInBytes: Long): S3Action[Seq[GetObjectRequest]] = for {
+  def createRequests(bucket: String, key: String, maxPartSize: BytesQuantity): S3Action[Seq[GetObjectRequest]] = for {
     client <- S3Action.client
     metadata = client.getObjectMetadata(bucket, key)
-    parts = partition(metadata.getContentLength, maxPartSizeInBytes)
+    parts = partition(metadata.getContentLength, maxPartSize.toBytes.value)
   } yield parts.map { case (start, end) => new GetObjectRequest(bucket, key).withRange(start, end) }
 
   /** partition a number of bytes, going from 0 to totalSize - 1 into parts of size partSize. The last part might be smaller */
