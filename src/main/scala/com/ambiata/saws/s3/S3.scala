@@ -61,6 +61,9 @@ object S3 {
   def withStream[A](bucket: String, key: String, f: InputStream => ResultT[IO, A]): S3Action[A] =
     getObject(bucket, key).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
 
+  def withStreamMultipart(path: FilePath, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] =
+    withStreamMultipart(bucket(path), key(path), maxPartSize, f)
+  
   def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(bucket, key, maxPartSize)
