@@ -40,6 +40,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
    mirror a local directory to a path  $e10
    delete all files from a base path   $e11
    download a file from S3 in parts    $e12
+   upload a file from S3 in parts      $e13
 
  Support functions
  =========================================
@@ -181,7 +182,7 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
       S3.putFile(bucket, key, tmpFile) >>
       S3.withStreamMultipart(bucket, key, 50, (in: InputStream) => Streams.pipe(in, out))
 
-    try action.evalT must ResultTIOMatcher.beOk
+    try     action.evalT must ResultTIOMatcher.beOk
     finally out.close
 
     result.exists must beTrue
@@ -195,7 +196,16 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
     bothLines must ResultTIOMatcher.beOkLike { case (lines1, lines2) => (lines1 must_== lines2).toResult }
   }
 
+  def e13 = {
+    val tmpFile = createFile("test12", "testing\n"*120)
+    val key = s3Key(tmpFile)
 
+    val action: S3Action[List[String]] =
+        S3.putFileMultiPart(bucket, key, 50, FilePath(tmpFile.getPath)) >>
+        S3.readLines(bucket, key)
+
+    action.evalT must ResultTIOMatcher.beOkValue(List.fill(120)("testing"))
+  }
 
   def f1 = {
     S3.partition(10, 5) must_== Seq((0, 4), (5, 9))
@@ -211,6 +221,6 @@ class S3Spec extends UnitSpec with AfterExample with ThrownExpectations with Loc
 
   def after {
     S3.deleteObjects(bucket, (_:String).startsWith(basePath.getName)).eval.unsafePerformIO
-    //rmdir(basePath)
+    rmdir(basePath)
   }
 }
