@@ -72,7 +72,7 @@ object EC2Instances {
 
   def waitForInstancesOrFault(reqIds: List[String]): EC2Action[Unit] =
     Wait.waitFor(completeOrFault(reqIds),
-      Some(s"""Waiting for spot requests ${reqIds.mkString("")}"""))
+      Some(s"""Waiting for spot requests ${reqIds.mkString(", ")}"""))
 
   def completeOrFault(reqIds: List[String]): EC2Action[Boolean] =
     spots(reqIds).map(reqs =>
