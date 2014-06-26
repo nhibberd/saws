@@ -13,11 +13,11 @@ import scalaz._, Scalaz._
 object EC2Status {
   def waitForReady(instanceIds: List[String]): EC2Action[Unit] =
     Wait.waitFor(areRunning(instanceIds),
-      Some(s"""Waiting for instances to start ${instanceIds.mkString("")}"""))
+      Some(s"""Waiting for instances to start ${instanceIds.mkString(", ")}"""))
 
   def waitForStop(instanceIds: List[String]): EC2Action[Unit] =
     Wait.waitFor(areRunning(instanceIds),
-      Some(s"""Waiting for instances to stop ${instanceIds.mkString("")}"""))
+      Some(s"""Waiting for instances to stop ${instanceIds.mkString(", ")}"""))
 
   def areRunning(instanceIds: List[String]): EC2Action[Boolean] =
     status(instanceIds).map(statuses =>
