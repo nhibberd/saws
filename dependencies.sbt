@@ -10,10 +10,10 @@ libraryDependencies ++= Seq(
     "javax.mail"          %  "mail"                       % "1.4.7")
 
 libraryDependencies ++= Seq(
-    "org.specs2"          %% "specs2-core"                % "2.3.10",
-    "org.specs2"          %% "specs2-matcher"             % "2.3.10",
-    "org.specs2"          %% "specs2-junit"               % "2.3.10"               % "test",
-    "org.specs2"          %% "specs2-scalacheck"          % "2.3.10"               % "test",
+    "org.specs2"          %% "specs2-core"                % "2.3.12",
+    "org.specs2"          %% "specs2-matcher"             % "2.3.12",
+    "org.specs2"          %% "specs2-junit"               % "2.3.12"               % "test",
+    "org.specs2"          %% "specs2-scalacheck"          % "2.3.12"               % "test",
     "com.decodified"      %% "scala-ssh"                  % "0.6.4"                % "test")
 
 resolvers ++= Seq(
