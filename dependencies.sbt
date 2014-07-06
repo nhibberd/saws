@@ -1,15 +1,13 @@
-libraryDependencies ++= Seq("com.ambiata" %% "mundane-io"      % "1.2.1-20140623062607-c00eebe",
-                            "com.ambiata" %% "mundane-store"   % "1.2.1-20140603064529-a563586",
-                            "com.ambiata" %% "mundane-control" % "1.2.1-20140613071625-928f1ba",
-                            "com.ambiata" %% "mundane-testing" % "1.2.1-20140603064529-a563586")
+libraryDependencies ++= Seq("com.ambiata" %% "mundane-io"      % "1.2.1-20140706102726-48c45a7",
+                            "com.ambiata" %% "mundane-store"   % "1.2.1-20140706102726-48c45a7",
+                            "com.ambiata" %% "mundane-control" % "1.2.1-20140706102726-48c45a7",
+                            "com.ambiata" %% "mundane-testing" % "1.2.1-20140706102726-48c45a7" % "test")
 
 libraryDependencies ++= Seq(
-    "org.scalaz.stream"   %% "scalaz-stream"              % "0.3",
-    "com.github.scopt"    %% "scopt"                      % "3.1.0",
+    "org.scalaz.stream"   %% "scalaz-stream"              % "0.4.1",
     "com.amazonaws"       %  "aws-java-sdk"               % "1.6.12",
     "com.owtelse.codec"   %  "base64"                     % "1.0.6",
-    "javax.mail"          %  "mail"                       % "1.4.7",
-    "com.chuusai"         %  "shapeless_2.10.3"           % "2.0.0-M1")
+    "javax.mail"          %  "mail"                       % "1.4.7")
 
 libraryDependencies ++= Seq(
     "org.specs2"          %% "specs2-core"                % "2.3.10"               % "test",
