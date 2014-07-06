@@ -1,7 +1,7 @@
 libraryDependencies ++= Seq("com.ambiata" %% "mundane-io"      % "1.2.1-20140706115053-2c11cc2",
                             "com.ambiata" %% "mundane-store"   % "1.2.1-20140706115053-2c11cc2",
                             "com.ambiata" %% "mundane-control" % "1.2.1-20140706115053-2c11cc2",
-                            "com.ambiata" %% "mundane-testing" % "1.2.1-20140706115053-2c11cc2" % "test")
+                            "com.ambiata" %% "mundane-testing" % "1.2.1-20140706115053-2c11cc2")
 
 libraryDependencies ++= Seq(
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.4.1",
