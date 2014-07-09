@@ -5,7 +5,8 @@ libraryDependencies ++= Seq("com.ambiata" %% "mundane-io"      % "1.2.1-20140706
 
 libraryDependencies ++= Seq(
     "org.scalaz.stream"   %% "scalaz-stream"              % "0.4.1",
-    "com.amazonaws"       %  "aws-java-sdk"               % "1.6.12",
+    "com.amazonaws"       %  "aws-java-sdk"               % "1.6.12"
+        exclude("joda-time", "joda-time"), // This is declared with a wildcard
     "com.owtelse.codec"   %  "base64"                     % "1.0.6",
     "javax.mail"          %  "mail"                       % "1.4.7")
 
