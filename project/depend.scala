@@ -1,0 +1,38 @@
+import sbt._
+import Keys._
+
+object depend {
+  val scalaz = Seq(  "org.scalaz" %% "scalaz-core"   % "7.0.6"
+                   , "org.scalaz" %% "scalaz-effect" % "7.0.6")
+
+  val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.4.1")
+
+  val mundane = Seq(  "com.ambiata" %% "mundane-io"      % "1.2.1-20140706115053-2c11cc2"
+                    , "com.ambiata" %% "mundane-store"   % "1.2.1-20140706115053-2c11cc2"
+                    , "com.ambiata" %% "mundane-control" % "1.2.1-20140706115053-2c11cc2")
+
+  val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % "1.2.1-20140706115053-2c11cc2")
+  
+  val aws = Seq(
+      "com.amazonaws"       %  "aws-java-sdk" % "1.6.12" exclude("joda-time", "joda-time") // This is declared with a wildcard
+    , "com.owtelse.codec"   %  "base64"       % "1.0.6"
+    , "javax.mail"          %  "mail"         % "1.4.7")
+
+  val specs2 = Seq(
+      "org.specs2" %% "specs2-core"    % "2.3.12")
+
+  val testing = Seq(
+      "org.specs2" %% "specs2-core"        % "2.3.12" % "test"
+    , "org.specs2" %% "specs2-junit"       % "2.3.12" % "test"
+    , "org.specs2" %% "specs2-scalacheck"  % "2.3.12" % "test")
+
+  val ssh = Seq("com.decodified" %% "scala-ssh" % "0.6.4")
+
+  val resolvers = Seq(
+      Resolver.sonatypeRepo("releases")
+    , Resolver.typesafeRepo("releases")
+    , "cloudera"              at "https://repository.cloudera.com/content/repositories/releases"
+    , Resolver.url("ambiata-oss", new URL("https://ambiata-oss.s3.amazonaws.com"))(Resolver.ivyStylePatterns)
+    , "Scalaz Bintray Repo"   at "http://dl.bintray.com/scalaz/releases")
+
+}
