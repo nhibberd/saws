@@ -65,12 +65,15 @@ object S3 {
   def withStreamMultipart(path: FilePath, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] =
     withStreamMultipart(bucket(path), key(path), maxPartSize, f, NoTick)
 
+  def withStreamMultipart(path: FilePath, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] =
+    withStreamMultipart(bucket(path), key(path), maxPartSize, f, tick)
+
   /**
    * Download a file in multiparts
    *
    * The tick method can be used inside hadoop to notify progress
    */
-  def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: Function0[Unit]): S3Action[Unit] = for {
+  def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(bucket, key, maxPartSize)
     task = Process.emitAll(requests)
@@ -146,6 +149,10 @@ object S3 {
     if (file.length > 10000) metadata.setContentLength(file.length)
     putStreamMultiPart(bucket, key, maxPartSize, input, tick, metadata)
   }
+
+  def putStreamMultiPart(path: FilePath, maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit],
+                         metadata: ObjectMetadata): S3Action[UploadResult] =
+    putStreamMultiPart(bucket(path), key(path), maxPartSize, stream, tick, metadata)
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
