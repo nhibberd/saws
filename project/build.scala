@@ -9,8 +9,8 @@ object build extends Build {
     id = "saws",
     base = file("."),
     settings = standardSettings ++ promulgate.library("com.ambiata.saws", "ambiata-oss"),
-    aggregate = Seq(core, ec2, s3, emr, ses, testing)
-    ).dependsOn(core, ec2, s3, emr, ses)
+    aggregate = Seq(core, ec2, s3, iam, emr, ses, testing)
+    ).dependsOn(core, ec2, s3, iam, emr, ses)
 
   lazy val standardSettings = Defaults.defaultSettings ++
                    projectSettings          ++
