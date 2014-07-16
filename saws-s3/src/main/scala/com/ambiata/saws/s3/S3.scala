@@ -1,8 +1,9 @@
 package com.ambiata.saws
 package s3
 
+import com.amazonaws.event.{ProgressEvent, ProgressListener}
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model._
+import com.amazonaws.services.s3.model.{ProgressListener => _, ProgressEvent =>_,_}
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
 import com.amazonaws.services.s3.transfer.model.UploadResult
@@ -62,13 +63,18 @@ object S3 {
     getObject(bucket, key).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
 
   def withStreamMultipart(path: FilePath, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] =
-    withStreamMultipart(bucket(path), key(path), maxPartSize, f)
-  
-  def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit]): S3Action[Unit] = for {
+    withStreamMultipart(bucket(path), key(path), maxPartSize, f, NoTick)
+
+  /**
+   * Download a file in multiparts
+   *
+   * The tick method can be used inside hadoop to notify progress
+   */
+  def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: Function0[Unit]): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(bucket, key, maxPartSize)
     task = Process.emitAll(requests)
-      .map(request => Task.delay(client.getObject(request)))
+      .map(request => Task.delay { tick(); client.getObject(request) })
       .sequence(Runtime.getRuntime.availableProcessors)
       .to(objectContentSink(f)).run
     result <- S3Action.fromTask(task)
@@ -118,32 +124,35 @@ object S3 {
     putStream(bucket, key, new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
 
   def putFileMultiPart(path: FilePath, maxPartSize: BytesQuantity, filePath: FilePath): S3Action[UploadResult] =
-    putFileMultiPart(bucket(path), key(path), maxPartSize, filePath)
+    putFileMultiPart(bucket(path), key(path), maxPartSize, filePath, NoTick)
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
    * to avoid having the stream materialised fully in memory
    */
-  def putStreamWithMetadataMultiPart(path: FilePath, maxPartSize: BytesQuantity, stream: InputStream, metadata: ObjectMetadata): S3Action[UploadResult] =
-    putStreamMultiPart(bucket(path), key(path), maxPartSize, stream, metadata)
+  def putStreamWithMetadataMultiPart(path: FilePath, maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit],
+                                     metadata: ObjectMetadata): S3Action[UploadResult] =
+    putStreamMultiPart(bucket(path), key(path), maxPartSize, stream, tick, metadata)
 
   def putFileWithMetadataMultiPart(path: FilePath, maxPartSize: BytesQuantity, filePath: FilePath, metadata: ObjectMetadata): S3Action[UploadResult] =
-    putFileMultiPart(bucket(path), key(path), maxPartSize, filePath, metadata)
+    putFileMultiPart(bucket(path), key(path), maxPartSize, filePath, NoTick, metadata)
 
-  def putFileMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, filePath: FilePath, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
+  def putFileMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, filePath: FilePath, tick: Function0[Unit],
+                       metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
     val file = new File(filePath.path)
     val input = new FileInputStream(file)
     // only set the content length if > 10Mb. Otherwise an error will be thrown by AWS because
     // the minimum upload size will be too small
     if (file.length > 10000) metadata.setContentLength(file.length)
-    putStreamMultiPart(bucket, key, maxPartSize, input, metadata)
+    putStreamMultiPart(bucket, key, maxPartSize, input, tick, metadata)
   }
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
    * to avoid having the stream materialised fully in memory
    */
-  def putStreamMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
+  def putStreamMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit],
+                         metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
     S3Action { client : AmazonS3Client =>
       // create a transfer manager
       val configuration = new TransferManagerConfiguration
@@ -154,6 +163,7 @@ object S3 {
 
       // start the upload and wait for the result
       val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, metadata))
+      upload.addProgressListener(new ProgressListener{ def progressChanged(e: ProgressEvent) { tick() }})
       upload.waitForUploadResult
     }.onResult(_.prependErrorMessage(s"Could not put stream to S3://$bucket/$key using the transfer manager"))
   }
@@ -266,7 +276,7 @@ object S3 {
              .onResult(_.prependErrorMessage(s"Could not delete S3://${bucket}/${key}"))
 
   def deleteObjects(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
-    listSummary(bucket, "").flatMap(_.collect { case o if(f(o.getKey)) => deleteObject(bucket, o.getKey) }.sequence.map(_ => ()))
+    listSummary(bucket, "").flatMap(_.collect { case o if f(o.getKey) => deleteObject(bucket, o.getKey) }.sequence.map(_ => ()))
 
   def md5(path: FilePath): S3Action[String] =
     md5(bucket(path), key(path))
@@ -337,4 +347,5 @@ object S3 {
   def objectContentSink(f: InputStream => ResultT[IO, Unit]): Sink[Task, S3Object] =
     io.channel((s3Object: S3Object) => toTask(f(s3Object.getObjectContent)))
 
+  val NoTick: Function0[Unit] = () => ()
 }
