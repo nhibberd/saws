@@ -160,19 +160,32 @@ object S3 {
    */
   def putStreamMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit],
                          metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
-    S3Action { client : AmazonS3Client =>
+    S3Action { client: AmazonS3Client =>
       // create a transfer manager
       val configuration = new TransferManagerConfiguration
       configuration.setMinimumUploadPartSize(maxPartSize.toBytes.value)
       configuration.setMultipartUploadThreshold(maxPartSize.toBytes.value.toInt)
       val transferManager = new TransferManager(client)
       transferManager.setConfiguration(configuration)
+      transferManager
+    }.flatMap { transferManager: TransferManager =>
+      putStreamMultiPart(bucket, key, transferManager, stream, tick, metadata) map { upload =>
+        try     upload()
+        finally transferManager.shutdownNow
+      }
+    }
+  }
 
+  def putStreamMultiPart(path: FilePath, transferManager: TransferManager, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[UploadResult] =
+    putStreamMultiPart(bucket(path), key(path), transferManager, stream, tick, metadata).map(_())
+
+  /** cache and pass your own transfer manager if you need to run lots of uploads */
+  def putStreamMultiPart(bucket: String, key: String, transferManager: TransferManager, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[() => UploadResult] = {
+    S3Action { client : AmazonS3Client =>
       // start the upload and wait for the result
-      val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, metadata))
+      val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, S3.ServerSideEncryption))
       upload.addProgressListener(new ProgressListener{ def progressChanged(e: ProgressEvent) { tick() }})
-      try     upload.waitForUploadResult
-      finally transferManager.shutdownNow
+      () => upload.waitForUploadResult
     }.onResult(_.prependErrorMessage(s"Could not put stream to S3://$bucket/$key using the transfer manager"))
   }
 
