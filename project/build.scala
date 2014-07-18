@@ -23,6 +23,7 @@ object build extends Build {
     , version in ThisBuild := "1.2.1"
     , organization := "com.ambiata"
     , scalaVersion := "2.10.4"
+    , crossScalaVersions := Seq("2.10.4", "2.11.1")
   ) ++ Seq(prompt)
 
   lazy val core = Project(
