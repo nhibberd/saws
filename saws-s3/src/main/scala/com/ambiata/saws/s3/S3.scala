@@ -183,7 +183,7 @@ object S3 {
   def putStreamMultiPart(bucket: String, key: String, transferManager: TransferManager, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[() => UploadResult] = {
     S3Action { client : AmazonS3Client =>
       // start the upload and wait for the result
-      val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, S3.ServerSideEncryption))
+      val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, metadata))
       upload.addProgressListener(new ProgressListener{ def progressChanged(e: ProgressEvent) { tick() }})
       () => upload.waitForUploadResult
     }.onResult(_.prependErrorMessage(s"Could not put stream to S3://$bucket/$key using the transfer manager"))
