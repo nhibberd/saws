@@ -62,7 +62,8 @@ case class Cluster(
   bootstrapActions: List[BootstrapAction],
   steps: List[Step],
   interactive: Boolean,
-  terminationProtected: Boolean
+  terminationProtected: Boolean,
+  tags: List[(String, String)]
 )
 {
 
@@ -89,6 +90,7 @@ case class Cluster(
       .withSteps(steps.map(_.asStepConfig).asJava)
       .withJobFlowRole(role.orNull)
       .withVisibleToAllUsers(true)
+      .withTags(tags.map({ case (k, v) => new Tag(k, v) }).asJava)
 
     jobFlowReq
   }
