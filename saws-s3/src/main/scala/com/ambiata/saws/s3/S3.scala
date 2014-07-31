@@ -91,7 +91,7 @@ object S3 {
     storeObject(bucket(path), key(path), file, mkdirs)
 
   def storeObject(bucket: String, key: String, file: File, mkdirs: Boolean = false): S3Action[File] =
-    withStream(bucket, key, Files.writeStream(file.getAbsolutePath.toFilePath, _)).as(file)
+    withStream(bucket, key, Files.writeStream(FilePath.unsafe(file.getAbsolutePath), _)).as(file)
 
   def readLines(path: FilePath): S3Action[List[String]] =
     readLines(bucket(path), key(path))
@@ -105,8 +105,10 @@ object S3 {
   def downloadFileTo(path: FilePath, to: String): S3Action[File] =
     downloadFile(bucket(path), key(path), to)
 
-  def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] =
-    S3.withStream(bucket, key, Files.writeStream(to </> key, _)).as((to </> key).toFile)
+  def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] = {
+    val destination = DirPath.unsafe(to) </> FilePath.unsafe(key)
+    S3.withStream(bucket, key, Files.writeStream(destination, _)).as(destination.toFile)
+  }
 
   def putString(path: FilePath, data: String): S3Action[PutObjectResult] =
     putString(bucket(path), key(path), data)
@@ -240,7 +242,7 @@ object S3 {
   def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
-  def listSummary(path: FilePath): S3Action[List[S3ObjectSummary]] =
+  def listSummary(path: DirPath): S3Action[List[S3ObjectSummary]] =
     listSummary(bucket(path), key(path))
 
   def listSummary(bucket: String, prefix: String = ""): S3Action[List[S3ObjectSummary]] =
@@ -257,7 +259,7 @@ object S3 {
       allObjects(client.listObjects(bucket, prefix), List())
     }).flatMap(x => x)
 
-  def listKeys(path: FilePath): S3Action[List[String]] =
+  def listKeys(path: DirPath): S3Action[List[String]] =
     listKeys(bucket(path), key(path))
 
   def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
@@ -310,32 +312,32 @@ object S3 {
     extractTarball(bucket(path), key(path), local, stripLevels)
 
   def extractTarball(bucket: String, key: String, local: File, stripLevels: Int): S3Action[File] =
-    withStream(bucket, key, Archive.extractTarballStream(_, local.getAbsolutePath.toFilePath, stripLevels)).as(local)
+    withStream(bucket, key, Archive.extractTarballStream(_, FilePath.unsafe(local.getAbsolutePath), stripLevels)).as(local)
 
   def extractTarballFlat(path: FilePath, local: File): S3Action[File] =
     extractTarballFlat(bucket(path), key(path), local)
 
   def extractTarballFlat(bucket: String, key: String, local: File): S3Action[File] =
-    withStream(bucket, key, Archive.extractTarballStreamFlat(_, local.getAbsolutePath.toFilePath)).as(local)
+    withStream(bucket, key, Archive.extractTarballStreamFlat(_, FilePath.unsafe(local.getAbsolutePath))).as(local)
 
   def extractGzip(path: FilePath, local: File): S3Action[File] =
     extractGzip(bucket(path), key(path), local)
 
   def extractGzip(bucket: String, key: String, local: File): S3Action[File] =
-    withStream(bucket, key, is => Archive.extractGzipStream(is, local.getAbsolutePath.toFilePath)).as(local)
+    withStream(bucket, key, is => Archive.extractGzipStream(is, FilePath.unsafe(local.getAbsolutePath))).as(local)
 
   def mirror(base: File, path: FilePath): S3Action[Unit] =
     mirror(base, bucket(path), key(path))
 
   def mirror(base: File, bucket: String, keybase: String): S3Action[Unit] = for {
-    local <- S3Action.fromResultT { Directories.list(base.getAbsolutePath.toFilePath) }
+    local <- S3Action.fromResultT { Directories.list(DirPath.unsafe(base.getAbsolutePath)) }
     _     <- local.traverse({ source =>
       val destination = source.toFile.getAbsolutePath.replace(base.getAbsolutePath + "/", "")
       S3.putFile(bucket, s"${keybase}/${destination}", source.toFile)
     })
   } yield ()
 
-  def deleteAll(path: FilePath): S3Action[Unit] =
+  def deleteAll(path: DirPath): S3Action[Unit] =
     deleteAll(bucket(path), key(path))
 
   def deleteAll(bucket: String, keybase: String): S3Action[Unit] = for {

@@ -13,15 +13,18 @@ import scala.io.Codec
 import scalaz.{Store => _, _}, Scalaz._, scalaz.stream._, scalaz.concurrent._, effect.IO, effect.Effect._, \&/._
 import scodec.bits.ByteVector
 
-case class S3ReadOnlyStore(bucket: String, base: FilePath, client: AmazonS3Client) extends ReadOnlyStore[ResultTIO] {
-  def list(prefix: FilePath): ResultT[IO, List[FilePath]] =
-    S3.listKeys(bucket, (base </> prefix).path).executeT(client).map(_.map(normalize).sorted).map(_.map(_.toFilePath))
+case class S3ReadOnlyStore(bucket: String, base: DirPath, client: AmazonS3Client) extends ReadOnlyStore[ResultTIO] {
+  def list(prefix: DirPath): ResultT[IO, List[FilePath]] =
+    S3.listKeys(bucket, (base </> prefix).path).executeT(client).map(_.map(normalize).sorted).map(_.map(FilePath.unsafe))
 
-  def filter(prefix: FilePath, predicate: FilePath => Boolean): ResultT[IO, List[FilePath]] =
+  def filter(prefix: DirPath, predicate: FilePath => Boolean): ResultT[IO, List[FilePath]] =
     list(prefix).map(_.filter(predicate))
 
-  def find(prefix: FilePath, predicate: FilePath => Boolean): ResultT[IO, Option[FilePath]] =
+  def find(prefix: DirPath, predicate: FilePath => Boolean): ResultT[IO, Option[FilePath]] =
     list(prefix).map(_.find(predicate))
+
+  def exists(path: DirPath): ResultT[IO, Boolean] =
+    S3.exists(bucket, (base </> path).path).executeT(client)
 
   def exists(path: FilePath): ResultT[IO, Boolean] =
     S3.exists(bucket, (base </> path).path).executeT(client)
@@ -37,12 +40,9 @@ case class S3ReadOnlyStore(bucket: String, base: FilePath, client: AmazonS3Clien
       store.unsafe.withOutputStream(dest) { out =>
         Streams.pipe(in, out) }}
 
-  def mirrorTo(store: Store[ResultTIO], in: FilePath, out: FilePath): ResultT[IO, Unit] = for {
+  def mirrorTo(store: Store[ResultTIO], in: DirPath, out: DirPath): ResultT[IO, Unit] = for {
     paths <- list(in)
-    _     <- paths.traverseU({ source =>
-      val destination = out </> source.path.replace(in.path + "/", "")
-      copyTo(store, source, destination)
-    })
+    _     <- paths.traverseU { source => copyTo(store, source, out </> source) }
   } yield ()
 
   val bytes: StoreBytesRead[ResultTIO] = new StoreBytesRead[ResultTIO] {
@@ -91,23 +91,26 @@ case class S3ReadOnlyStore(bucket: String, base: FilePath, client: AmazonS3Clien
     thunk.executeT(client)
 }
 
-case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache: FilePath) extends Store[ResultTIO] with ReadOnlyStore[ResultTIO] {
+case class S3Store(bucket: String, base: DirPath, client: AmazonS3Client, cache: DirPath) extends Store[ResultTIO] with ReadOnlyStore[ResultTIO] {
   def local =
     PosixStore(cache)
 
   val readOnly: ReadOnlyStore[ResultTIO] =
     S3ReadOnlyStore(bucket, base, client)
 
-  def list(prefix: FilePath): ResultT[IO, List[FilePath]] =
+  def list(prefix: DirPath): ResultT[IO, List[FilePath]] =
     readOnly.list(prefix)
 
-  def filter(prefix: FilePath, predicate: FilePath => Boolean): ResultT[IO, List[FilePath]] =
+  def filter(prefix: DirPath, predicate: FilePath => Boolean): ResultT[IO, List[FilePath]] =
     readOnly.filter(prefix, predicate)
 
-  def find(prefix: FilePath, predicate: FilePath => Boolean): ResultT[IO, Option[FilePath]] =
+  def find(prefix: DirPath, predicate: FilePath => Boolean): ResultT[IO, Option[FilePath]] =
     readOnly.find(prefix, predicate)
 
   def exists(path: FilePath): ResultT[IO, Boolean] =
+    readOnly.exists(path)
+
+  def exists(path: DirPath): ResultT[IO, Boolean] =
     readOnly.exists(path)
 
   def normalize(key: String): String =
@@ -119,7 +122,7 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
   def delete(path: FilePath): ResultT[IO, Unit] =
     S3.deleteObject(bucket, (base </> path).path).executeT(client)
 
-  def deleteAll(prefix: FilePath): ResultT[IO, Unit] =
+  def deleteAll(prefix: DirPath): ResultT[IO, Unit] =
     list(prefix).flatMap(_.traverseU(delete)).void
 
   def move(in: FilePath, out: FilePath): ResultT[IO, Unit] =
@@ -131,18 +134,15 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
   def copy(in: FilePath, out: FilePath): ResultT[IO, Unit] =
     S3.copyFile(bucket, (base </> in).path, bucket, (base </> out).path).executeT(client).void
 
-  def mirror(in: FilePath, out: FilePath): ResultT[IO, Unit] = for {
+  def mirror(in: DirPath, out: DirPath): ResultT[IO, Unit] = for {
     paths <- list(in)
-    _     <- paths.traverseU({ source =>
-      val destination = out </> source.path.replace(in.path + "/", "")
-      copy(source, destination)
-    })
+    _     <- paths.traverseU { source => copy(source, out </> source) }
   } yield ()
 
   def copyTo(store: Store[ResultTIO], src: FilePath, dest: FilePath): ResultT[IO, Unit] =
     readOnly.copyTo(store, src, dest)
 
-  def mirrorTo(store: Store[ResultTIO], in: FilePath, out: FilePath): ResultT[IO, Unit] =
+  def mirrorTo(store: Store[ResultTIO], in: DirPath, out: DirPath): ResultT[IO, Unit] =
     readOnly.mirrorTo(store, in, out)
 
   val bytes: StoreBytes[ResultTIO] = new StoreBytes[ResultTIO] {
@@ -178,7 +178,6 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 
     def write(path: FilePath, data: String): ResultT[IO, Unit] =
     strings.write(path, data, Codec.UTF8)
-
 
     def sink(path: FilePath): Sink[Task, String] =
       bytes.sink(path).map(_.contramap(s => ByteVector.view(s.getBytes("UTF-8"))))
@@ -217,7 +216,7 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
       readOnly.unsafe.withInputStream(path)(f)
 
     def withOutputStream(path: FilePath)(f: OutputStream => ResultT[IO, Unit]): ResultT[IO, Unit] = {
-      val unique = UUID.randomUUID.toString.toFilePath
+      val unique = FilePath.unsafe(UUID.randomUUID.toString)
       local.unsafe.withOutputStream(unique)(f) >> local.unsafe.withInputStream(unique)(in =>
         S3.putStream(bucket, (base </> path).path, in, {
           val metadata = S3.ServerSideEncryption
@@ -232,16 +231,16 @@ case class S3Store(bucket: String, base: FilePath, client: AmazonS3Client, cache
 }
 
 object S3Store {
-  def createReadOnly(path: FilePath): S3Action[S3ReadOnlyStore] =
+  def createReadOnly(path: DirPath): S3Action[S3ReadOnlyStore] =
     createReadOnly(path.rootname.path, path.fromRoot)
 
-  def createReadOnly(bucket: String, base: FilePath): S3Action[S3ReadOnlyStore] =
+  def createReadOnly(bucket: String, base: DirPath): S3Action[S3ReadOnlyStore] =
     S3Action.client.map(c => S3ReadOnlyStore(bucket, base, c))
 
-  def create(path: FilePath, cache: FilePath): S3Action[S3Store] =
+  def create(path: DirPath, cache: DirPath): S3Action[S3Store] =
     create(path.rootname.path, path.fromRoot, cache)
 
-  def create(bucket: String, base: FilePath, cache: FilePath): S3Action[S3Store] =
+  def create(bucket: String, base: DirPath, cache: DirPath): S3Action[S3Store] =
     S3Action.client.map(c => S3Store(bucket, base, c, cache))
 
 }
