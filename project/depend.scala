@@ -2,15 +2,14 @@ import sbt._
 import Keys._
 
 object depend {
-  val scalaz = Seq(  "org.scalaz" %% "scalaz-core"   % "7.0.6"
-                   , "org.scalaz" %% "scalaz-effect" % "7.0.6")
+  val scalaz = Seq(  "org.scalaz" %% "scalaz-core"   % "7.1.0"
+                   , "org.scalaz" %% "scalaz-effect" % "7.1.0")
 
   val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.4.1")
 
-  val mundaneVersion = "1.2.1-20141009231713-6cb5d9b"
+  val mundaneVersion = "1.2.1-20141016221505-82db433"
 
   val mundane = Seq(  "com.ambiata" %% "mundane-io"
-                    , "com.ambiata" %% "mundane-store"
                     , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion)
 
   val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % mundaneVersion)
@@ -20,13 +19,15 @@ object depend {
     , "com.owtelse.codec"   %  "base64"       % "1.0.6"
     , "javax.mail"          %  "mail"         % "1.4.7")
 
+  val specs2Version = "2.4.5"
+
   val specs2 = Seq(
-      "org.specs2" %% "specs2-core"    % "2.3.12")
+      "org.specs2" %% "specs2-core"    % specs2Version)
 
   val testing = Seq(
-      "org.specs2" %% "specs2-core"        % "2.3.12" % "test"
-    , "org.specs2" %% "specs2-junit"       % "2.3.12" % "test"
-    , "org.specs2" %% "specs2-scalacheck"  % "2.3.12" % "test")
+      "org.specs2" %% "specs2-core"        % specs2Version % "test"
+    , "org.specs2" %% "specs2-junit"       % specs2Version % "test"
+    , "org.specs2" %% "specs2-scalacheck"  % specs2Version % "test")
 
   val ssh = Seq("com.decodified" %% "scala-ssh" % "0.6.4")
 

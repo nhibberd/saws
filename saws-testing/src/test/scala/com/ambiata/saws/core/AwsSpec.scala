@@ -58,7 +58,7 @@ class AwsSpec extends UnitSpec with ScalaCheck { def is = s2"""
   def retry = {
     var c = 5
     val action = Aws.result((n: Int) => {
-      val ret = if (c < 3) Result.ok(1) else Result.fail("fail")
+      val ret = if (c < 3) Result.ok(1) else Result.fail[Int]("fail")
       c = c - 1
       ret
     })

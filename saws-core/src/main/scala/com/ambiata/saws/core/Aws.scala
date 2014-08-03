@@ -10,7 +10,7 @@ import scalaz.concurrent.Task
 import scalaz.effect._
 import com.ambiata.mundane.control._
 
-case class Aws[R, +A](runT: ActionIO[Vector[AwsLog], R, A]) {
+case class Aws[R, A](runT: ActionIO[Vector[AwsLog], R, A]) {
   def contramap[B](f: B => R): Aws[B, A] =
     Aws(ActionT(r => runT.runT(f(r))))
 
@@ -20,8 +20,8 @@ case class Aws[R, +A](runT: ActionIO[Vector[AwsLog], R, A]) {
   def flatMap[B](f: A => Aws[R, B]): Aws[R, B] =
     Aws(runT.flatMap(a => f(a).runT))
 
-  def flatMapError[AA >: A](f: These[String, Throwable] => Aws[R, AA]): Aws[R, AA] =
-    Aws(runT.flatMapError[AA](t => f(t).runT))
+  def flatMapError(f: These[String, Throwable] => Aws[R, A]): Aws[R, A] =
+    Aws(runT.flatMapError(t => f(t).runT))
 
   def onResult[B](f: Result[A] => Result[B]): Aws[R, B] =
     Aws(runT.onResult(f))
@@ -50,10 +50,10 @@ case class Aws[R, +A](runT: ActionIO[Vector[AwsLog], R, A]) {
   def liftAws[RR](implicit select: Select[RR, R]): Aws[RR, A] =
     contramap(Select[RR, R].contra)
 
-  def |||[AA >: A](otherwise: => Aws[R, AA]): Aws[R, AA] =
+  def |||(otherwise: => Aws[R, A]): Aws[R, A] =
     Aws(runT ||| otherwise.runT)
 
-  def orElse[AA >: A](otherwise: => AA): Aws[R, AA] =
+  def orElse(otherwise: => A): Aws[R, A] =
     Aws(runT.orElse(otherwise))
 
   // FIX Retry and flush are a port from old code, they need to be tidied up and simplified.
@@ -61,17 +61,17 @@ case class Aws[R, +A](runT: ActionIO[Vector[AwsLog], R, A]) {
   //     to do.
 
   def retry(i: Int, lf: (Int, These[String, Throwable]) => Vector[AwsLog] = (_,_) => Vector()): Aws[R, A] =
-    Aws[R, A](ActionT(r => ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](runT.runT(r).run.run.flatMap(aa => aa match {
+    Aws[R, A](ActionT(r => ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](runT.runT(r).run.run.flatMap(aa => aa match {
       case (log, Ok(b))    => (log, Result.ok(b)).pure[IO]
       case (log, Error(e)) => if(i > 0) retry(i - 1, lf).runT.runT(r).run.run.map(rr => rr match {
         case (nlog, nattp) => (log ++ lf(i, e) ++ nlog, nattp)
-      }) else (log ++ lf(i, e), Result.these(e)).pure[IO]
+      }) else (log ++ lf(i, e), Result.these[A](e)).pure[IO]
     })))))
 
   /** after running the action, print the last log message to the console */
   // FIX this looks unusual, should it print everything and take it out of writer?
   def flush: Aws[R, A] =
-    Aws[R, A](ActionT(r => ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](runT.runT(r).run.run.flatMap({
+    Aws[R, A](ActionT(r => ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](runT.runT(r).run.run.flatMap({
       case (log, a) =>
         IO { log.lastOption.foreach(println) }.as((log, a))
     })))))
@@ -89,7 +89,7 @@ object Aws {
     Aws(ActionT.result[IO, Vector[AwsLog], R, A](f))
 
   def io[R, A](f: R => IO[A]): Aws[R, A] =
-    Aws(ActionT(r => ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](f(r).map(a => (Vector[AwsLog](), Result.ok(a)))))))
+    Aws(ActionT(r => ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](f(r).map(a => (Vector[AwsLog](), Result.ok(a)))))))
 
   def resultT[R, A](f: R => ResultT[IO, A]): Aws[R, A] =
     Aws(ActionT.resultT(f))
@@ -132,7 +132,7 @@ object Aws {
 
   def log[R](l: AwsLog): Aws[R, Unit] =
     Aws(ActionT(r =>
-      ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, Unit](
+      ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, Unit](
         WriterT[IO, Vector[AwsLog], Result[Unit]](
           (Vector[AwsLog](l), Result.ok(())).pure[IO]))))
 
