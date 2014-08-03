@@ -5,7 +5,7 @@ object depend {
   val scalaz = Seq(  "org.scalaz" %% "scalaz-core"   % "7.1.0"
                    , "org.scalaz" %% "scalaz-effect" % "7.1.0")
 
-  val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.4.1")
+  val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.5a")
 
   val mundaneVersion = "1.2.1-20141016221505-82db433"
 
