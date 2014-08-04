@@ -7,11 +7,11 @@ object depend {
 
   val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.4.1")
 
-  val mundane = Seq(  "com.ambiata" %% "mundane-io"      % "1.2.1-20140706115053-2c11cc2"
-                    , "com.ambiata" %% "mundane-store"   % "1.2.1-20140706115053-2c11cc2"
-                    , "com.ambiata" %% "mundane-control" % "1.2.1-20140706115053-2c11cc2")
+  val mundane = Seq(  "com.ambiata" %% "mundane-io"
+                    , "com.ambiata" %% "mundane-store"
+                    , "com.ambiata" %% "mundane-control").map(_ % "1.2.1-20140801031632-37f2977")
 
-  val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % "1.2.1-20140706115053-2c11cc2")
+  val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % "1.2.1-20140801031632-37f2977")
   
   val aws = Seq(
       "com.amazonaws"       %  "aws-java-sdk" % "1.6.12" exclude("joda-time", "joda-time") // This is declared with a wildcard
