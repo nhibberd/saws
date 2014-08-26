@@ -9,9 +9,9 @@ object depend {
 
   val mundane = Seq(  "com.ambiata" %% "mundane-io"
                     , "com.ambiata" %% "mundane-store"
-                    , "com.ambiata" %% "mundane-control").map(_ % "1.2.1-20140804052856-ebcf518")
+                    , "com.ambiata" %% "mundane-control").map(_ % "1.2.1-20140826070012-af5a1bc")
 
-  val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % "1.2.1-20140804052856-ebcf518")
+  val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % "1.2.1-20140826070012-af5a1bc")
   
   val aws = Seq(
       "com.amazonaws"       %  "aws-java-sdk" % "1.6.12" exclude("joda-time", "joda-time") // This is declared with a wildcard
