@@ -15,7 +15,7 @@ import scodec.bits.ByteVector
 
 case class S3ReadOnlyStore(bucket: String, base: DirPath, client: AmazonS3Client) extends ReadOnlyStore[ResultTIO] {
   def list(prefix: DirPath): ResultT[IO, List[FilePath]] =
-    S3.listKeys(bucket, (base </> prefix).path).executeT(client).map(_.map(normalize).sorted).map(_.map(FilePath.unsafe))
+    S3.listKeys(bucket, (base </> prefix).path).executeT(client).map(_.map(key => FilePath.unsafe(key).relativeTo(base </> prefix)))
 
   def filter(prefix: DirPath, predicate: FilePath => Boolean): ResultT[IO, List[FilePath]] =
     list(prefix).map(_.filter(predicate))

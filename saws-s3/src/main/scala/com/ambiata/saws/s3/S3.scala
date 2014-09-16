@@ -230,8 +230,11 @@ object S3 {
     copyFile(bucket(fromPath), key(fromPath), bucket(toPath), key(toPath))
 
   def copyFile(fromBucket: String, fromKey: String, toBucket: String, toKey: String /*, metadata: ObjectMetadata = S3.ServerSideEncryption*/): S3Action[CopyObjectResult] =
-    S3Action(_.copyObject(new CopyObjectRequest(fromBucket, fromKey, toBucket, toKey)))/*.withNewObjectMetadata(metadata) */
-      .onResult(_.prependErrorMessage(s"Could not copy object from S3://${fromBucket}/${fromKey} to S3://${toBucket}/${toKey}"))
+    S3Action.client.map { client =>
+      val metadata =  client.getObjectMetadata(new GetObjectMetadataRequest(fromBucket, fromKey))
+      metadata.setServerSideEncryption(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
+      client.copyObject(new CopyObjectRequest(fromBucket, fromKey, toBucket, toKey).withNewObjectMetadata(metadata))
+    }.onResult(_.prependErrorMessage(s"Could not copy object from S3://${fromBucket}/${fromKey} to S3://${toBucket}/${toKey}"))
 
   def writeLines(path: FilePath, lines: Seq[String]): S3Action[PutObjectResult] =
     writeLines(bucket(path), key(path), lines)
