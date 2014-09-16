@@ -18,7 +18,7 @@ import scalaz.effect.IO
 import org.specs2.specification._
 
 // FIX Workout how this test can be pulled out and shared with posix/s3/hdfs.
-class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ skipAllIf(!s3IsAccessible) ^ s2"""
+class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ skipAllIf(true) ^ s2"""
   S3 Store Usage
   ==============
 
