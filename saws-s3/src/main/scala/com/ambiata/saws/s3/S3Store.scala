@@ -92,6 +92,9 @@ case class S3ReadOnlyStore(bucket: String, base: DirPath, client: AmazonS3Client
 }
 
 case class S3Store(bucket: String, base: DirPath, client: AmazonS3Client, cache: DirPath) extends Store[ResultTIO] with ReadOnlyStore[ResultTIO] {
+  val root: DirPath =
+    DirPath.unsafe(bucket) </> base
+
   def local =
     PosixStore(cache)
 
