@@ -24,7 +24,8 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
   ==============
 
   list all keys                                   $list
-  list all keys from a prefix                     $listPrefix
+  list all keys from a key prefix                 $listFromPrefix
+  list all direct prefixes from a key prefix      $listHeadPrefixes
   filter listed paths                             $filter
   find path in root (thirdish)                    $find
   find path in root (first)                       $findfirst
@@ -68,9 +69,13 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
     propNoShrink((keys: Keys) => clean(keys) { keys =>
       store.listAll must beOkLike((_:List[Key]).toSet must_== keys.toSet) })
 
-  def listPrefix =
+  def listFromPrefix =
     propNoShrink((keys: Keys) => clean(keys.map(_ prepend "sub")) { keys =>
       store.list(Key.Root /"sub") must beOkLike((_:List[Key]).toSet must_== keys.map(_.fromRoot).toSet) })
+
+  def listHeadPrefixes =
+    propNoShrink((keys: Keys) => clean(keys.map(_ prepend "sub")) { keys =>
+      store.listHeads(Key.Root /"sub") must beOkLike((_:List[Key]).toSet must_== keys.map(_.fromRoot.head).toSet) }).set(workers=1)
 
   def filter =
     propNoShrink((keys: Keys) => clean(keys) { keys =>
