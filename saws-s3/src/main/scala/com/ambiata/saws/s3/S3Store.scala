@@ -15,7 +15,12 @@ import scodec.bits.ByteVector
 
 case class S3ReadOnlyStore(bucket: String, base: DirPath, client: AmazonS3Client) extends ReadOnlyStore[ResultTIO] {
   def list(prefix: Key): ResultT[IO, List[Key]] =
-    S3.listKeys(bucket, (base </> keyToDirPath(prefix)).path).executeT(client).map(_.map(path => filePathToKey(FilePath.unsafe(path).relativeTo(base </> keyToDirPath(prefix)))))
+    S3.listKeys(bucket, (base </> keyToDirPath(prefix)).path).executeT(client)
+      .map(_.map(path => filePathToKey(FilePath.unsafe(path).relativeTo(base </> keyToDirPath(prefix)))))
+
+  def listHeads(prefix: Key): ResultT[IO, List[Key]] =
+    S3.listKeysHead(bucket, (base </> keyToDirPath(prefix)).path).executeT(client)
+      .map(_.map(Key.unsafe))
 
   def filter(prefix: Key, predicate: Key => Boolean): ResultT[IO, List[Key]] =
     list(prefix).map(_.filter(predicate))
@@ -108,6 +113,9 @@ case class S3Store(bucket: String, base: DirPath, client: AmazonS3Client, cache:
 
   def list(prefix: Key): ResultT[IO, List[Key]] =
     readOnly.list(prefix)
+
+  def listHeads(prefix: Key): ResultT[IO, List[Key]] =
+    readOnly.listHeads(prefix)
 
   def filter(prefix: Key, predicate: Key => Boolean): ResultT[IO, List[Key]] =
     readOnly.filter(prefix, predicate)

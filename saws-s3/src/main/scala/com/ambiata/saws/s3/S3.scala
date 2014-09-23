@@ -254,7 +254,7 @@ object S3 {
       def allObjects(prevObjectsListing : => ObjectListing, objects : List[S3ObjectSummary]): S3Action[List[S3ObjectSummary]] = {
         val previousListing = prevObjectsListing
         val previousObjects = previousListing.getObjectSummaries.asScala.toList
-        if (previousListing.isTruncated())
+        if (previousListing.isTruncated)
           allObjects(client.listNextBatchOfObjects(previousListing), objects ++ previousObjects)
         else
           S3Action.ok(objects ++ previousObjects)
@@ -267,6 +267,17 @@ object S3 {
 
   def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
     listSummary(bucket, prefix).map(_.map(_.getKey))
+
+  def listKeysHead(path: DirPath): S3Action[List[String]] =
+    listKeysHead(bucket(path), key(path))
+
+  def listKeysHead(bucket: String, prefix: String = "/"): S3Action[List[String]] =
+    S3Action(client => {
+      val request = new ListObjectsRequest(bucket, prefix+(if (prefix.endsWith("/")) "" else "/"), null, "/", null)
+      val common = client.listObjects(request).getCommonPrefixes.asScala.toList
+      val prefixes = common.flatMap(_.split("/").lastOption)
+      prefixes
+    })
 
   def listBuckets: S3Action[List[Bucket]] =
     S3Action(_.listBuckets.toList).onResult(_.prependErrorMessage(s"Could access the buckets list"))
