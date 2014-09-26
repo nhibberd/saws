@@ -273,7 +273,7 @@ object S3 {
 
   def listKeysHead(bucket: String, prefix: String = "/"): S3Action[List[String]] =
     S3Action(client => {
-      val request = new ListObjectsRequest(bucket, prefix+(if (prefix.endsWith("/")) "" else "/"), null, "/", null)
+      val request = new ListObjectsRequest(bucket, directory(prefix), null, "/", null)
       val common = client.listObjects(request).getCommonPrefixes.asScala.toList
       val prefixes = common.flatMap(_.split("/").lastOption)
       prefixes
@@ -301,6 +301,12 @@ object S3 {
         case t: Throwable =>
           S3Action.exception(t)
       }).join
+
+  def existsPrefix(bucket: String, prefix: String): S3Action[Boolean] =
+    S3Action(client => {
+      val request = new ListObjectsRequest(bucket, directory(prefix), null, "/", null)
+      client.listObjects(request).getObjectSummaries.asScala.nonEmpty
+    })
 
   def existsInBucket(bucket: String, filter: String => Boolean): S3Action[Boolean] =
     listSummary(bucket).map(_.exists(o => filter(o.getKey)))
