@@ -31,6 +31,9 @@ case class S3ReadOnlyStore(bucket: String, base: DirPath, client: AmazonS3Client
   def exists(key: Key): ResultT[IO, Boolean] =
     S3.exists(bucket, (base </> keyToDirPath(key)).path).executeT(client)
 
+  def existsPrefix(prefix: Key): ResultT[IO, Boolean] =
+    S3.existsPrefix(bucket, (base </> keyToDirPath(prefix)).path).executeT(client)
+
   def checksum(key: Key, algorithm: ChecksumAlgorithm): ResultT[IO, Checksum] =
     S3.withStream(bucket, (base </> keyToDirPath(key)).path, in => Checksum.stream(in, algorithm)).executeT(client)
 
@@ -125,6 +128,9 @@ case class S3Store(bucket: String, base: DirPath, client: AmazonS3Client, cache:
 
   def exists(key: Key): ResultT[IO, Boolean] =
     readOnly.exists(key)
+
+  def existsPrefix(key: Key): ResultT[IO, Boolean] =
+    readOnly.existsPrefix(key)
 
   def checksum(key: Key, algorithm: ChecksumAlgorithm): ResultT[IO, Checksum] =
     readOnly.checksum(key, algorithm)

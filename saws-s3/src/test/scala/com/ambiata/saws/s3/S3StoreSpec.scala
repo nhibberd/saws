@@ -32,6 +32,7 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
   find path in root (last)                        $findlast
 
   exists                                          $exists
+  existsPrefix                                    $existsPrefix
   not exists                                      $notExists
 
   delete                                          $delete
@@ -100,6 +101,10 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
   def exists =
     propNoShrink((keys: Keys) => clean(keys) { keys =>
       keys.traverseU(store.exists) must beOkLike(_.forall(identity)) })
+
+  def existsPrefix =
+    propNoShrink((keys: Keys) => clean(keys) { keys =>
+      keys.traverseU(key => store.existsPrefix(key.copy(components = key.components.dropRight(1)))) must beOkLike(_.forall(identity)) })
 
   def notExists =
     propNoShrink((keys: Keys) => store.exists("root" / "i really don't exist") must beOkValue(false))
