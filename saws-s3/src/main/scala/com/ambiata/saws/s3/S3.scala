@@ -13,9 +13,6 @@ import com.ambiata.mundane.control._
 
 import java.io._
 
-import scodec.bits.ByteVector
-
-import scala.io.Source
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 import scalaz.effect._
