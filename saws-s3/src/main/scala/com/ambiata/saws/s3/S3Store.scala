@@ -22,6 +22,9 @@ case class S3ReadOnlyStore(bucket: String, base: DirPath, client: AmazonS3Client
     S3.listKeysHead(bucket, (base </> keyToDirPath(prefix)).path).executeT(client)
       .map(_.map(Key.unsafe))
 
+  def listDropRightOne(prefix: Key): ResultT[IO, List[Key]] =
+    list(prefix).map(_.map(_.dropRight(1)))
+
   def filter(prefix: Key, predicate: Key => Boolean): ResultT[IO, List[Key]] =
     list(prefix).map(_.filter(predicate))
 
@@ -119,6 +122,9 @@ case class S3Store(bucket: String, base: DirPath, client: AmazonS3Client, cache:
 
   def listHeads(prefix: Key): ResultT[IO, List[Key]] =
     readOnly.listHeads(prefix)
+
+  def listDropRightOne(prefix: Key): ResultT[IO, List[Key]] =
+    readOnly.listDropRightOne(prefix)
 
   def filter(prefix: Key, predicate: Key => Boolean): ResultT[IO, List[Key]] =
     readOnly.filter(prefix, predicate)
