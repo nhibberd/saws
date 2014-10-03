@@ -243,7 +243,7 @@ object S3 {
     putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
   def listSummary(path: DirPath): S3Action[List[S3ObjectSummary]] =
-    listSummary(bucket(path), key(path))
+    listSummary(bucket(path), directory(key(path)))
 
   def listSummary(bucket: String, prefix: String = ""): S3Action[List[S3ObjectSummary]] =
     S3Action(client => {
