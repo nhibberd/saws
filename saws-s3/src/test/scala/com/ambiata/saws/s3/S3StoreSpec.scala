@@ -107,7 +107,7 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
       keys.traverseU(key => store.existsPrefix(key.copy(components = key.components.dropRight(1)))) must beOkLike(_.forall(identity)) })
 
   def notExists =
-    propNoShrink((keys: Keys) => store.exists("root" / "i really don't exist") must beOkValue(false))
+    propNoShrink((keys: Keys) => store.exists("root" / "missing") must beOkValue(false))
 
   def delete =
     propNoShrink((keys: Keys) => clean(keys) { keys =>
