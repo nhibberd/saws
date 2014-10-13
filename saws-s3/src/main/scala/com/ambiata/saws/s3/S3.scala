@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.control._
+import com.ambiata.mundane.data._
 
 import java.io._
 
@@ -143,7 +144,7 @@ object S3 {
     }.onResult(_.prependErrorMessage(s"Could not copy object from S3://${fromS3.render} to S3://${toS3.render}"))
 
   def writeLines(s3: S3Address, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    putStream(s3, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
+    putString(s3, Lists.prepareForFile(lines.toList), "UTF-8", metadata)
 
   def listSummary(s3: S3Address): S3Action[List[S3ObjectSummary]] =
     S3Action(client => {
