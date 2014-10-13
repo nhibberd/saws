@@ -17,7 +17,7 @@ object S3Jar {
       val jarFile = new File(base, jarName)
       (for {
         _ <- makeJar(jarFile)
-        _ <- S3.putFile(bucket, jarName, jarFile)
+        _ <- S3.putFile(S3Address(bucket, jarName), jarFile)
       } yield s"pushed the jar file at ${jarFile.getPath} to the S3 bucket/key $bucket/$jarName")
         .mapError(t => This(s"couldn't push the jar file at ${jarFile.getPath} to the S3 bucket/key $bucket/$jarName - ${t}"))
     }).join

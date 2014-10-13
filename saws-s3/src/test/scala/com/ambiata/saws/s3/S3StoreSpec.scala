@@ -184,7 +184,7 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
 
   def create(keys: Keys): ResultT[IO, Unit] =
     keys.keys.traverseU(e =>
-      S3.writeLines("ambiata-test-view-exp", (e prepend "s3storespec/store").path+"/"+e.value, Seq(e.value.toString))).evalT.void
+      S3.writeLines(S3Address("ambiata-test-view-exp", (e prepend "s3storespec/store").path+"/"+e.value), Seq(e.value.toString))).evalT.void
 
   def clean[A](keys: Keys)(run: List[Key] => A): A = {
     try {
@@ -192,7 +192,7 @@ class S3StoreSpec extends Specification with ScalaCheck { def is = sequential ^ 
       run(keys.keys.map(e => e.full.toKey))
     }
     finally {
-      (S3.deleteAll("ambiata-test-view-exp", "s3storespec") >>
+      (S3.deleteAll(S3Address("ambiata-test-view-exp", "s3storespec")) >>
         S3Action.fromResultT(Directories.delete(tmp1)) >>
         S3Action.fromResultT(Directories.delete(tmp2))).execute(client).unsafePerformIO
     }

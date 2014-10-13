@@ -25,29 +25,29 @@ import ResultT._
 
 object S3 {
 
-  def getObject(bucket: String, key: String): S3Action[S3Object] =
-    S3Action(_.getObject(bucket, key)).onResult(_.prependErrorMessage(s"Could not get S3://$bucket/$key"))
+  def getObject(s3: S3Address): S3Action[S3Object] =
+    S3Action(_.getObject(s3.bucket, s3.key)).onResult(_.prependErrorMessage(s"Could not get S3://${s3.render}"))
 
-  def getBytes(bucket: String, key: String): S3Action[Array[Byte]] =
-    withStream(bucket, key, is => Streams.readBytes(is))
+  def getBytes(s3: S3Address): S3Action[Array[Byte]] =
+    withStream(s3, is => Streams.readBytes(is))
 
-  def getString(bucket: String, key: String, encoding: String = "UTF-8"): S3Action[String] =
-    withStream(bucket, key, is => Streams.read(is, encoding))
+  def getString(s3: S3Address, encoding: String = "UTF-8"): S3Action[String] =
+    withStream(s3, is => Streams.read(is, encoding))
 
-  def withStreamUnsafe[A](bucket: String, key: String, f: InputStream => A): S3Action[A] =
-    getObject(bucket, key).map(o => f(o.getObjectContent))
+  def withStreamUnsafe[A](s3: S3Address, f: InputStream => A): S3Action[A] =
+    getObject(s3).map(o => f(o.getObjectContent))
 
-  def withStream[A](bucket: String, key: String, f: InputStream => ResultT[IO, A]): S3Action[A] =
-    getObject(bucket, key).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
+  def withStream[A](s3: S3Address, f: InputStream => ResultT[IO, A]): S3Action[A] =
+    getObject(s3).flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
 
   /**
    * Download a file in multiparts
    *
    * The tick method can be used inside hadoop to notify progress
    */
-  def withStreamMultipart(bucket: String, key: String, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
+  def withStreamMultipart(s3: S3Address, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
-    requests <- createRequests(bucket, key, maxPartSize)
+    requests <- createRequests(s3, maxPartSize)
     task = Process.emitAll(requests)
       .map(request => Task.delay { tick(); client.getObject(request) })
       .sequence(Runtime.getRuntime.availableProcessors)
@@ -56,41 +56,41 @@ object S3 {
   } yield result
 
 
-  def storeObject(bucket: String, key: String, file: File, mkdirs: Boolean = false): S3Action[File] =
-    withStream(bucket, key, Files.writeStream(FilePath.unsafe(file.getAbsolutePath), _)).as(file)
+  def storeObject(s3: S3Address, file: File, mkdirs: Boolean = false): S3Action[File] =
+    withStream(s3, Files.writeStream(FilePath.unsafe(file.getAbsolutePath), _)).as(file)
 
-  def readLines(bucket: String, key: String): S3Action[List[String]] =
-    withStream(bucket, key, Streams.read(_)).map(_.lines.toList)
+  def readLines(s3: S3Address): S3Action[List[String]] =
+    withStream(s3, Streams.read(_)).map(_.lines.toList)
 
-  def downloadFile(bucket: String, key: String, to: String = "."): S3Action[File] = {
-    val destination = DirPath.unsafe(to) </> FilePath.unsafe(key)
-    S3.withStream(bucket, key, Files.writeStream(destination, _)).as(destination.toFile)
+  def downloadFile(s3: S3Address, to: String = "."): S3Action[File] = {
+    val destination = DirPath.unsafe(to) </> FilePath.unsafe(s3.key)
+    S3.withStream(s3, Files.writeStream(destination, _)).as(destination.toFile)
   }
-  def putString(bucket: String, key: String,  data: String, encoding: String = "UTF-8", metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    putBytes(bucket, key, data.getBytes(encoding), metadata)
+  def putString(s3: S3Address,  data: String, encoding: String = "UTF-8", metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    putBytes(s3, data.getBytes(encoding), metadata)
 
-  def putBytes(bucket: String, key: String,  data: Array[Byte], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    putStream(bucket, key, new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
+  def putBytes(s3: S3Address,  data: Array[Byte], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    putStream(s3, new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
    * to avoid having the stream materialised fully in memory
    */
-  def putFileMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, filePath: FilePath, tick: Function0[Unit],
+  def putFileMultiPart(s3: S3Address, maxPartSize: BytesQuantity, filePath: FilePath, tick: Function0[Unit],
                        metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
     val file = new File(filePath.path)
     val input = new FileInputStream(file)
     // only set the content length if > 10Mb. Otherwise an error will be thrown by AWS because
     // the minimum upload size will be too small
     if (file.length > 10000) metadata.setContentLength(file.length)
-    putStreamMultiPart(bucket, key, maxPartSize, input, tick, metadata)
+    putStreamMultiPart(s3, maxPartSize, input, tick, metadata)
   }
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
    * to avoid having the stream materialised fully in memory
    */
-  def putStreamMultiPart(bucket: String, key: String, maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit],
+  def putStreamMultiPart(s3: S3Address, maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit],
                          metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[UploadResult] = {
     S3Action { client: AmazonS3Client =>
       // create a transfer manager
@@ -101,7 +101,7 @@ object S3 {
       transferManager.setConfiguration(configuration)
       transferManager
     }.flatMap { transferManager: TransferManager =>
-      putStreamMultiPart(bucket, key, transferManager, stream, tick, metadata) map { upload =>
+      putStreamMultiPart(s3, transferManager, stream, tick, metadata) map { upload =>
         try     upload()
         finally transferManager.shutdownNow
       }
@@ -109,43 +109,43 @@ object S3 {
   }
 
   /** cache and pass your own transfer manager if you need to run lots of uploads */
-  def putStreamMultiPart(bucket: String, key: String, transferManager: TransferManager, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[() => UploadResult] = {
+  def putStreamMultiPart(s3: S3Address, transferManager: TransferManager, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[() => UploadResult] = {
     S3Action { client : AmazonS3Client =>
       // start the upload and wait for the result
-      val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, metadata))
+      val upload = transferManager.upload(new PutObjectRequest(s3.bucket, s3.key, stream, metadata))
       upload.addProgressListener(new ProgressListener{ def progressChanged(e: ProgressEvent) { tick() }})
       () => upload.waitForUploadResult
-    }.onResult(_.prependErrorMessage(s"Could not put stream to S3://$bucket/$key using the transfer manager"))
+    }.onResult(_.prependErrorMessage(s"Could not put stream to S3://${s3.render} using the transfer manager"))
   }
 
-  def putStream(bucket: String, key: String,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    S3Action(_.putObject(bucket, key, stream, metadata))
-             .onResult(_.prependErrorMessage(s"Could not put stream to S3://$bucket/$key"))
+  def putStream(s3: S3Address,  stream: InputStream, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    S3Action(_.putObject(s3.bucket, s3.key, stream, metadata))
+             .onResult(_.prependErrorMessage(s"Could not put stream to S3://${s3.render}"))
 
-  def putFile(bucket: String, key: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    S3Action(_.putObject(new PutObjectRequest(bucket, key, file).withMetadata(metadata)))
-             .onResult(_.prependErrorMessage(s"Could not put file to S3://$bucket/$key"))
+  def putFile(s3: S3Address, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    S3Action(_.putObject(new PutObjectRequest(s3.bucket, s3.key, file).withMetadata(metadata)))
+             .onResult(_.prependErrorMessage(s"Could not put file to S3://${s3.render}"))
 
   /** If file is a directory, recursivly put all files and dirs under it on S3. If file is a file, put that file on S3. */
-  def putFiles(bucket: String, prefix: String, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[List[PutObjectResult]] =
+  def putFiles(s3: S3Address, file: File, metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[List[PutObjectResult]] =
     if(file.isDirectory)
-      file.listFiles.toList.traverse(f => putFiles(bucket, prefix + "/" + f.getName, f, metadata)).map(_.flatten)
+      file.listFiles.toList.traverse(f => putFiles(S3Address(s3.bucket, s3.key + "/" + f.getName), f, metadata)).map(_.flatten)
     else
-      putFile(bucket, prefix, file, metadata).map(List(_))
+      putFile(s3, file, metadata).map(List(_))
 
   /** copy an object from s3 to s3, without downloading the object */
   // metadata disabled, since it copies the old objects metadata
-  def copyFile(fromBucket: String, fromKey: String, toBucket: String, toKey: String /*, metadata: ObjectMetadata = S3.ServerSideEncryption*/): S3Action[CopyObjectResult] =
+  def copyFile(fromS3: S3Address, toS3: S3Address /*, metadata: ObjectMetadata = S3.ServerSideEncryption*/): S3Action[CopyObjectResult] =
     S3Action.client.map { client =>
-      val metadata =  client.getObjectMetadata(new GetObjectMetadataRequest(fromBucket, fromKey))
+      val metadata =  client.getObjectMetadata(new GetObjectMetadataRequest(fromS3.bucket, fromS3.key))
       metadata.setServerSideEncryption(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
-      client.copyObject(new CopyObjectRequest(fromBucket, fromKey, toBucket, toKey).withNewObjectMetadata(metadata))
-    }.onResult(_.prependErrorMessage(s"Could not copy object from S3://${fromBucket}/${fromKey} to S3://${toBucket}/${toKey}"))
+      client.copyObject(new CopyObjectRequest(fromS3.bucket, fromS3.key, toS3.bucket, toS3.key).withNewObjectMetadata(metadata))
+    }.onResult(_.prependErrorMessage(s"Could not copy object from S3://${fromS3.render} to S3://${toS3.render}"))
 
-  def writeLines(bucket: String, key: String, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
-    putStream(bucket, key, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
+  def writeLines(s3: S3Address, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
+    putStream(s3, new ByteArrayInputStream(lines.mkString("\n").getBytes), metadata) // TODO: Fix ram use
 
-  def listSummary(bucket: String, prefix: String = ""): S3Action[List[S3ObjectSummary]] =
+  def listSummary(s3: S3Address): S3Action[List[S3ObjectSummary]] =
     S3Action(client => {
       @tailrec
       def allObjects(prevObjectsListing : => ObjectListing, objects : List[S3ObjectSummary]): S3Action[List[S3ObjectSummary]] = {
@@ -156,15 +156,15 @@ object S3 {
         else
           S3Action.ok(objects ++ previousObjects)
       }
-      allObjects(client.listObjects(bucket, directory(prefix)), List())
+      allObjects(client.listObjects(s3.bucket, directory(s3.key)), List())
     }).flatMap(x => x)
 
-  def listKeys(bucket: String, prefix: String = ""): S3Action[List[String]] =
-    listSummary(bucket, prefix).map(_.map(_.getKey))
+  def listKeys(s3: S3Address): S3Action[List[String]] =
+    listSummary(s3).map(_.map(_.getKey))
 
-  def listKeysHead(bucket: String, prefix: String = "/"): S3Action[List[String]] =
+  def listKeysHead(s3: S3Address): S3Action[List[String]] =
     S3Action(client => {
-      val request = new ListObjectsRequest(bucket, directory(prefix), null, "/", null)
+      val request = new ListObjectsRequest(s3.bucket, directory(s3.key), null, "/", null)
       val common = client.listObjects(request).getCommonPrefixes.asScala.toList
       val prefixes = common.flatMap(_.split("/").lastOption)
       prefixes
@@ -179,9 +179,9 @@ object S3 {
   /** use this method to make sure that a prefix ends with a slash */
   def directory(prefix: String) = prefix + (if (prefix.endsWith("/")) "" else "/")
 
-  def exists(bucket: String, key: String): S3Action[Boolean] =
+  def exists(s3: S3Address): S3Action[Boolean] =
     S3Action((client: AmazonS3Client) => try {
-        client.getObject(bucket, key)
+        client.getObject(s3.bucket, s3.key)
         S3Action.ok(true)
       } catch {
         case ase: AmazonServiceException =>
@@ -190,46 +190,46 @@ object S3 {
           S3Action.exception(t)
       }).join
 
-  def existsPrefix(bucket: String, prefix: String): S3Action[Boolean] =
+  def existsPrefix(s3: S3Address): S3Action[Boolean] =
     S3Action(client => {
-      val request = new ListObjectsRequest(bucket, directory(prefix), null, "/", null)
+      val request = new ListObjectsRequest(s3.bucket, directory(s3.key), null, "/", null)
       client.listObjects(request).getObjectSummaries.asScala.nonEmpty
     })
 
   def existsInBucket(bucket: String, filter: String => Boolean): S3Action[Boolean] =
-    listSummary(bucket).map(_.exists(o => filter(o.getKey)))
+    listSummary(S3Address(bucket, "")).map(_.exists(o => filter(o.getKey)))
 
-  def deleteObject(bucket: String, key: String): S3Action[Unit] =
-    S3Action(_.deleteObject(bucket, key))
-             .onResult(_.prependErrorMessage(s"Could not delete S3://${bucket}/${key}"))
+  def deleteObject(s3: S3Address): S3Action[Unit] =
+    S3Action(_.deleteObject(s3.bucket, s3.key))
+             .onResult(_.prependErrorMessage(s"Could not delete S3://${s3.render}"))
 
   def deleteObjects(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
-    listSummary(bucket, "").flatMap(_.collect { case o if f(o.getKey) => deleteObject(bucket, o.getKey) }.sequence.map(_ => ()))
+    listSummary(S3Address(bucket, "")).flatMap(_.collect { case o if f(o.getKey) => deleteObject(S3Address(bucket, o.getKey)) }.sequence.map(_ => ()))
 
-  def md5(bucket: String, key: String): S3Action[String] =
-    S3Action(_.getObjectMetadata(bucket, key).getETag)
-             .onResult(_.prependErrorMessage(s"Could not get md5 of S3://${bucket}/${key}"))
+  def md5(s3: S3Address): S3Action[String] =
+    S3Action(_.getObjectMetadata(s3.bucket, s3.key).getETag)
+             .onResult(_.prependErrorMessage(s"Could not get md5 of S3://${s3.render}"))
 
-  def extractTarball(bucket: String, key: String, local: File, stripLevels: Int): S3Action[File] =
-    withStream(bucket, key, Archive.extractTarballStream(_, FilePath.unsafe(local.getAbsolutePath), stripLevels)).as(local)
+  def extractTarball(s3: S3Address, local: File, stripLevels: Int): S3Action[File] =
+    withStream(s3, Archive.extractTarballStream(_, FilePath.unsafe(local.getAbsolutePath), stripLevels)).as(local)
 
-  def extractTarballFlat(bucket: String, key: String, local: File): S3Action[File] =
-    withStream(bucket, key, Archive.extractTarballStreamFlat(_, FilePath.unsafe(local.getAbsolutePath))).as(local)
+  def extractTarballFlat(s3: S3Address, local: File): S3Action[File] =
+    withStream(s3, Archive.extractTarballStreamFlat(_, FilePath.unsafe(local.getAbsolutePath))).as(local)
 
-  def extractGzip(bucket: String, key: String, local: File): S3Action[File] =
-    withStream(bucket, key, is => Archive.extractGzipStream(is, FilePath.unsafe(local.getAbsolutePath))).as(local)
+  def extractGzip(s3: S3Address, local: File): S3Action[File] =
+    withStream(s3, is => Archive.extractGzipStream(is, FilePath.unsafe(local.getAbsolutePath))).as(local)
 
-  def mirror(base: File, bucket: String, keybase: String): S3Action[Unit] = for {
+  def mirror(base: File, s3: S3Address): S3Action[Unit] = for {
     local <- S3Action.fromResultT { Directories.list(DirPath.unsafe(base.getAbsolutePath)) }
     _     <- local.traverse({ source =>
       val destination = source.toFile.getAbsolutePath.replace(base.getAbsolutePath + "/", "")
-      S3.putFile(bucket, s"${keybase}/${destination}", source.toFile)
+      S3.putFile(s3 / destination, source.toFile)
     })
   } yield ()
 
-  def deleteAll(bucket: String, keybase: String): S3Action[Unit] = for {
-    all <- listSummary(bucket, keybase)
-    _   <- all.traverse(obj => deleteObject(bucket, obj.getKey))
+  def deleteAll(s3: S3Address): S3Action[Unit] = for {
+    all <- listSummary(s3)
+    _   <- all.traverse(obj => deleteObject(S3Address(s3.bucket, obj.getKey)))
   } yield ()
 
   /** Object metadata that enables AES256 server-side encryption. */
@@ -240,11 +240,11 @@ object S3 {
   }
 
   /** create a list of multipart requests */
-  def createRequests(bucket: String, key: String, maxPartSize: BytesQuantity): S3Action[Seq[GetObjectRequest]] = for {
+  def createRequests(s3: S3Address, maxPartSize: BytesQuantity): S3Action[Seq[GetObjectRequest]] = for {
     client <- S3Action.client
-    metadata = client.getObjectMetadata(bucket, key)
+    metadata = client.getObjectMetadata(s3.bucket, s3.key)
     parts = partition(metadata.getContentLength, maxPartSize.toBytes.value)
-  } yield parts.map { case (start, end) => new GetObjectRequest(bucket, key).withRange(start, end) }
+  } yield parts.map { case (start, end) => new GetObjectRequest(s3.bucket, s3.key).withRange(start, end) }
 
   /** partition a number of bytes, going from 0 to totalSize - 1 into parts of size partSize. The last part might be smaller */
   def partition(totalSize: Long, partSize: Long): Seq[(Long, Long)] = {
