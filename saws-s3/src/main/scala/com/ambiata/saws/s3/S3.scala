@@ -146,6 +146,21 @@ object S3 {
   def writeLines(s3: S3Address, lines: Seq[String], metadata: ObjectMetadata = S3.ServerSideEncryption): S3Action[PutObjectResult] =
     putString(s3, Lists.prepareForFile(lines.toList), "UTF-8", metadata)
 
+  def listSummaryx(s3: S3Address): S3Action[List[S3ObjectSummary]] =
+    S3Action(client => {
+      @tailrec
+      def allObjects(prevObjectsListing : => ObjectListing, objects : List[S3ObjectSummary]): S3Action[List[S3ObjectSummary]] = {
+        val previousListing = prevObjectsListing
+        val previousObjects = previousListing.getObjectSummaries.asScala.toList
+        if (previousListing.isTruncated)
+          allObjects(client.listNextBatchOfObjects(previousListing), objects ++ previousObjects)
+        else
+          S3Action.ok(objects ++ previousObjects)
+      }
+      allObjects(client.listObjects(s3.bucket, s3.key), List())
+    }).flatMap(x => x)
+
+  @deprecated("Use `listSummaryx`, same API just a change in semantics", "608c44b")
   def listSummary(s3: S3Address): S3Action[List[S3ObjectSummary]] =
     S3Action(client => {
       @tailrec
@@ -160,9 +175,22 @@ object S3 {
       allObjects(client.listObjects(s3.bucket, directory(s3.key)), List())
     }).flatMap(x => x)
 
+  def listKeysx(s3: S3Address): S3Action[List[String]] =
+    listSummaryx(s3).map(_.map(_.getKey))
+
+  @deprecated("Use `listKeysx`, same API just a change in semantics", "608c44b")
   def listKeys(s3: S3Address): S3Action[List[String]] =
     listSummary(s3).map(_.map(_.getKey))
 
+  def listKeysHeadx(s3: S3Address): S3Action[List[String]] =
+    S3Action(client => {
+      val request = new ListObjectsRequest(s3.bucket, s3.key, null, "/", null)
+      val common = client.listObjects(request).getCommonPrefixes.asScala.toList
+      val prefixes = common.flatMap(_.split("/").lastOption)
+      prefixes
+    })
+
+  @deprecated("Use `listKeysHeadx`, same API just a change in semantics", "608c44b")
   def listKeysHead(s3: S3Address): S3Action[List[String]] =
     S3Action(client => {
       val request = new ListObjectsRequest(s3.bucket, directory(s3.key), null, "/", null)
@@ -178,6 +206,7 @@ object S3 {
     listBuckets.map(_ => ()).orElse(S3Action.fail("S3 is not accessible"))
 
   /** use this method to make sure that a prefix ends with a slash */
+  @deprecated("This shouldn't be in saws", "608c44b")
   def directory(prefix: String) = prefix + (if (prefix.endsWith("/")) "" else "/")
 
   def exists(s3: S3Address): S3Action[Boolean] =
@@ -191,12 +220,23 @@ object S3 {
           S3Action.exception(t)
       }).join
 
+  def existsPrefixx(s3: S3Address): S3Action[Boolean] =
+    S3Action(client => {
+      val request = new ListObjectsRequest(s3.bucket, s3.key, null, "/", null)
+      client.listObjects(request).getObjectSummaries.asScala.nonEmpty
+    })
+
+  @deprecated("Use `existsPrefixx`, same API just a change in semantics", "608c44b")
   def existsPrefix(s3: S3Address): S3Action[Boolean] =
     S3Action(client => {
       val request = new ListObjectsRequest(s3.bucket, directory(s3.key), null, "/", null)
       client.listObjects(request).getObjectSummaries.asScala.nonEmpty
     })
 
+  def existsInBucketx(bucket: String, filter: String => Boolean): S3Action[Boolean] =
+    listSummaryx(S3Address(bucket, "")).map(_.exists(o => filter(o.getKey)))
+
+  @deprecated("Use `existsInBucketx`, same API just a change in semantics", "608c44b")
   def existsInBucket(bucket: String, filter: String => Boolean): S3Action[Boolean] =
     listSummary(S3Address(bucket, "")).map(_.exists(o => filter(o.getKey)))
 
@@ -204,6 +244,10 @@ object S3 {
     S3Action(_.deleteObject(s3.bucket, s3.key))
              .onResult(_.prependErrorMessage(s"Could not delete S3://${s3.render}"))
 
+  def deleteObjectsx(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
+    listSummaryx(S3Address(bucket, "")).flatMap(_.collect { case o if f(o.getKey) => deleteObject(S3Address(bucket, o.getKey)) }.sequence.map(_ => ()))
+
+  @deprecated("Use `deleteObjectsx`, same API just a change in semantics", "608c44b")
   def deleteObjects(bucket: String, f: String => Boolean = (s: String) => true): S3Action[Unit] =
     listSummary(S3Address(bucket, "")).flatMap(_.collect { case o if f(o.getKey) => deleteObject(S3Address(bucket, o.getKey)) }.sequence.map(_ => ()))
 
@@ -228,6 +272,12 @@ object S3 {
     })
   } yield ()
 
+  def deleteAllx(s3: S3Address): S3Action[Unit] = for {
+    all <- listSummaryx(s3)
+    _   <- all.traverse(obj => deleteObject(S3Address(s3.bucket, obj.getKey)))
+  } yield ()
+
+  @deprecated("Use `deleteAllx`, same API just a change in semantics", "608c44b")
   def deleteAll(s3: S3Address): S3Action[Unit] = for {
     all <- listSummary(s3)
     _   <- all.traverse(obj => deleteObject(S3Address(s3.bucket, obj.getKey)))

@@ -12,7 +12,7 @@ object build extends Build {
     aggregate = Seq(core, ec2, s3, iam, emr, ses, testing)
     ).dependsOn(core, ec2, s3, iam, emr, ses)
 
-  lazy val standardSettings = Defaults.defaultSettings ++
+  lazy val standardSettings = Defaults.coreDefaultSettings ++
                    projectSettings          ++
                    compilationSettings      ++
                    testingSettings          ++
@@ -74,7 +74,8 @@ object build extends Build {
   lazy val compilationSettings: Seq[Settings] = Seq(
     javacOptions ++= Seq("-Xmx3G", "-Xms512m", "-Xss4m"),
     maxErrors := 20,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
+    scalacOptions ++= Seq("-feature", "-language:_"),
+    scalacOptions in Compile ++= Seq("-deprecation", "-unchecked", "-Xfatal-warnings"),
     scalacOptions in Test ++= Seq("-Yrangepos")
   )
 
