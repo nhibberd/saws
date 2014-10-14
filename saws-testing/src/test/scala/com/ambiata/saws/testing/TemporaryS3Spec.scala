@@ -26,5 +26,5 @@ class TemporaryS3Spec extends Specification { def is = s2"""
       } yield e)
       y <- S3.exists(p).executeT(Clients.s3)
     } yield (x, y)) must beOkValue((true,false))
-  }.pendingUntilFixed("S3:160")
+  }
 }
