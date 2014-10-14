@@ -53,6 +53,9 @@ object EC2InstanceSize {
   lazy val instanceMappings: Map[String, EC2InstanceSize] = {
     List(
       T1Micro
+    , T2Micro
+    , T2Small
+    , T2Medium
     , M3Medium
     , M3Large
     , M3XLarge
@@ -76,6 +79,11 @@ object EC2InstanceSize {
     , M2XLarge
     , M22XLarge
     , M24XLarge
+    , HS18XLarge
+    , I2XLarge
+    , I22XLarge
+    , I24XLarge
+    , I28XLarge
     ).map(x => x.size -> x).toMap
   }
 
@@ -83,8 +91,11 @@ object EC2InstanceSize {
     instanceMappings.get(size)
 }
 
-// Micro
+// Tiny
 case object T1Micro extends EC2InstanceSize("t1.micro", EC2Devices0)
+case object T2Micro extends EC2InstanceSize("t2.micro", EC2Devices0)
+case object T2Small extends EC2InstanceSize("t2.small", EC2Devices0)
+case object T2Medium extends EC2InstanceSize("t2.medium", EC2Devices0)
 
 // General Purpose - Current Generation
 case object M3Medium extends EC2InstanceSize("m3.medium", EC2Devices1)
@@ -120,3 +131,12 @@ case object R38XLarge extends EC2InstanceSize("r3.8xlarge", EC2Devices2)
 case object M2XLarge extends EC2InstanceSize("m2.xlarge", EC2Devices2)
 case object M22XLarge extends EC2InstanceSize("m2.2xlarge", EC2Devices2)
 case object M24XLarge extends EC2InstanceSize("m2.4xlarge", EC2Devices2)
+
+// High Storage Density
+case object HS18XLarge extends EC2InstanceSize("hs1.8xlarge", EC2Devices4)
+
+// Storage Optimised
+case object I2XLarge extends EC2InstanceSize("i2.xlarge", EC2Devices1)
+case object I22XLarge extends EC2InstanceSize("i2.2xlarge", EC2Devices2)
+case object I24XLarge extends EC2InstanceSize("i2.4xlarge", EC2Devices4)
+case object I28XLarge extends EC2InstanceSize("i2.8xlarge", EC2Devices4)
