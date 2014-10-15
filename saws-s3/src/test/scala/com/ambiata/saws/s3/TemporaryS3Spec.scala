@@ -12,7 +12,7 @@ class TemporaryS3Spec extends Specification { def is = s2"""
  TemporaryS3 should clean up its own resources
  =============================================
 
-   single file               $singleFile
+   single file               $singleFile         ${tag("aws")}
 
 """
 
