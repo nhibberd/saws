@@ -1,10 +1,9 @@
-package com.ambiata.saws.testing
+package com.ambiata.saws.s3
 
 import java.util.UUID
 
 import com.ambiata.mundane.control._
 import com.ambiata.saws.core.Clients
-import com.ambiata.saws.s3._
 
 import scalaz._, Scalaz._, effect._
 

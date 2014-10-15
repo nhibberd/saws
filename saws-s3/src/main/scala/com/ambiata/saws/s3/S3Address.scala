@@ -27,4 +27,4 @@ case class S3Address(bucket: String, key: String) {
     S3Address(bucket, key + "/" + suffix)
 }
 
-case class SizedS3S3Address(s3Data: S3Address, size: Long)
+case class SizedS3Address(s3Data: S3Address, size: Long)

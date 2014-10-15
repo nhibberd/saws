@@ -1,12 +1,11 @@
-package com.ambiata.saws.testing
+package com.ambiata.saws.s3
 
 import com.ambiata.mundane.testing.ResultTIOMatcher._
 import com.ambiata.saws.core.Clients
-import com.ambiata.saws.s3._
-import com.ambiata.saws.testing.TemporaryS3._
+import com.ambiata.saws.s3.TemporaryS3._
 import org.specs2.Specification
 
-import scalaz.{Store => _, _}, Scalaz._
+import scalaz.{Store => _}
 
 class TemporaryS3Spec extends Specification { def is = s2"""
 
