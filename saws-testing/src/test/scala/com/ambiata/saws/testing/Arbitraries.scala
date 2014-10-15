@@ -4,6 +4,7 @@ package testing
 
 import com.ambiata.saws.core._
 import org.scalacheck._, Arbitrary._
+import scala.io.Codec
 import scalaz._, Scalaz._
 import scalaz.effect.IO
 import mundane.control._
@@ -57,4 +58,8 @@ object Arbitraries {
     (m: Int) => (n: Int) => m * x
   ))
 
+  implicit def CodecArbitrary: Arbitrary[Codec] = Arbitrary(Gen.oneOf(
+    Codec.UTF8
+    , Codec.ISO8859
+  ))
 }
