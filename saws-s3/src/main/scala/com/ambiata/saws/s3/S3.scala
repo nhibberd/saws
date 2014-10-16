@@ -49,10 +49,11 @@ object S3 {
   def withStreamMultipart(s3: S3Address, maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(s3, maxPartSize)
-    task = Process.emitAll(requests)
+    objs = Process.emitAll(requests)
       .map(request => Task.delay { tick(); client.getObject(request) })
       .sequence(Runtime.getRuntime.availableProcessors)
-      .to(objectContentSink(f)).run
+    // Manual syntax just to help Scala 2.10 work shit out
+    task = Process.ProcessSyntax(objs).to(objectContentSink(f)).run
     result <- S3Action.fromTask(task)
   } yield result
 
@@ -215,9 +216,9 @@ object S3 {
         S3Action.ok(true)
       } catch {
         case ase: AmazonServiceException =>
-          if (ase.getErrorCode == "NoSuchKey") S3Action.ok(false) else S3Action.exception(ase)
+          if (ase.getErrorCode == "NoSuchKey") S3Action.ok(false) else S3Action.exception[Boolean](ase)
         case t: Throwable =>
-          S3Action.exception(t)
+          S3Action.exception[Boolean](t)
       }).join
 
   def existsPrefixx(s3: S3Address): S3Action[Boolean] =
