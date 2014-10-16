@@ -210,7 +210,7 @@ case class S3Address(bucket: String, key: String) {
     }.flatMap { transferManager: TransferManager =>
       putStreamMultiPartWithTransferManager(transferManager, stream, tick, metadata) map { upload =>
         try     upload()
-        finally transferManager.shutdownNow
+        finally transferManager.shutdownNow(false)
       }
     }.map(p => S3UploadResult(p.getETag, p.getVersionId))
   }

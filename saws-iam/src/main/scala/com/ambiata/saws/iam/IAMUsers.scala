@@ -84,7 +84,7 @@ object IAMUsers {
 
   /** Delete the access key associated with an IAM user. */
   def deleteAccessKey(userName: String, accessKey: String): IAMAction[Unit] =
-    IAMAction(client => client.deleteAccessKey(new DeleteAccessKeyRequest(accessKey).withUserName(userName)))
+    IAMAction(client => client.deleteAccessKey(new DeleteAccessKeyRequest(userName, accessKey)))
 
   /** Delete all the access keys associated with an IAM user. */
   def deleteAllAccessKeys(userName: String): IAMAction[Unit] = for {
