@@ -8,31 +8,32 @@ import org.specs2._
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3PrefixSpec extends Specification with ScalaCheck { def is = s2"""
+class S3PrefixSpec extends Specification with ScalaCheck { def is = section("aws") ^ s2"""
 
  S3 file interactions
  ====================
 
  It is possible to
-   upload multiple files to S3         $upload              ${tag("aws")}
-   download multiple files from S3     $download            ${tag("aws")}
-   delete multiple files from S3       $delete              ${tag("aws")}
-   check existence of prefix on S3     $exists              ${tag("aws")}
-   check existence can fail on S3      $existsFail          ${tag("aws")}
-   delete all files from a base path   $deletePrefix        ${tag("aws")}
-   list all files in prefix on S3      $list                ${tag("aws")}
-   get list of file sizes              $fileSizes           ${tag("aws")}
+   upload multiple files to S3         $upload
+   download multiple files from S3     $download
+   delete multiple files from S3       $delete
+   check existence of prefix on S3     $exists
+   check existence can fail on S3      $existsFail
+   delete all files from a base path   $deletePrefix
+   list all files in prefix on S3      $list
+   list all S3Prefix's in prefix on S3 $listPrefix
+   get list of file sizes              $fileSizes
 
  Test that we can remove common prefix's from S3Address
  ======================================================
 
-  Can successfully remove common prefix              $succesfullCommonPrefix          ${tag("aws")}
-  Will return None when there is no common prefix    $noCommonPrefix                  ${tag("aws")}
+  Can successfully remove common prefix              $succesfullCommonPrefix
+  Will return None when there is no common prefix    $noCommonPrefix
 
  Support functions
  =========================================
 
-  Can retrieve S3Prefix from uri        $fromUri            ${tag("aws")}
+  Can retrieve S3Prefix from uri        $fromUri
 
 """
 
@@ -94,6 +95,16 @@ class S3PrefixSpec extends Specification with ScalaCheck { def is = s2"""
   } yield s3 -> l) must beOkLike({
     case (a: S3Prefix, b: List[String]) =>
       List("foo", "foo2", "foos/bar").map(s => S3Operations.concat(a.prefix, s)) must_== b
+  })
+
+  def listPrefix = TemporaryS3.withS3Prefix(s3 => for {
+    _ <- (s3 | "foo").put("").executeT(conf)
+    _ <- (s3 | "foo2").put("").executeT(conf)
+    _ <- (s3 / "foos" | "bar").put("").executeT(conf)
+    l <- s3.listPrefix.executeT(conf)
+  } yield s3 -> l) must beOkLike({
+    case (a: S3Prefix, b: List[S3Prefix]) =>
+      List("foo", "foo2", "foos/bar").map(s => a / s) must_== b
   })
 
   def fileSizes = TemporaryDirPath.withDirPath(dir => for {
