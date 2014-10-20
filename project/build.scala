@@ -68,7 +68,7 @@ object build extends Build {
     id = "testing"
   , base = file("saws-testing")
   , settings = standardSettings ++ lib("testing") ++ Seq[Settings](name := "saws-testing"
-    ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh)
+    ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane)
   ).dependsOn(iam, emr, ec2, ses, s3)
 
   lazy val compilationSettings: Seq[Settings] = Seq(
@@ -83,10 +83,14 @@ object build extends Build {
     promulgate.library("com.ambiata.saws", "ambiata-oss")
 
   lazy val testingSettings: Seq[Settings] = Seq(
-    initialCommands in console := "import org.specs2._",
-    logBuffered := false,
-    cancelable := true,
-    javaOptions += "-Xmx3G"
+    initialCommands in console := "import org.specs2._"
+    , logBuffered := false
+    , cancelable := true
+    , javaOptions += "-Xmx3G"
+    , testOptions in Test ++= (if (Option(System.getenv("FORCE_AWS")).isDefined || Option(System.getenv("AWS_ACCESS_KEY")).isDefined)
+                                 Seq()
+                               else
+                                 Seq(Tests.Argument("--", "exclude", "aws")))
   )
 
   def lib(name: String) =

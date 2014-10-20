@@ -124,6 +124,9 @@ object Aws {
   def fromIO[R, A](v: IO[A]): Aws[R, A] =
     io(_ => v)
 
+  def using[A: Resource, B <: A, R, C](a: Aws[R, B])(run: B => Aws[R, C]): Aws[R, C] =
+    Aws(ActionT.using[A, B, Vector[AwsLog], R, C](a.runT)(run.apply(_).runT))
+
   def fromIOResult[R, A](v: IO[Result[A]]): Aws[R, A] =
     fromResultT(ResultT(v))
 
