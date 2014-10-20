@@ -82,6 +82,9 @@ case class S3Prefix(bucket: String, prefix: String) {
       allObjects(client.listObjects(bucket, awsPrefix), List())
     }).flatMap(x => x)
 
+  def listPrefix: S3Action[List[S3Prefix]] =
+    listKeys.map(_.map(s => S3Prefix(bucket, s)))
+
   def listKeys: S3Action[List[String]] =
     listSummary.map(_.map(_.getKey))
 
