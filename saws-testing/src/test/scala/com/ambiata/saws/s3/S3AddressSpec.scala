@@ -192,25 +192,25 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = s2"""
 
   def succesfullCommonPrefix = {
     val s3 = S3Address("bucket","a/b/c/d/e")
-    val foo = S3Address("bucket","a/b/c")
+    val foo = S3Prefix("bucket","a/b/c")
     s3.removeCommonPrefix(foo) must_== Some("d/e")
   }
 
   def noCommonPrefix = {
     val s3 = S3Address("bucket","a/b/c/d/e")
-    val foo = S3Address("bucket","a/b/e")
+    val foo = S3Prefix("bucket","a/b/e")
     s3.removeCommonPrefix(foo) must_== None
   }
 
   def bucketPrefix = {
     val s3 = S3Address("bucket","a")
-    val foo = S3Address("bucket","")
+    val foo = S3Prefix("bucket","")
     s3.removeCommonPrefix(foo) must_== Some("a")
   }
 
   def differentBuckets = {
     val s3 = S3Address("bucket","a")
-    val foo = S3Address("buckset","")
+    val foo = S3Prefix("buckset","")
     s3.removeCommonPrefix(foo) must_== None
   }
 

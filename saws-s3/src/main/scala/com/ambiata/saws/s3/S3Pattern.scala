@@ -13,8 +13,8 @@ import scalaz._, Scalaz._
  * may represent a `S3Prefix` or `S3Address`
  */
 case class S3Pattern(bucket: String, unknown: String) {
-  def removeCommonPrefix(data: S3Pattern): Option[String] =
-    S3Operations.removeCommonPrefix(bucket, unknown, data.bucket, data.unknown)
+  def removeCommonPrefix(data: S3Prefix): Option[String] =
+    S3Operations.removeCommonPrefix(bucket, unknown, data.bucket, data.prefix)
 
   def render: String =
     Op.render(bucket, unknown)
