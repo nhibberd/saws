@@ -16,6 +16,9 @@ case class S3Pattern(bucket: String, unknown: String) {
   def removeCommonPrefix(data: S3Prefix): Option[String] =
     S3Operations.removeCommonPrefix(bucket, unknown, data.bucket, data.prefix)
 
+  def removeCommonPattern(data: S3Pattern): Option[String] =
+    S3Operations.removeCommonPrefix(bucket, unknown, data.bucket, data.unknown)
+
   def render: String =
     Op.render(bucket, unknown)
 
