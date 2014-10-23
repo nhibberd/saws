@@ -3,10 +3,10 @@ package com.ambiata.saws.s3
 import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
 import com.ambiata.mundane.io._
 import com.ambiata.saws.core.S3Action
+import com.ambiata.saws.s3.{S3Operations => Op}
 import com.ambiata.saws.s3.S3Pattern._
 
 import scalaz._, Scalaz._
-
 
 /**
  * Representation of a unknown location S3 designated by a `bucket` and a `unknown`, which
@@ -15,6 +15,9 @@ import scalaz._, Scalaz._
 case class S3Pattern(bucket: String, unknown: String) {
   def removeCommonPrefix(data: S3Pattern): Option[String] =
     S3Operations.removeCommonPrefix(bucket, unknown, data.bucket, data.unknown)
+
+  def render: String =
+    Op.render(bucket, unknown)
 
   def resolve: S3Action[List[S3Address]] =
     listS3.map(_.map(obj => obj.s3))
