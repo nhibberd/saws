@@ -17,6 +17,9 @@ import scala.annotation.tailrec
  *
  */
 case class S3Prefix(bucket: String, prefix: String) {
+  def toS3Pattern: S3Pattern =
+    S3Pattern(bucket, prefix)
+
   def removeCommonPrefix(data: S3Prefix): Option[String] =
     Op.removeCommonPrefix(bucket, prefix, data.bucket, data.prefix)
 
