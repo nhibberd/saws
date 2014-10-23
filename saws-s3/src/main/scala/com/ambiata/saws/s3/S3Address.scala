@@ -33,8 +33,8 @@ case class S3Address(bucket: String, key: String) {
   def toS3Pattern: S3Pattern =
     S3Pattern(bucket, key)
 
-  def removeCommonPrefix(data: S3Address): Option[String] =
-    Op.removeCommonPrefix(bucket, key, data.bucket, data.key)
+  def removeCommonPrefix(data: S3Prefix): Option[String] =
+    Op.removeCommonPrefix(bucket, key, data.bucket, data.prefix)
 
   def render: String =
     Op.render(bucket, key)
