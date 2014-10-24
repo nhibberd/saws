@@ -3,9 +3,11 @@ package saws
 package testing
 
 import com.ambiata.saws.core._
+import com.ambiata.saws.s3._
 import org.scalacheck._, Arbitrary._
 import scalaz._, Scalaz._
 import scalaz.effect.IO
+import scala.io.Codec
 import mundane.control._
 import mundane.testing.Arbitraries._
 
@@ -57,4 +59,25 @@ object Arbitraries {
     (m: Int) => (n: Int) => m * x
   ))
 
+  implicit def CodecArbitrary: Arbitrary[Codec] = Arbitrary(Gen.oneOf(
+      Codec.UTF8
+    , Codec.ISO8859
+  ))
+
+  def testBucket: String = Option(System.getenv("AWS_TEST_BUCKET")).getOrElse("ambiata-dev-view")
+
+  implicit def S3AddressArbitrary: Arbitrary[S3Address] = Arbitrary(for {
+    p <- arbitrary[S3Prefix]
+    k <- Gen.identifier
+  } yield p | k)
+
+  implicit def S3PrefixArbitrary: Arbitrary[S3Prefix] = Arbitrary(for {
+    i <- Gen.choose(1, 10)
+    a <- Gen.listOfN(i, Gen.identifier)
+    z = a.mkString("/")
+    f <- Gen.oneOf("", "/")
+  } yield S3Prefix(testBucket, z + f))
+
+  implicit def S3PatternArbitrary: Arbitrary[S3Pattern] =
+    Arbitrary(Gen.oneOf(arbitrary[S3Prefix].map(_.toS3Pattern), arbitrary[S3Address].map(_.toS3Pattern)))
 }
