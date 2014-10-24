@@ -9,7 +9,8 @@ object S3Operations {
     bucket + "/" + s
 
   def concat(one: String, two: String): String =
-    one + "/" + two
+    if (one.endsWith(DELIMITER) || one.isEmpty) one + two
+    else one + DELIMITER + two
 
   def removeCommonPrefix(bucket: String, prefix: String, removeBucket: String, removePrefix: String): Option[String] = {
     def ll(x: List[String], y: List[String]): Option[String] =
