@@ -1,6 +1,5 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.mundane.control.ResultT._
 import com.ambiata.saws.s3.{S3Operations => Op}
 import com.amazonaws.event.{ProgressEvent, ProgressListener}
 import com.amazonaws.services.s3.AmazonS3Client
@@ -275,5 +274,5 @@ object S3Address {
   }
 
   def objectContentSink(f: InputStream => ResultT[IO, Unit]): Sink[Task, S3Object] =
-    io.channel((s3Object: S3Object) => toTask(f(s3Object.getObjectContent)))
+    io.channel((s3Object: S3Object) => ResultT.toTask(f(s3Object.getObjectContent)))
 }
