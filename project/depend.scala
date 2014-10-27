@@ -7,7 +7,7 @@ object depend {
 
   val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.5a")
 
-  val mundaneVersion = "1.2.1-20141016221505-82db433"
+  val mundaneVersion = "1.2.1-20141024050817-e2b01b2"
 
   val mundane = Seq(  "com.ambiata" %% "mundane-io"
                     , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion)
