@@ -19,7 +19,7 @@ Versioning
   can never really be undone, and also enabling versioning on a test bucket
   would have some fairly poor cost outcomes. The best we can do is, make sure
   a dedicated 'versioning' test bucket exists, then go through an enable/disable
-  process.  $versioning
+  process.  $versioning ${tag("aws")}
 
 
 """
