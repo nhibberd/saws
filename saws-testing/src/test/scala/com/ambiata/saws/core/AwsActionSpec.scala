@@ -45,6 +45,10 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
    composing actions of moar different types                $compositionLiftAgain
    logging                                                  $logging
    handling errors                                          $errors
+   when                                                     $when
+   unless                                                   $unless
+   when is inverse of unless                                $whenunless
+   unit                                                     $unit
 
 """
 
@@ -192,6 +196,29 @@ class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
       case Error(error) =>
         error must_== Both(message, throwable): execute.Result
     })
+
+  def when = prop((b: Boolean) =>{
+    var state = false
+    EC2Action.when(b, EC2Action.safe { state = true }) must beOkLike(_ => state ==== b)
+  })
+
+  def unless = prop((b: Boolean) =>{
+    var state = true
+    EC2Action.unless(b, EC2Action.safe { state = false }) must beOkLike(_ => state ==== b)
+  })
+
+  def whenunless = prop((n: Int, b: Boolean) =>{
+    var state = 0
+    val tick = EC2Action.safe { state += n }
+    val action = for {
+      _ <- EC2Action.unless(b, tick)
+      _ <- EC2Action.when(b, tick)
+    } yield ()
+    action must beOkLike(_ => state ==== n)
+  })
+
+  def unit =
+    Aws.unit[Int] === Aws.safe[Int, Unit](())
 
   /*  Aws Support (Instances specialized for law checking) */
 
