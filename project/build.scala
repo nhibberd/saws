@@ -31,7 +31,7 @@ object build extends Build {
   , base = file("saws-core")
   , settings = standardSettings ++ lib("core") ++ Seq[Settings](
       name := "saws-core"
-    ) ++ Seq[Settings](libraryDependencies ++= depend.scalaz ++ depend.aws ++ depend.scalazStream ++ depend.mundane ++ depend.mundaneTesting ++ depend.testing)
+    ) ++ Seq[Settings](libraryDependencies ++= depend.scalaz ++ depend.aws ++ depend.scalazStream ++ depend.mundane ++ depend.testing)
   )
 
   lazy val iam = Project(
@@ -68,7 +68,7 @@ object build extends Build {
     id = "testing"
   , base = file("saws-testing")
   , settings = standardSettings ++ lib("testing") ++ Seq[Settings](name := "saws-testing"
-    ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane)
+    ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane ++ depend.mundaneTesting)
   ).dependsOn(iam, emr, ec2, ses, s3)
 
   lazy val compilationSettings: Seq[Settings] = Seq(
