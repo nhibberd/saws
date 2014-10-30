@@ -44,14 +44,8 @@ case class S3Address(bucket: String, key: String) {
   def size: S3Action[Long] =
     getS3.map(_.size)
 
-// ------------ Useful operations
-
-  def withStreamUnsafe[A](f: InputStream => A): S3Action[A] =
-    getObject.map(o => f(o.getObjectContent))
-
   def withStream[A](f: InputStream => ResultT[IO, A]): S3Action[A] =
     getObject.flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
-
 
 // ------------- Read
 
@@ -82,15 +76,18 @@ case class S3Address(bucket: String, key: String) {
   }
 
   def exists: S3Action[Boolean] =
-    S3Action((client: AmazonS3Client) => try {
-      client.getObject(bucket, key)
-      S3Action.ok(true)
-    } catch {
-      case ase: AmazonServiceException =>
-        if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
-      case t: Throwable =>
-        S3Action.exception[Boolean](t)
-    }).join
+    if (bucket.equals("")) S3Action.ok(false)
+    else {
+      S3Action((client: AmazonS3Client) => try {
+        client.getObject(bucket, key)
+        S3Action.ok(true)
+      } catch {
+        case ase: AmazonServiceException =>
+          if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
+        case t: Throwable =>
+          S3Action.exception[Boolean](t)
+      }).join
+    }
 
   /** copy an object from s3 to s3, without downloading the object */
   // metadata disabled, since it copies the old objects metadata

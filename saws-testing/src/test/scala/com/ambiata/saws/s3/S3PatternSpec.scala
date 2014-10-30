@@ -3,31 +3,34 @@ package com.ambiata.saws.s3
 import com.ambiata.mundane.control.ResultTIO
 import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
+import com.ambiata.saws.testing.Arbitraries._
 import com.ambiata.mundane.testing.ResultTIOMatcher._
 import com.ambiata.mundane.io._
 import org.specs2._
+import org.specs2.matcher.Parameters
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3PatternSpec extends Specification { def is = s2"""
+class S3PatternSpec extends Specification with ScalaCheck { def is = section("aws") ^ s2"""
 
   S3Pattern should perform as expected
   ====================================
 
-    determine a S3Address              $determineAddress         ${tag("aws")}
-    determine a S3Prefix               $determinePrefix          ${tag("aws")}
-    determine an invalid S3Pattern     $determineNone            ${tag("aws")}
-    determine an failure               $determineFailure         ${tag("aws")}
+    determine a S3Address              $determineAddress         
+    determine a S3Prefix               $determinePrefix
+    determine an invalid S3Pattern     $determineNone
+    determine an failure               $determineFailure
+    determine an failure               $determineFailurex
 
-    listSummary from S3Address         $listAddress              ${tag("aws")}
-    listSummary from S3Prefix          $listPrefix               ${tag("aws")}
-    listSummary from invalid S3Pattern $listNone                 ${tag("aws")}
-    listSummary from failure           $listFailure              ${tag("aws")}
+    listSummary from S3Address         $listAddress
+    listSummary from S3Prefix          $listPrefix
+    listSummary from invalid S3Pattern $listNone
+    listSummary from failure           $listFailure
 
-    exists from S3Address              $existsAddress            ${tag("aws")}
-    exists from S3Prefix               $existsPrefix             ${tag("aws")}
-    exists from invalid S3Pattern      $existsNone               ${tag("aws")}
-    exists form failure                $existsFailure            ${tag("aws")}
+    exists from S3Address              $existsAddress
+    exists from S3Prefix               $existsPrefix
+    exists from invalid S3Pattern      $existsNone
+    exists form failure                $existsFailure
 
 
   Support functions
@@ -36,67 +39,80 @@ class S3PatternSpec extends Specification { def is = s2"""
     can retrieve S3Pattern from uri    $fromUri
 
 """
+
+  override implicit def defaultParameters: Parameters =
+    new Parameters(minTestsOk = 3, workers = 3)
+
   val conf = Clients.s3
 
-  val invalidS3Pattern = S3Pattern("ambiata-dev-view", "nope")
-  val failureS3Pattern = S3Pattern("ambiata-dev-zzz", "nope")
-
-  def determineAddress = TemporaryS3.withS3Address(s3 => for {
-    _ <- s3.put("").executeT(conf)
+  def determineAddress = prop((address: S3Address, data: String) =>
+    TemporaryS3.runWithS3Address(address)(s3 => for {
+    _ <- s3.put(data).executeT(conf)
     s <- S3Pattern(s3.bucket, s3.key).determine.executeT(conf)
-  } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isLeft must beTrue ))
+  } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isLeft must beTrue )))
 
-  def determinePrefix = TemporaryS3.withS3Prefix(s3 => for {
-    _ <- (s3 | "foo").put("").executeT(conf)
+  def determinePrefix = prop((prefix: S3Prefix, data: String) =>
+    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
+    _ <- (s3 | "foo").put(data).executeT(conf)
     s <- S3Pattern(s3.bucket, s3.prefix).determine.executeT(conf)
-  } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isRight must beTrue ))
+  } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isRight must beTrue )))
 
-  def determineNone =
-    invalidS3Pattern.determine.executeT(conf) must beOkLike(_ must beNone )
+  def determineNone = prop((r: S3Pattern) =>
+    r.determine.executeT(conf) must beOkLike(_ must beNone ))
 
-  def determineFailure =
-    failureS3Pattern.determine.executeT(conf) must beOkLike(_ must beNone )
+  def determineFailure = prop((bucket: String, unknown: String) =>
+    S3Pattern(bucket, unknown).determine.executeT(conf) must beOkLike(_ must beNone ))
 
-  def listAddress = TemporaryS3.withS3Address(s3 => for {
-    _ <- s3.put("").executeT(conf)
-    l <- S3Pattern(s3.bucket, s3.key).listKeys.executeT(conf)
-  } yield s3 -> l) must beOkLike({
-    case (a: S3Address, b: List[String]) => a.key must_== b.head
+  def determineFailurex =
+    S3Pattern("", "").determine.executeT(conf) must beOkLike(_ must beNone )
+
+  def listAddress = prop((address: S3Address, data: String) =>
+    TemporaryS3.withS3Address(s3 => for {
+      _ <- s3.put(data).executeT(conf)
+      l <- S3Pattern(s3.bucket, s3.key).listKeys.executeT(conf)
+    } yield s3 -> l) must beOkLike({
+      case (a: S3Address, b: List[String]) => a.key must_== b.head
+    })
+  )
+
+  def listPrefix = prop((prefix: S3Prefix, data: String, key1: S3Address, key2: S3Address) => (key1.key != key2.key) ==> {
+    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
+      _ <- (s3 | key1.key).put(data).executeT(conf)
+      _ <- (s3 | key2.key).put(data).executeT(conf)
+      l <- s3.toS3Pattern.listKeys.executeT(conf)
+    } yield s3 -> l) must beOkLike({
+      case (a: S3Prefix, b: List[String]) =>
+        b.toSet must_== List(key1.key, key2.key).map(s => S3Operations.concat(a.prefix, s)).toSet
+    })
   })
 
-  def listPrefix = TemporaryS3.withS3Prefix(s3 => for {
-    _ <- (s3 | "foo").put( "").executeT(conf)
-    _ <- (s3 | "foo2").put( "").executeT(conf)
-    _ <- (s3 / "foos" | "bar").put( "").executeT(conf)
-    l <- S3Pattern(s3.bucket, s3.prefix).listKeys.executeT(conf)
-  } yield s3 -> l) must beOkLike({
-    case (a: S3Prefix, b: List[String]) =>
-      List("foo", "foo2", "foos/bar").map(s => S3Operations.concat(a.prefix, s)) must_== b
-  })
+  def listNone = prop((pattern: S3Pattern) =>
+    pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty))
 
-  def listNone =
-    invalidS3Pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty)
+  def listFailure = prop((bucket: String, unknown: String) =>
+    S3Pattern(bucket, unknown).listS3.executeT(conf) must beOkLike(l => l.isEmpty))
 
-  def listFailure =
-    failureS3Pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty)
+  def existsAddress = prop((address: S3Address, data: String) =>
+    TemporaryS3.runWithS3Address(address)(s3 => for {
+      _ <- s3.put(data).executeT(conf)
+      e <- S3Pattern(s3.bucket, s3.key).exists.executeT(conf)
+    } yield e) must beOkValue(true)
+  )
 
-  def existsAddress =TemporaryS3.withS3Address(s3 => for {
-    _ <- s3.put("").executeT(conf)
-    e <- S3Pattern(s3.bucket, s3.key).exists.executeT(conf)
-  } yield e) must beOkValue(true)
+  def existsPrefix = prop((prefix: S3Prefix, data: String) =>
+    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
+      _ <- (s3 | "foo").put(data).executeT(conf)
+      e <- S3Pattern(s3.bucket, s3.prefix).exists.executeT(conf)
+    } yield e) must beOkValue(true)
+  )
 
-  def existsPrefix = TemporaryS3.withS3Prefix(s3 => for {
-    _ <- (s3 | "foo").put( "").executeT(conf)
-    e <- S3Pattern(s3.bucket, s3.prefix).exists.executeT(conf)
-  } yield e) must beOkValue(true)
+  def existsNone = prop((pattern: S3Pattern) =>
+    pattern.exists.executeT(conf) must beOkValue(false))
 
-  def existsNone =
-    invalidS3Pattern.exists.executeT(conf) must beOkValue(false)
+  def existsFailure = prop((bucket: String, unknown: String) =>
+    S3Pattern(bucket, unknown).exists.executeT(conf) must beOkValue(false))
 
-  def existsFailure =
-    failureS3Pattern.exists.executeT(conf) must beOkValue(false)
-
-  def fromUri =
-    S3Pattern.fromURI("s3://ambiata-dev-view/foo/bar/foos/bars") must beSome((a: S3Pattern) => a must_== S3Pattern("ambiata-dev-view", "foo/bar/foos/bars"))
+  def fromUri = prop((pattern: S3Pattern) =>
+    S3Pattern.fromURI(s"s3://${pattern.render}") must beSome((a: S3Pattern) => a must_== pattern))
 
 }

@@ -71,12 +71,12 @@ object Arbitraries {
     k <- Gen.identifier
   } yield p | k)
 
-  implicit def S3PrefixArbitrary: Arbitrary[S3Prefix] = Arbitrary(for {
-    i <- Gen.choose(1, 10)
+    implicit def S3PrefixArbitrary: Arbitrary[S3Prefix] = Arbitrary(for {
+    i <- Gen.choose(1, 5)
     a <- Gen.listOfN(i, Gen.identifier)
     z = a.mkString("/")
     f <- Gen.oneOf("", "/")
-  } yield S3Prefix(testBucket, z + f))
+  } yield S3Prefix(testBucket, "tests/" + z + f))
 
   implicit def S3PatternArbitrary: Arbitrary[S3Pattern] =
     Arbitrary(Gen.oneOf(arbitrary[S3Prefix].map(_.toS3Pattern), arbitrary[S3Address].map(_.toS3Pattern)))

@@ -100,18 +100,22 @@ case class S3Prefix(bucket: String, prefix: String) {
     })
 
   def exists: S3Action[Boolean] =
-    S3Action((client: AmazonS3Client) => try {
-      val request = new ListObjectsRequest(bucket, awsPrefix, null, "/", null)
-      request.setMaxKeys(1)
-      val list = client.listObjects(request)
-      val summaries = list.getObjectSummaries
-      S3Action.ok(summaries.asScala.nonEmpty)
-    } catch {
-      case ase: AmazonServiceException =>
-        if (ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
-      case t: Throwable =>
-        S3Action.exception[Boolean](t)
-    }).join
+    if (bucket.equals("")) S3Action.ok(false)
+    else {
+      S3Action((client: AmazonS3Client) => try {
+        val request = new ListObjectsRequest(bucket, awsPrefix, null, "/", null)
+        request.setMaxKeys(1)
+        val list = client.listObjects(request)
+        val summaries = list.getObjectSummaries
+        val commonPrefix = list.getCommonPrefixes
+        S3Action.ok(summaries.asScala.nonEmpty || commonPrefix.asScala.nonEmpty)
+      } catch {
+        case ase: AmazonServiceException =>
+          if (ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
+        case t: Throwable =>
+          S3Action.exception[Boolean](t)
+      }).join
+    }
 
   def delete: S3Action[Unit] =
     listSummary >>=
