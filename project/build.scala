@@ -80,7 +80,8 @@ object build extends Build {
           })
       , javaOptions in (Proguard, ProguardKeys.proguard) := Seq("-Xmx2G")
       )
-    ++ addArtifact(name.apply(n => Artifact(s"$n-shade", "shade", "jar")), (ProguardKeys.proguard in Proguard).map(_.head))
+    ++ addArtifact(name.apply(n => Artifact(s"$n-shade", "shade", "jar")), (ProguardKeys.proguard in Proguard, packageBin in Compile, name, version).map({ case (_, s, n, v) =>
+      s.getParentFile / "proguard" / s"$n-proguard-$v.jar"}))
   ).dependsOn(core)
 
   lazy val emr = Project(

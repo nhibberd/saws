@@ -22,7 +22,7 @@ object Mappings {
     keepAmbiata ++
     Seq("-applymapping aws.map") ++
     setup(file, update) ++
-    Seq(s"-outjars ${name}-hackzzz_${version}.jar") ++
+    Seq(s"-outjars ${name}-proguard-${version}.jar") ++
     dont
   }
 
