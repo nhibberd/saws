@@ -112,7 +112,7 @@ object build extends Build {
   , settings = projectSettings ++ compilationSettings ++ Seq(resolvers ++= depend.resolvers) ++ lib("shim") ++ proguardSettings ++
       Seq[Settings](libraryDependencies ++= depend.aws) ++
       inConfig(ProguardPre)(ProguardSettings.default ++ dependenciesPre ++ Seq(managedClasspath <<= (managedClasspath, managedClasspath in Compile).map({ case (y, x) => y ++ x}))) ++
-      dependenciesPre ++q
+      dependenciesPre ++
       Seq[Settings](name := "saws-shim"
         , ProguardKeys.options in ProguardPre <<= (update, packageBin in Compile).map({ case (u, _) => Mappings.preshim(u) })
         , ProguardKeys.options in Proguard <<= (ProguardKeys.proguard in ProguardPre, name, version, update, packageBin in Compile).map({
