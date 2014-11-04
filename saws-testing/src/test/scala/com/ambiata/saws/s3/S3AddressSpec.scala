@@ -1,4 +1,4 @@
-package com.ambiata.saws.s3
+18package com.ambiata.saws.s3
 
 import java.security.MessageDigest
 
@@ -21,38 +21,38 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
  ========================================
 
  It is possible to
-   write string to S3                  $putString              
-   upload a single file to S3          $upload                 
-   get a stream  from S3               $downloadStream         
-   download a file from S3             $download               
-   download a file from S3 to file     $downloadTo             
-   delete a file from S3               $delete                 
-   check existance of file on S3       $exists                 
-   get md5 of file from S3             $md5                    
-   copy an object in s3                $copy                   
-   download a file from S3 in parts    $downloadParts          
-   upload a small file to S3           $uploadPartsSmall       
-   upload a file to S3 in parts        $uploadParts            
-   get file size from S3               $fileSizes              
-   read and write string with codec    $codecString            
+   write string to S3                  $putString
+   upload a single file to S3          $upload
+   get a stream  from S3               $downloadStream
+   download a file from S3             $download
+   download a file from S3 to file     $downloadTo
+   delete a file from S3               $delete
+   check existance of file on S3       $exists
+   get md5 of file from S3             $md5
+   copy an object in s3                $copy
+   download a file from S3 in parts    $downloadParts
+   upload a small file to S3           $uploadPartsSmall
+   upload a file to S3 in parts        $uploadParts
+   get file size from S3               $fileSizes
+   read and write string with codec    $codecString
 
  Test that we can remove common prefix's from S3Address
  ======================================================
 
-  Can successfully remove common prefix              $succesfullCommonPrefix         
-  Will return None when there is no common prefix    $noCommonPrefix                 
-  Will return None when there is no common bucket    $differentBuckets               
+  Can successfully remove common prefix              $succesfullCommonPrefix
+  Will return None when there is no common prefix    $noCommonPrefix
+  Will return None when there is no common bucket    $differentBuckets
 
  Support functions
  ================
 
-  Can retrieve S3Address from uri                                                                            $fromUri     
+  Can retrieve S3Address from uri                                                                            $fromUri
   A range of longs from 0 to size can be partitioned in n ranges of size m (the last range might be shorter) $partition
 
 """
 
   override implicit def defaultParameters: Parameters =
-    new Parameters(minTestsOk = 3, workers = 3)
+    new Parameters(minTestsOk = 10, workers = 3)
 
   val conf = Clients.s3
 
