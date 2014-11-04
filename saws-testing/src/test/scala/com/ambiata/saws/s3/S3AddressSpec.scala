@@ -1,4 +1,4 @@
-18package com.ambiata.saws.s3
+package com.ambiata.saws.s3
 
 import java.security.MessageDigest
 
