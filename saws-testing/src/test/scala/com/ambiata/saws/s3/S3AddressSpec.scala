@@ -52,7 +52,7 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
 """
 
   override implicit def defaultParameters: Parameters =
-    new Parameters(minTestsOk = 10, workers = 3)
+    new Parameters(minTestsOk = 5, workers = 3)
 
   val conf = Clients.s3
 
