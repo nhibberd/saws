@@ -1,6 +1,9 @@
 import sbt._
 import Keys._
 import com.ambiata.promulgate.project.ProjectPlugin._
+import com.ambiata.promulgate.version.VersionPlugin._
+import sbtassembly.Plugin._
+import com.typesafe.sbt.SbtProguard._
 
 object build extends Build {
   type Settings = Def.Setting[_]
@@ -46,10 +49,38 @@ object build extends Build {
   , settings = standardSettings ++ lib("ec2") ++ Seq[Settings](name := "saws-ec2")
   ).dependsOn(core, iam)
 
+  val ProguardPre = config("proguard-pre")
+
+  def dependenciesPre: Seq[Setting[_]] = Seq(
+    ivyConfigurations += ProguardPre,
+    libraryDependencies <+= (ProguardKeys.proguardVersion in ProguardPre) { version =>
+      "net.sf.proguard" % "proguard-base" % version % ProguardPre.name
+    }
+  )
+
+  /*
+   Hadoop has an imcompatible dependency on `aws-java-sdk` with the version in use here.
+   Therefore we are using Proguard to map the package names in `aws-java-sdk` in use
+   here to avoid runtime errros.
+   ProguardPre will create a mapping file of the `aws-java-sdk` and `Mappings.mapping`
+   will then filter and rename the mappings file before the final Proguard task runs the
+   mappings over the library.
+   */
   lazy val s3 = Project(
     id = "s3"
   , base = file("saws-s3")
-  , settings = standardSettings ++ lib("s3") ++ Seq[Settings](name := "saws-s3") 
+  , settings = standardSettings ++ proguardSettings ++ lib("s3")
+      ++ inConfig(ProguardPre)(ProguardSettings.default ++ dependenciesPre ++ Seq(managedClasspath <<= (managedClasspath, managedClasspath in Compile).map({ case (y, x) => y ++ x })) )
+      ++ dependenciesPre
+      ++ Seq[Settings](
+          name := "saws-s3"
+        , ProguardKeys.options in ProguardPre <<= (update, packageBin in Compile).map({ case (u, b) => Mappings.premapping(u, b) })
+        , ProguardKeys.options in Proguard <<= (ProguardKeys.proguard in ProguardPre, name, version, update, packageBin in Compile).map({
+            case(_, n, v, u, b) => Mappings.mapping(n, v, u, b)
+          })
+      , javaOptions in (Proguard, ProguardKeys.proguard) := Seq("-Xmx2G")
+      )
+    ++ addArtifact(name.apply(n => Artifact(s"$n-shade", "shade", "jar")), (ProguardKeys.proguard in Proguard).map(_.head))
   ).dependsOn(core)
 
   lazy val emr = Project(
