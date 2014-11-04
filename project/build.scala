@@ -58,7 +58,7 @@ object build extends Build {
         })
       , javaOptions in (Proguard, ProguardKeys.proguard) := Seq("-Xmx2G")
     )                        ++
-    addArtifact(name.apply(n => Artifact(s"$n-shade", "shade", "jar")), (ProguardKeys.proguard in Proguard, packageBin in Compile, name, version).map({ case (_, s, n, v) =>
+    addArtifact(name.apply(n => Artifact(s"$n", "jar", "jar", "shade")), (ProguardKeys.proguard in Proguard, packageBin in Compile, name, version).map({ case (_, s, n, v) =>
       s.getParentFile / "proguard" / s"$n-proguard-$v.jar"}))
 
   lazy val core = Project(
@@ -120,7 +120,7 @@ object build extends Build {
           })
       , javaOptions in (Proguard, ProguardKeys.proguard) := Seq("-Xmx2G")
       ) ++
-      addArtifact(name.apply(n => Artifact(s"$n-shade", "shade", "jar")), (ProguardKeys.proguard in Proguard, packageBin in Compile, name, version).map({ case (_, s, n, v) => s.getParentFile / "proguard" / s"$n-proguard-$v.jar"}))
+      addArtifact(name.apply(n => Artifact(s"$n", "jar", "jar", "shade")), (ProguardKeys.proguard in Proguard, packageBin in Compile, name, version).map({ case (_, s, n, v) => s.getParentFile / "proguard" / s"$n-proguard-$v.jar"}))
   )
 
   lazy val compilationSettings: Seq[Settings] = Seq(
