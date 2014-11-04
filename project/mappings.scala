@@ -8,6 +8,7 @@ object Mappings {
     Seq("-printmapping mappings.map"
       , "-keep class com.amazonaws.** { *; }"
       , "-keepclassmembers class com.amazonaws.** { *; }") ++
+    Seq("-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod") ++
     setup(file, update) ++
     Seq("-outjars empty.jar") ++
     dont
@@ -23,6 +24,7 @@ object Mappings {
     Seq("-applymapping aws.map") ++
     Seq(s"-outjars ${name}-proguard-${version}.jar") ++
     setup(file, update) ++
+    Seq("-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod") ++
     dont
   }
 
