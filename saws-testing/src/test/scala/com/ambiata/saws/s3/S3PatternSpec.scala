@@ -16,7 +16,7 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
   S3Pattern should perform as expected
   ====================================
 
-    determine a S3Address              $determineAddress         
+    determine a S3Address              $determineAddress
     determine a S3Prefix               $determinePrefix
     determine an invalid S3Pattern     $determineNone
     determine an failure               $determineFailure
@@ -109,8 +109,8 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
   def existsNone = prop((pattern: S3Pattern) =>
     pattern.exists.executeT(conf) must beOkValue(false))
 
-  def existsFailure = prop((bucket: String, unknown: String) =>
-    S3Pattern(bucket, unknown).exists.executeT(conf) must beOkValue(false))
+  def existsFailure = prop((bucket: Clean, unknown: String) =>
+    S3Pattern(bucket.s, unknown).exists.executeT(conf) must beOkValue(false))
 
   def fromUri = prop((pattern: S3Pattern) =>
     S3Pattern.fromURI(s"s3://${pattern.render}") must beSome((a: S3Pattern) => a must_== pattern))
