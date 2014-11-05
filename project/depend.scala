@@ -9,20 +9,27 @@ object depend {
 
   val mundaneVersion = "1.2.1-20141024050817-e2b01b2"
 
-  val mundane = Seq(  "com.ambiata" %% "mundane-io"
-                    , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion)
+  val mundane = Seq(
+      "com.ambiata" %% "mundane-io"
+    , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion)
 
-  val mundaneTesting = Seq("com.ambiata" %% "mundane-testing" % mundaneVersion)
-  
+  val mundaneTesting = Seq(
+      "com.ambiata" %% "mundane-testing"   % mundaneVersion)
+
   val aws = Seq(
-      "com.amazonaws"       %  "aws-java-sdk" % "1.9.0" exclude("joda-time", "joda-time") // This is declared with a wildcard
-    , "com.owtelse.codec"   %  "base64"       % "1.0.6"
-    , "javax.mail"          %  "mail"         % "1.4.7")
+      "com.ambiata" %% "saws-aws"          % "1.2.1-20141105043457-94fc80b" intransitive()
+    , "commons-logging"            % "commons-logging"     % "1.1.1"
+    , "org.apache.httpcomponents"  % "httpclient"          % "4.2"
+    , "com.owtelse.codec"          % "base64"              % "1.0.6"
+    , "javax.mail"                 % "mail"                % "1.4.7"
+    , "com.fasterxml.jackson.core" % "jackson-core"        % "2.1.1"
+    , "com.fasterxml.jackson.core" % "jackson-databind"    % "2.1.1"
+    , "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.1" )
 
   val specs2Version = "2.4.5"
 
   val specs2 = Seq(
-      "org.specs2" %% "specs2-core"    % specs2Version)
+      "org.specs2" %% "specs2-core"        % specs2Version)
 
   val testing = Seq(
       "org.specs2" %% "specs2-core"        % specs2Version % "test"

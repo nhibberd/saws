@@ -2,8 +2,8 @@ package com.ambiata
 package saws
 package testing
 
-import com.ambiata.saws.core._
-import com.ambiata.saws.s3._
+import core._
+import s3._
 import org.scalacheck._, Arbitrary._
 import scalaz._, Scalaz._
 import scalaz.effect.IO

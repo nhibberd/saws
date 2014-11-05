@@ -1,8 +1,8 @@
 package com.ambiata.saws
 package ec2
 
-import com.amazonaws.services.ec2.AmazonEC2Client
-import com.amazonaws.services.ec2.model._
+import com.ambiata.com.amazonaws.services.ec2.AmazonEC2Client
+import com.ambiata.com.amazonaws.services.ec2.model._
 import com.ambiata.saws.core._
 import com.ambiata.saws.ec2._
 

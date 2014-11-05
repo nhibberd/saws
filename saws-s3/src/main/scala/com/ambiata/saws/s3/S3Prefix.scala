@@ -1,8 +1,8 @@
 package com.ambiata.saws.s3
 
-import com.amazonaws.AmazonServiceException
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model._
+import com.ambiata.com.amazonaws.AmazonServiceException
+import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
+import com.ambiata.com.amazonaws.services.s3.model._
 import com.ambiata.mundane.io.{FilePath, DirPath, Directories}
 import com.ambiata.saws.core._
 import com.ambiata.saws.s3.{S3Operations => Op}

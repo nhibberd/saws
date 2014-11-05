@@ -1,6 +1,6 @@
 package com.ambiata.saws.s3
 
-import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
+import com.ambiata.com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
 import com.ambiata.mundane.io._
 import com.ambiata.saws.core.S3Action
 import com.ambiata.saws.s3.{S3Operations => Op}
