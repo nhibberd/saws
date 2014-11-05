@@ -49,7 +49,7 @@ object build extends Build {
   lazy val s3 = Project(
     id = "s3"
   , base = file("saws-s3")
-  , settings = standardSettings ++ lib("s3") ++ Seq[Settings](name := "saws-s3") 
+  , settings = standardSettings ++ lib("s3") ++ Seq[Settings](name := "saws-s3")
   ).dependsOn(core)
 
   lazy val emr = Project(

@@ -1,6 +1,7 @@
 package com.ambiata.saws.s3
 
-import com.amazonaws.services.s3.model.{ObjectMetadata, Bucket}
+import com.ambiata.com.amazonaws.services.s3.model.{ObjectMetadata, Bucket}
+import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
 import com.ambiata.saws.core._
 
 import scalaz._, Scalaz._

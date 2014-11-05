@@ -1,8 +1,8 @@
 package com.ambiata.saws
 package s3
 
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model._
+import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
+import com.ambiata.com.amazonaws.services.s3.model._
 import com.ambiata.saws.core._
 
 import scala.collection.JavaConverters._

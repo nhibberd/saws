@@ -2,8 +2,8 @@ package com.ambiata.saws
 package iam
 
 import com.ambiata.saws.core._
-import com.amazonaws.services.identitymanagement.model.{User => AwsUser, _}
-import com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
+import com.ambiata.com.amazonaws.services.identitymanagement.model.{User => AwsUser, _}
+import com.ambiata.com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
 
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._

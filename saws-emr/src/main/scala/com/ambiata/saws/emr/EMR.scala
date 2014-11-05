@@ -1,8 +1,8 @@
 package com.ambiata.saws
 package emr
 
-import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
-import com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, Instance => EMRInstance, _}
+import com.ambiata.com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
+import com.ambiata.com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, Instance => EMRInstance, _}
 import com.ambiata.saws.core._
 import com.ambiata.saws.core.EMRAction
 

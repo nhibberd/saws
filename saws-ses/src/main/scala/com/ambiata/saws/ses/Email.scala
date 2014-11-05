@@ -1,8 +1,8 @@
 package com.ambiata.saws
 package ses
 
-import com.amazonaws.services.simpleemail._
-import com.amazonaws.services.simpleemail.model.{Message => AwsMessage, _}
+import com.ambiata.com.amazonaws.services.simpleemail._
+import com.ambiata.com.amazonaws.services.simpleemail.model.{Message => AwsMessage, _}
 import com.ambiata.mundane.control._
 
 import scala.collection.JavaConverters._

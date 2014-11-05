@@ -1,7 +1,7 @@
 package com.ambiata.saws
 package ec2
 
-import com.amazonaws.services.ec2.model.{SecurityGroup => AwsSecurityGroup, _}
+import com.ambiata.com.amazonaws.services.ec2.model.{SecurityGroup => AwsSecurityGroup, _}
 
 
 /** Configuration settings for a AWS Security Group. */

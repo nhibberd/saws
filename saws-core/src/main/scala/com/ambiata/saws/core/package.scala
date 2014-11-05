@@ -1,9 +1,9 @@
 package com.ambiata.saws
 
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.ec2.AmazonEC2Client
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
-import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
+import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
+import com.ambiata.com.amazonaws.services.ec2.AmazonEC2Client
+import com.ambiata.com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
+import com.ambiata.com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
 
 import scalaz._, Scalaz._
 import scalaz.effect._

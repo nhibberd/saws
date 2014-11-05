@@ -1,7 +1,7 @@
 package com.ambiata.saws
 package ses
 
-import com.amazonaws.services.simpleemail.model.{Message => AwsMessage, _}
+import com.ambiata.com.amazonaws.services.simpleemail.model.{Message => AwsMessage, _}
 
 import java.io.ByteArrayOutputStream
 import java.io.IOException
