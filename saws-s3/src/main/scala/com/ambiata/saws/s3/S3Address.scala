@@ -242,15 +242,11 @@ case class S3Address(bucket: String, key: String) {
   def withStreamMultipart( maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(maxPartSize)
-    task = Process.emitAll(requests)
-      .map(request => Task.delay { tick(); client.getObject(request) })
-      .sequence(Runtime.getRuntime.availableProcessors)
-      .to(S3Address.objectContentSink(f)).run
-    result <- S3Action.fromTask(task)
-  } yield result
+    _ <- Aws.fromResultT(requests.traverseU(z => { tick(); f(client.getObject(z).getObjectContent) }))
+  } yield ()
 
   /** create a list of multipart requests */
-  def createRequests(maxPartSize: BytesQuantity): S3Action[Seq[GetObjectRequest]] = for {
+  def createRequests(maxPartSize: BytesQuantity): S3Action[List[GetObjectRequest]] = for {
     client <- S3Action.client
     metadata = client.getObjectMetadata(bucket, key)
     parts = S3Address.partition(metadata.getContentLength, maxPartSize.toBytes.value)
@@ -263,11 +259,11 @@ object S3Address {
   }
 
   /** partition a number of bytes, going from 0 to totalSize - 1 into parts of size partSize. The last part might be smaller */
-  def partition(totalSize: Long, partSize: Long): Seq[(Long, Long)] = {
+  def partition(totalSize: Long, partSize: Long): List[(Long, Long)] = {
     val numberOfParts = totalSize / partSize
     val lastPartSize = totalSize % partSize
-    (0 until numberOfParts.toInt).map(part => (part * partSize, (part+1) * partSize - 1)) ++
-      (if (lastPartSize == 0) Seq() else Seq((totalSize - lastPartSize, totalSize - 1)))
+    (0 until numberOfParts.toInt).toList.map(part => (part * partSize, (part+1) * partSize - 1)) ++
+      (if (lastPartSize == 0) List() else List((totalSize - lastPartSize, totalSize - 1)))
   }
 
   def objectContentSink(f: InputStream => ResultT[IO, Unit]): Sink[Task, S3Object] =
