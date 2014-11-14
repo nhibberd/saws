@@ -75,7 +75,7 @@ object Arbitraries {
     k <- Gen.identifier
   } yield p | k)
 
-    implicit def S3PrefixArbitrary: Arbitrary[S3Prefix] = Arbitrary(for {
+  implicit def S3PrefixArbitrary: Arbitrary[S3Prefix] = Arbitrary(for {
     i <- Gen.choose(1, 5)
     a <- Gen.listOfN(i, Gen.identifier)
     z = a.mkString("/")

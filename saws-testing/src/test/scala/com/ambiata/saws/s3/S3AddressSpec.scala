@@ -120,8 +120,9 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
   def md5 = prop((data: String, address: S3Address) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
       _ <- s3.put(data).executeT(conf)
+      d <- s3.get.executeT(conf)
       m <- s3.md5.executeT(conf)
-    } yield m) must beOkValue (md5Hex(data.getBytes)))
+    } yield d -> m) must beOkValue (data -> md5Hex(data.getBytes("UTF8"))))
 
   def md5Hex(bytes: Array[Byte]): String =
     MessageDigest.getInstance("MD5").digest(bytes).map("%02X".format(_)).mkString.toLowerCase
