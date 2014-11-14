@@ -89,8 +89,8 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
   def listNone = prop((pattern: S3Pattern) =>
     pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty))
 
-  def listFailure = prop((bucket: String, unknown: String) =>
-    S3Pattern(bucket, unknown).listS3.executeT(conf) must beOkLike(l => l.isEmpty))
+  def listFailure = prop((s3: S3Prefix, unknown: String) =>
+    (s3 | unknown).toS3Pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty))
 
   def existsAddress = prop((address: S3Address, data: String) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
