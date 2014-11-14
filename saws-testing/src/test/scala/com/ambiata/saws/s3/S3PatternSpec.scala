@@ -60,8 +60,8 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
   def determineNone = prop((r: S3Pattern) =>
     r.determine.executeT(conf) must beOkLike(_ must beNone ))
 
-  def determineFailure = prop((bucket: String, unknown: String) =>
-    S3Pattern(bucket, unknown).determine.executeT(conf) must beOkLike(_ must beNone ))
+  def determineFailure = prop((s3: S3Prefix, unknown: String) =>
+    (s3 | unknown).toS3Pattern.determine.executeT(conf) must beOkLike(_ must beNone ))
 
   def determineFailurex =
     S3Pattern("", "").determine.executeT(conf) must beOkLike(_ must beNone )
