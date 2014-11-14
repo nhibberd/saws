@@ -1,15 +1,15 @@
-package com.ambiata
-package saws
-package testing
+package com.ambiata.saws.testing
 
-import core._
-import s3._
+import com.ambiata.mundane.control._
+import com.ambiata.mundane.testing.Arbitraries._
+import com.ambiata.saws.core._
+import com.ambiata.saws.s3._
+
 import org.scalacheck._, Arbitrary._
-import scalaz._, Scalaz._
-import scalaz.effect.IO
+
+import scalaz._, Scalaz._, effect.IO
+
 import scala.io.Codec
-import mundane.control._
-import mundane.testing.Arbitraries._
 
 object Arbitraries {
   implicit def AwsLogArbitrary: Arbitrary[AwsLog] = Arbitrary(Gen.oneOf(
