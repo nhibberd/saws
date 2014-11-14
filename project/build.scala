@@ -87,6 +87,7 @@ object build extends Build {
     , logBuffered := false
     , cancelable := true
     , javaOptions += "-Xmx3G"
+    , fork in Test := Option(System.getenv("NO_FORK")).map(_ != "true").getOrElse(true)
     , testOptions in Test ++= (if (Option(System.getenv("FORCE_AWS")).isDefined || Option(System.getenv("AWS_ACCESS_KEY")).isDefined)
                                  Seq()
                                else
