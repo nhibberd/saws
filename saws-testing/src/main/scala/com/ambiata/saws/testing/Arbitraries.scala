@@ -80,7 +80,7 @@ object Arbitraries {
     a <- Gen.listOfN(i, Gen.identifier)
     z = a.mkString("/")
     f <- Gen.oneOf("", "/")
-  } yield S3Prefix(testBucket, "tests/" + z + f))
+  } yield S3Prefix(testBucket, s"tests-${java.util.UUID.randomUUID().toString}/" + z + f))
 
   implicit def S3PatternArbitrary: Arbitrary[S3Pattern] =
     Arbitrary(Gen.oneOf(arbitrary[S3Prefix].map(_.toS3Pattern), arbitrary[S3Address].map(_.toS3Pattern)))
