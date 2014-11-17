@@ -1,12 +1,10 @@
-package com.ambiata
-package saws
-package core
+package com.ambiata.saws.core
 
-import mundane.testing.Arbitraries._
-import mundane.testing.Laws._
-import testing.Arbitraries._
+import com.ambiata.mundane.testing.Arbitraries._
+import com.ambiata.mundane.testing.Laws._
+import com.ambiata.saws.testing.Arbitraries._
 import org.specs2._
-import testing._
+import com.ambiata.saws.testing._
 
 class AwsLogSpec extends UnitSpec with ScalaCheck { def is = s2"""
 

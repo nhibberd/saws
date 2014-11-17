@@ -23,4 +23,6 @@ object S3 {
   }
 
   val NoTick: Function0[Unit] = () => ()
+
+  val NoTickX: Long => Unit = _ => ()
 }

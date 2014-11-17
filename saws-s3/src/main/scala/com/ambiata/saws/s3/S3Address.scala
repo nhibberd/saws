@@ -104,6 +104,8 @@ case class S3Address(bucket: String, key: String) {
 
 // ------------- Write
 
+  val ReadLimitDefault: Int = 8 * 1024 // 8k
+
   def put(data: String): S3Action[PutObjectResult] =
     putWithEncoding(data, Codec.UTF8)
 
@@ -148,7 +150,7 @@ case class S3Address(bucket: String, key: String) {
    *
    * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
    */
-  def putFileMultiPart(maxPartSize: BytesQuantity, filePath: FilePath, tick: Function0[Unit]): S3Action[S3UploadResult] =
+  def putFileMultiPart(maxPartSize: BytesQuantity, filePath: FilePath, tick: Long => Unit): S3Action[S3UploadResult] =
     putFileMultiPartWithMetadata(maxPartSize, filePath, tick, S3.ServerSideEncryption)
 
   /**
@@ -157,7 +159,7 @@ case class S3Address(bucket: String, key: String) {
    *
    * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
    */
-  def putFileMultiPartWithMetadata(maxPartSize: BytesQuantity, filePath: FilePath, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[S3UploadResult] = {
+  def putFileMultiPartWithMetadata(maxPartSize: BytesQuantity, filePath: FilePath, tick: Long => Unit, metadata: ObjectMetadata): S3Action[S3UploadResult] = {
     S3Action.safe({
       val file = new File(filePath.path)
       val length = file.length
@@ -169,7 +171,7 @@ case class S3Address(bucket: String, key: String) {
         if (length > 10.mb.toBytes.value) {
           metadata.setContentLength(length)
           S3Action.safe (new FileInputStream(file)) >>=
-            { input => putStreamMultiPartWithMetaData(maxPartSize, input, tick, metadata) }
+            { input => putStreamMultiPartWithMetaData(maxPartSize, input, ReadLimitDefault, tick, metadata) }
         }
         else
           putFileWithMetaData(filePath, metadata)
@@ -182,8 +184,8 @@ case class S3Address(bucket: String, key: String) {
    *
    * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
    */
-  def putStreamMultiPart(maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit]): S3Action[S3UploadResult] =
-    putStreamMultiPartWithMetaData(maxPartSize, stream, tick, S3.ServerSideEncryption)
+  def putStreamMultiPart(maxPartSize: BytesQuantity, stream: InputStream, readLimit: Int, tick: Long => Unit): S3Action[S3UploadResult] =
+    putStreamMultiPartWithMetaData(maxPartSize, stream, readLimit, tick, S3.ServerSideEncryption)
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
@@ -191,7 +193,7 @@ case class S3Address(bucket: String, key: String) {
    *
    * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
    */
-  def putStreamMultiPartWithMetaData(maxPartSize: BytesQuantity, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[S3UploadResult] = {
+  def putStreamMultiPartWithMetaData(maxPartSize: BytesQuantity, stream: InputStream, readLimit: Int, tick: Long => Unit, metadata: ObjectMetadata): S3Action[S3UploadResult] = {
     S3Action { client: AmazonS3Client =>
       // create a transfer manager
       val configuration = new TransferManagerConfiguration
@@ -207,7 +209,7 @@ case class S3Address(bucket: String, key: String) {
       transferManager.setConfiguration(configuration)
       transferManager
     }.flatMap { transferManager: TransferManager =>
-      putStreamMultiPartWithTransferManager(transferManager, stream, tick, metadata) map { upload =>
+      putStreamMultiPartWithTransferManager(transferManager, stream, readLimit, tick, metadata) map { upload =>
         try     upload()
         finally transferManager.shutdownNow(false)
       }
@@ -215,13 +217,15 @@ case class S3Address(bucket: String, key: String) {
   }
 
   /** cache and pass your own transfer manager if you need to run lots of uploads */
-  def putStreamMultiPartWithTransferManager(transferManager: TransferManager, stream: InputStream, tick: Function0[Unit], metadata: ObjectMetadata): S3Action[() => UploadResult] = {
+  def putStreamMultiPartWithTransferManager(transferManager: TransferManager, stream: InputStream, readLimit: Int, tick: Long => Unit, metadata: ObjectMetadata): S3Action[() => UploadResult] = {
     S3Action { client: AmazonS3Client =>
       // start the upload and wait for the result
-      val upload = transferManager.upload(new PutObjectRequest(bucket, key, stream, metadata))
+      val r = new PutObjectRequest(bucket, key, stream, metadata)
+      r.getRequestClientOptions.setReadLimit(readLimit)
+      val upload = transferManager.upload(r)
       upload.addProgressListener(new ProgressListener {
         def progressChanged(e: ProgressEvent) {
-          tick()
+          tick(e.getBytesTransferred)
         }
       })
       () => upload.waitForUploadResult()
@@ -239,7 +243,7 @@ case class S3Address(bucket: String, key: String) {
    *
    * The tick method can be used inside hadoop to notify progress
    */
-  def withStreamMultipart( maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
+  def withStreamMultipart(maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(maxPartSize)
     _ <- Aws.fromResultT(requests.traverseU(z => { tick(); f(client.getObject(z).getObjectContent) }))

@@ -17,14 +17,10 @@ object depend {
       "com.ambiata" %% "mundane-testing"   % mundaneVersion)
 
   val aws = Seq(
-      "com.ambiata" %% "saws-aws"          % "1.2.1-20141105043457-94fc80b" intransitive()
+      "com.ambiata" %% "saws-aws"          % "1.2.1-20141114025437-6525723" intransitive()
     , "commons-logging"            % "commons-logging"     % "1.1.1"
-    , "org.apache.httpcomponents"  % "httpclient"          % "4.2"
     , "com.owtelse.codec"          % "base64"              % "1.0.6"
-    , "javax.mail"                 % "mail"                % "1.4.7"
-    , "com.fasterxml.jackson.core" % "jackson-core"        % "2.1.1"
-    , "com.fasterxml.jackson.core" % "jackson-databind"    % "2.1.1"
-    , "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.1" )
+    , "javax.mail"                 % "mail"                % "1.4.7")
 
   val specs2Version = "2.4.5"
 
