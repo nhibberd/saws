@@ -1,8 +1,8 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.saws.testing.TemporaryS3
+import com.ambiata.saws.s3._
+import com.ambiata.saws.s3.TemporaryS3._
 import com.ambiata.mundane.testing.ResultTIOMatcher._
-import TemporaryS3._
 import org.specs2.Specification
 
 import scalaz.{Store => _}
@@ -27,7 +27,7 @@ class TemporaryS3Spec extends Specification { def is = s2"""
       y <- p.exists.executeT(TemporaryS3.conf)
     } yield (x, y)) must beOkValue((true,false))
   }
-  
+
   def prefix = {
     val p = S3Prefix(testBucket, s3TempPath)
     (for {
