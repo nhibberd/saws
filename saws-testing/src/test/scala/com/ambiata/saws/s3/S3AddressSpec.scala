@@ -159,7 +159,7 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     TemporaryFilePath.withFilePath(f => for {
       _ <- Files.writeLines(f, smallData)
       s <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTick).executeT(conf)
+        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).executeT(conf)
         z <- s3.getLines.executeT(conf)
       } yield z)
     } yield s) must beOkValue(smallData))
@@ -168,7 +168,7 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     TemporaryFilePath.withFilePath(f => for {
       _ <- Files.write(f, bigData)
       s <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTick).executeT(conf)
+        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).executeT(conf)
         z <- s3.get.executeT(conf)
       } yield z)
     } yield s) must beOkValue(bigData))
