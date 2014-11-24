@@ -50,7 +50,7 @@ case class S3Address(bucket: String, key: String) {
 // ------------- Read
 
   def getS3: S3Action[SizedS3Address] =
-    getObject.map(z => SizedS3Address(this, z.getObjectMetadata.getContentLength))
+    Aws.using(getObject)(o => Aws.ok(SizedS3Address(this, o.getObjectMetadata.getContentLength)))
 
   def getObject: S3Action[S3Object] =
     S3Action(_.getObject(bucket, key)).onResult(_.prependErrorMessage(s"Could not get S3://$render"))
