@@ -52,6 +52,7 @@ case class S3Address(bucket: String, key: String) {
   def getS3: S3Action[SizedS3Address] =
     Aws.using(getObject)(o => Aws.ok(SizedS3Address(this, o.getObjectMetadata.getContentLength)))
 
+  /* Ensure callers of this function call close on the S3Object  */
   def getObject: S3Action[S3Object] =
     S3Action(_.getObject(bucket, key)).onResult(_.prependErrorMessage(s"Could not get S3://$render"))
 
@@ -246,7 +247,10 @@ case class S3Address(bucket: String, key: String) {
   def withStreamMultipart(maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(maxPartSize)
-    _ <- Aws.fromResultT(requests.traverseU(z => { tick(); f(client.getObject(z).getObjectContent) }))
+    _ <- Aws.fromResultT(requests.traverseU(z => {
+      ResultT.safe[IO, Unit](tick()) >>
+      ResultT.using(ResultT.safe(client.getObject(z)))(zz => f(zz.getObjectContent))
+    }))
   } yield ()
 
   /** create a list of multipart requests */
