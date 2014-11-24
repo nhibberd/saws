@@ -18,7 +18,7 @@ import java.io._
 import scala.io.Codec
 
 import scalaz._, Scalaz._, effect._, stream._, concurrent.Task
-
+import scalaz.\&/._
 
 case class SizedS3Address(s3: S3Address, size: Long)
 
@@ -82,15 +82,38 @@ case class S3Address(bucket: String, key: String) {
   def exists: S3Action[Boolean] =
     if (bucket.equals("")) S3Action.ok(false)
     else {
-      S3Action((client: AmazonS3Client) => try {
-        Aws.using(S3Action.safe(client.getObject(bucket, key)))(_ => S3Action.ok(true))
-      } catch {
-        case ase: AmazonServiceException =>
-          if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
-        case t: Throwable =>
-          S3Action.exception[Boolean](t)
-      }).join
+      Aws.using(S3Action(client => client.getObject(bucket, key)))(_ => S3Action.ok(true)).onResult({
+        case Ok(_) =>
+          Ok(true)
+        case Error(That(t)) =>
+          t match {
+            case ase: AmazonServiceException =>
+              if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") Result.ok(false) else Result.exception[Boolean](ase)
+            case t: Throwable =>
+              Result.exception[Boolean](t)
+          }
+        case Error(s) =>
+          Error(s)
+
+      })
     }
+/*
+      S3Action((client: AmazonS3Client) =>
+        Aws.using(
+          try {
+            S3Action.safe(client.getObject(bucket, key))
+          } catch {
+            case ase: AmazonServiceException =>
+              if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
+            case t: Throwable =>
+              S3Action.exception[Boolean](t)
+          }).join)(_ => S3Action.ok(true))
+    }
+ */
+  /*
+        Aws.using(S3Action.safe(client.getObject(bucket, key)))(_ => S3Action.ok(true)).mapResult({ case Ok(_) => Ok(true); case Error(That(t)) => exceptiony code })
+
+   */
 
   /** copy an object from s3 to s3, without downloading the object */
   // metadata disabled, since it copies the old objects metadata
