@@ -83,8 +83,7 @@ case class S3Address(bucket: String, key: String) {
     if (bucket.equals("")) S3Action.ok(false)
     else {
       S3Action((client: AmazonS3Client) => try {
-        client.getObject(bucket, key)
-        S3Action.ok(true)
+        Aws.using(S3Action.safe(client.getObject(bucket, key)))(_ => S3Action.ok(true))
       } catch {
         case ase: AmazonServiceException =>
           if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") S3Action.ok(false) else S3Action.exception[Boolean](ase)
