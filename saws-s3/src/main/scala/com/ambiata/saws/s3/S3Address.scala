@@ -81,21 +81,22 @@ case class S3Address(bucket: String, key: String) {
 
   def exists: S3Action[Boolean] =
     if (bucket.equals("")) S3Action.ok(false)
-    else
-      Aws.using(S3Action(client => client.getObject(bucket, key)))(_ => S3Action.ok(true)).onResult({
+    else {
+      getObjectMetadata.onResult({
         case Ok(_) =>
           Ok(true)
         case Error(That(t)) =>
           t match {
             case ase: AmazonServiceException =>
-              if (ase.getErrorCode == "NoSuchKey" || ase.getErrorCode == "NoSuchBucket") Result.ok(false) else Result.exception[Boolean](ase)
+              if (ase.getStatusCode == 404) Result.ok(false) else Result.exception[Boolean](ase)
             case t: Throwable =>
               Result.exception[Boolean](t)
           }
         case Error(s) =>
           Error(s)
-      })
 
+      })
+    }
 
   /** copy an object from s3 to s3, without downloading the object */
   // metadata disabled, since it copies the old objects metadata
