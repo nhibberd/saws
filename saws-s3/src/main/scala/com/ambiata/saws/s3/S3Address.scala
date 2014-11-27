@@ -137,7 +137,7 @@ case class S3Address(bucket: String, key: String) {
     putBytesWithMetadata(data, S3.ServerSideEncryption)
 
   def putBytesWithMetadata(data: Array[Byte], metadata: ObjectMetadata): S3Action[PutObjectResult] =
-    putStreamWithMetadata(new ByteArrayInputStream(data), metadata <| (_.setContentLength(data.length)))
+    putStreamWithMetadata(new ByteArrayInputStream(data), ReadLimitDefault, metadata <| (_.setContentLength(data.length)))
 
   def putFile(file: FilePath): S3Action[S3UploadResult] =
     putFileWithMetaData(file, S3.ServerSideEncryption)
@@ -147,11 +147,17 @@ case class S3Address(bucket: String, key: String) {
       .onResult(_.prependErrorMessage(s"Could not put file to S3://$render")).map(p => S3UploadResult(p.getETag, p.getVersionId))
 
   def putStream(stream: InputStream): S3Action[PutObjectResult] =
-    putStreamWithMetadata(stream, S3.ServerSideEncryption)
+    putStreamWithMetadata(stream, ReadLimitDefault, S3.ServerSideEncryption)
 
-  def putStreamWithMetadata(stream: InputStream, metadata: ObjectMetadata): S3Action[PutObjectResult] =
-    S3Action(_.putObject(bucket, key, stream, metadata))
-      .onResult(_.prependErrorMessage(s"Could not put stream to S3://$render"))
+  def putStreamWithReadLimit(stream: InputStream, readLimit: Int): S3Action[PutObjectResult] =
+    putStreamWithMetadata(stream, readLimit, S3.ServerSideEncryption)
+
+  def putStreamWithMetadata(stream: InputStream, readLimit: Int, metadata: ObjectMetadata): S3Action[PutObjectResult] =
+    S3Action(client => {
+      val r = new PutObjectRequest(bucket, key, stream, metadata)
+      r.getRequestClientOptions.setReadLimit(readLimit)
+      client.putObject(r)
+    }).onResult(_.prependErrorMessage(s"Could not put stream to S3://$render"))
 
   /**
    * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
