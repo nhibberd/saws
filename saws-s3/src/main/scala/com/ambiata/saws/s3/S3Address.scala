@@ -113,8 +113,6 @@ case class S3Address(bucket: String, key: String) {
 
 // ------------- Write
 
-  val ReadLimitDefault: Int = 8 * 1024 // 8k
-
   def put(data: String): S3Action[PutObjectResult] =
     putWithEncoding(data, Codec.UTF8)
 
@@ -137,7 +135,7 @@ case class S3Address(bucket: String, key: String) {
     putBytesWithMetadata(data, S3.ServerSideEncryption)
 
   def putBytesWithMetadata(data: Array[Byte], metadata: ObjectMetadata): S3Action[PutObjectResult] =
-    putStreamWithMetadata(new ByteArrayInputStream(data), ReadLimitDefault, metadata <| (_.setContentLength(data.length)))
+    putStreamWithMetadata(new ByteArrayInputStream(data), S3Address.ReadLimitDefault, metadata <| (_.setContentLength(data.length)))
 
   def putFile(file: FilePath): S3Action[S3UploadResult] =
     putFileWithMetaData(file, S3.ServerSideEncryption)
@@ -147,7 +145,7 @@ case class S3Address(bucket: String, key: String) {
       .onResult(_.prependErrorMessage(s"Could not put file to S3://$render")).map(p => S3UploadResult(p.getETag, p.getVersionId))
 
   def putStream(stream: InputStream): S3Action[PutObjectResult] =
-    putStreamWithMetadata(stream, ReadLimitDefault, S3.ServerSideEncryption)
+    putStreamWithMetadata(stream, S3Address.ReadLimitDefault, S3.ServerSideEncryption)
 
   def putStreamWithReadLimit(stream: InputStream, readLimit: Int): S3Action[PutObjectResult] =
     putStreamWithMetadata(stream, readLimit, S3.ServerSideEncryption)
@@ -186,7 +184,7 @@ case class S3Address(bucket: String, key: String) {
         if (length > 10.mb.toBytes.value) {
           metadata.setContentLength(length)
           S3Action.safe (new FileInputStream(file)) >>=
-            { input => putStreamMultiPartWithMetaData(maxPartSize, input, ReadLimitDefault, tick, metadata) }
+            { input => putStreamMultiPartWithMetaData(maxPartSize, input, S3Address.ReadLimitDefault, tick, metadata) }
         }
         else
           putFileWithMetaData(filePath, metadata)
@@ -276,6 +274,8 @@ case class S3Address(bucket: String, key: String) {
 }
 
 object S3Address {
+  val ReadLimitDefault: Int = 8 * 1024 // 8k
+
   def fromUri(uri: String): S3Action[Option[S3Address]] = {
     S3Pattern.fromURI(uri).traverseU(_.determine.map(_.flatMap(_.swap.toOption))).map(_.flatten)
   }
