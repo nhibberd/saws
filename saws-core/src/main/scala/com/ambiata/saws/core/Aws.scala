@@ -10,7 +10,7 @@ import scalaz.concurrent.Task
 import scalaz.effect._
 import com.ambiata.mundane.control._
 
-case class Aws[R, A](runT: ActionIO[Vector[AwsLog], R, A]) {
+case class Aws[R, A](runT: AIO[Vector[AwsLog], R, A]) {
   def contramap[B](f: B => R): Aws[B, A] =
     Aws(ActionT(r => runT.runT(f(r))))
 
