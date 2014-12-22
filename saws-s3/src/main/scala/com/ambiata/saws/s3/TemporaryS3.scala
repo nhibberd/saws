@@ -9,12 +9,12 @@ import com.ambiata.saws.s3.TemporaryS3._
 import scalaz._, Scalaz._, effect._
 
 case class TemporaryS3Address(s3: S3Address) {
-  def clean: ResultT[IO, Unit] =
+  def clean: RIO[Unit] =
     s3.delete.executeT(conf)
 }
 
 case class TemporaryS3Prefix(s3: S3Prefix) {
-  def clean: ResultT[IO, Unit] =
+  def clean: RIO[Unit] =
     s3.delete.executeT(conf)
 }
 
@@ -29,17 +29,17 @@ object TemporaryS3 {
     def close(temp: TemporaryS3Prefix) = temp.clean.run.void
   }
 
-  def withS3Address[A](f: S3Address => ResultTIO[A]): ResultTIO[A] =
+  def withS3Address[A](f: S3Address => RIO[A]): RIO[A] =
     runWithS3Address(S3Address(testBucket, s3TempPath))(f)
 
-  def runWithS3Address[A](s3: S3Address)(f: S3Address => ResultTIO[A]): ResultTIO[A] =
-    ResultT.using(TemporaryS3Address(s3).pure[ResultTIO])(tmp => f(tmp.s3))
+  def runWithS3Address[A](s3: S3Address)(f: S3Address => RIO[A]): RIO[A] =
+    ResultT.using(TemporaryS3Address(s3).pure[RIO])(tmp => f(tmp.s3))
 
-  def withS3Prefix[A](f: S3Prefix => ResultTIO[A]): ResultTIO[A] =
+  def withS3Prefix[A](f: S3Prefix => RIO[A]): RIO[A] =
     runWithS3Prefix(S3Prefix(testBucket, s3TempPath))(f)
 
-  def runWithS3Prefix[A](s3: S3Prefix)(f: S3Prefix => ResultTIO[A]): ResultTIO[A] =
-    ResultT.using(TemporaryS3Prefix(s3).pure[ResultTIO])(tmp => f(tmp.s3))
+  def runWithS3Prefix[A](s3: S3Prefix)(f: S3Prefix => RIO[A]): RIO[A] =
+    ResultT.using(TemporaryS3Prefix(s3).pure[RIO])(tmp => f(tmp.s3))
 
 
   def testBucket: String = Option(System.getenv("AWS_TEST_BUCKET")).getOrElse("ambiata-dev-view")

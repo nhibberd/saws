@@ -2,7 +2,7 @@ package com.ambiata.saws.s3
 
 import com.ambiata.saws.s3._
 import com.ambiata.saws.s3.TemporaryS3._
-import com.ambiata.mundane.testing.ResultTIOMatcher._
+import com.ambiata.mundane.testing.RIOMatcher._
 import org.specs2.Specification
 
 import scalaz.{Store => _}

@@ -1,10 +1,9 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.mundane.control.ResultTIO
 import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.Arbitraries._
-import com.ambiata.mundane.testing.ResultTIOMatcher._
+import com.ambiata.mundane.testing.RIOMatcher._
 import com.ambiata.mundane.io._
 import org.specs2._
 import org.specs2.matcher.Parameters

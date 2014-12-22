@@ -6,7 +6,7 @@ import com.ambiata.mundane.control._
 import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.Arbitraries._
-import com.ambiata.mundane.testing.ResultTIOMatcher._
+import com.ambiata.mundane.testing.RIOMatcher._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.MemoryConversions._
 import org.specs2._

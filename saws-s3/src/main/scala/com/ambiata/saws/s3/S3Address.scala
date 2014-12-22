@@ -44,7 +44,7 @@ case class S3Address(bucket: String, key: String) {
   def size: S3Action[Long] =
     getS3.map(_.size)
 
-  def withStream[A](f: InputStream => ResultT[IO, A]): S3Action[A] =
+  def withStream[A](f: InputStream => RIO[A]): S3Action[A] =
     getObject.flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
 
 // ------------- Read
@@ -256,7 +256,7 @@ case class S3Address(bucket: String, key: String) {
    *
    * The tick method can be used inside hadoop to notify progress
    */
-  def withStreamMultipart(maxPartSize: BytesQuantity, f: InputStream => ResultT[IO, Unit], tick: () => Unit): S3Action[Unit] = for {
+  def withStreamMultipart(maxPartSize: BytesQuantity, f: InputStream => RIO[Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(maxPartSize)
     _ <- Aws.fromResultT(requests.traverseU(z => {
@@ -288,6 +288,6 @@ object S3Address {
       (if (lastPartSize == 0) List() else List((totalSize - lastPartSize, totalSize - 1)))
   }
 
-  def objectContentSink(f: InputStream => ResultT[IO, Unit]): Sink[Task, S3Object] =
+  def objectContentSink(f: InputStream => RIO[Unit]): Sink[Task, S3Object] =
     io.channel((s3Object: S3Object) => ResultT.toTask(f(s3Object.getObjectContent)))
 }
