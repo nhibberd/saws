@@ -73,7 +73,7 @@ object build extends Build {
 
   lazy val compilationSettings: Seq[Settings] = Seq(
     javacOptions ++= Seq("-Xmx3G", "-Xms512m", "-Xss4m"),
-    maxErrors := 20,
+    maxErrors := 10,
     scalacOptions ++= Seq("-feature", "-language:_"),
     scalacOptions in Compile ++= Seq("-deprecation", "-unchecked", "-Xfatal-warnings"),
     scalacOptions in Test ++= Seq("-Yrangepos")
