@@ -45,7 +45,7 @@ case class S3Address(bucket: String, key: String) {
     getS3.map(_.size)
 
   def withStream[A](f: InputStream => RIO[A]): S3Action[A] =
-    getObject.flatMap(o => S3Action.fromResultT(f(o.getObjectContent)))
+    getObject.flatMap(o => S3Action.fromRIO(f(o.getObjectContent)))
 
 // ------------- Read
 
@@ -259,9 +259,9 @@ case class S3Address(bucket: String, key: String) {
   def withStreamMultipart(maxPartSize: BytesQuantity, f: InputStream => RIO[Unit], tick: () => Unit): S3Action[Unit] = for {
     client   <- S3Action.client
     requests <- createRequests(maxPartSize)
-    _ <- Aws.fromResultT(requests.traverseU(z => {
-      ResultT.safe[IO, Unit](tick()) >>
-      ResultT.using(ResultT.safe(client.getObject(z)))(zz => f(zz.getObjectContent))
+    _ <- Aws.fromRIO(requests.traverseU(z => {
+      RIO.safe[Unit](tick()) >>
+      RIO.using(RIO.safe(client.getObject(z)))(zz => f(zz.getObjectContent))
     }))
   } yield ()
 
@@ -289,5 +289,5 @@ object S3Address {
   }
 
   def objectContentSink(f: InputStream => RIO[Unit]): Sink[Task, S3Object] =
-    io.channel((s3Object: S3Object) => ResultT.toTask(f(s3Object.getObjectContent)))
+    io.channel((s3Object: S3Object) => RIO.toTask(f(s3Object.getObjectContent)))
 }

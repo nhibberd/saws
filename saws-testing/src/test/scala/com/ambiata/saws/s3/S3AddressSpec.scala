@@ -58,8 +58,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
 
   def putString = prop((data: String, address: S3Address) => {
     TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).executeT(conf)
-      e <- s3.get.executeT(conf)
+      _ <- s3.put(data).execute(conf)
+      e <- s3.get.execute(conf)
     } yield e) must beOkValue (data)
   })
 
@@ -67,8 +67,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     TemporaryFilePath.withFilePath(f => for {
       _ <- Files.write(f, data)
       e <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putFile(f).executeT(conf)
-        e <- s3.get.executeT(conf)
+        _ <- s3.putFile(f).execute(conf)
+        e <- s3.get.execute(conf)
       } yield e)
     } yield e) must beOkValue (data)
   })
@@ -77,8 +77,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     TemporaryFilePath.withFilePath(f => for {
       _ <- Files.write(f, data)
       e <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putFile(f).executeT(conf)
-        e <- s3.withStream(is => Streams.read(is, "UTF-8")).executeT(conf)
+        _ <- s3.putFile(f).execute(conf)
+        e <- s3.withStream(is => Streams.read(is, "UTF-8")).execute(conf)
       } yield e)
     } yield e) must beOkValue (data)
   })
@@ -86,8 +86,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
   def download = prop((data: String, address: S3Address) =>
     TemporaryFilePath.withFilePath(f => for {
       _ <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.put(data).executeT(conf)
-        _ <- s3.getFile(f).executeT(conf)
+        _ <- s3.put(data).execute(conf)
+        _ <- s3.getFile(f).execute(conf)
       } yield ())
       e <- Files.exists(f)
       d <- Files.read(f)
@@ -96,8 +96,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
   def downloadTo = prop((data: String, address: S3Address) =>
     TemporaryDirPath.withDirPath(dir => for {
       r <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.put(data).executeT(conf)
-        _ <- s3.getFileTo(dir).executeT(conf)
+        _ <- s3.put(data).execute(conf)
+        _ <- s3.getFileTo(dir).execute(conf)
         e <- Files.exists(dir </> FilePath.unsafe(s3.key))
         d <- Files.read(dir </> FilePath.unsafe(s3.key))
       } yield e -> d)
@@ -105,23 +105,23 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
 
   def delete = prop((data: String, address: S3Address) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).executeT(conf)
-      e <- s3.exists.executeT(conf)
-      _ <- s3.delete.executeT(conf)
-      d <- s3.exists.executeT(conf)
+      _ <- s3.put(data).execute(conf)
+      e <- s3.exists.execute(conf)
+      _ <- s3.delete.execute(conf)
+      d <- s3.exists.execute(conf)
     } yield e -> d) must beOkValue (true -> false))
 
   def exists = prop((data: String, address: S3Address) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).executeT(conf)
-      e <- s3.exists.executeT(conf)
+      _ <- s3.put(data).execute(conf)
+      e <- s3.exists.execute(conf)
     } yield e) must beOkValue (true))
 
   def md5 = prop((data: String, address: S3Address) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).executeT(conf)
-      d <- s3.get.executeT(conf)
-      m <- s3.md5.executeT(conf)
+      _ <- s3.put(data).execute(conf)
+      d <- s3.get.execute(conf)
+      m <- s3.md5.execute(conf)
     } yield d -> m) must beOkValue (data -> md5Hex(data.getBytes("UTF8"))))
 
   def md5Hex(bytes: Array[Byte]): String =
@@ -129,12 +129,12 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
 
   def copy = prop((data: String, address: S3Address, to: S3Address) =>
     TemporaryS3.runWithS3Address(address)(origin => for {
-      _ <- origin.put(data).executeT(conf)
+      _ <- origin.put(data).execute(conf)
       r <- TemporaryS3.runWithS3Address(to)(s3 => for {
-        _ <- origin.copy(s3).executeT(conf)
-        o <- origin.exists.executeT(conf)
-        e <- s3.exists.executeT(conf)
-        d <- s3.get.executeT(conf)
+        _ <- origin.copy(s3).execute(conf)
+        o <- origin.exists.execute(conf)
+        e <- s3.exists.execute(conf)
+        d <- s3.get.execute(conf)
       } yield (o, e, d))
     } yield r) must beOkValue (true, true, data))
 
@@ -149,8 +149,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
   def downloadParts = prop((address: S3Address) =>
     TemporaryFilePath.withFilePath(f => for {
       _ <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putLines(smallData).executeT(conf)
-        _ <- ResultT.using(f.toOutputStream)( out => s3.withStreamMultipart(50.bytes, in => Streams.pipe(in, out), S3.NoTick).executeT(conf))
+        _ <- s3.putLines(smallData).execute(conf)
+        _ <- RIO.using(f.toOutputStream)( out => s3.withStreamMultipart(50.bytes, in => Streams.pipe(in, out), S3.NoTick).execute(conf))
       } yield ())
       e <- Files.readLines(f)
     } yield e.toList) must beOkValue(smallData))
@@ -159,8 +159,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     TemporaryFilePath.withFilePath(f => for {
       _ <- Files.writeLines(f, smallData)
       s <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).executeT(conf)
-        z <- s3.getLines.executeT(conf)
+        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).execute(conf)
+        z <- s3.getLines.execute(conf)
       } yield z)
     } yield s) must beOkValue(smallData))
 
@@ -168,8 +168,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     TemporaryFilePath.withFilePath(f => for {
       _ <- Files.write(f, bigData)
       s <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).executeT(conf)
-        z <- s3.get.executeT(conf)
+        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).execute(conf)
+        z <- s3.get.execute(conf)
       } yield z)
     } yield s) must beOkValue(bigData))
 
@@ -178,15 +178,15 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
       _ <- Files.write(f, data)
       s = f.toFile.length()
       e <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putFile(f).executeT(conf)
-        e <- s3.size.executeT(conf)
+        _ <- s3.putFile(f).execute(conf)
+        e <- s3.size.execute(conf)
       } yield e)
     } yield s -> e) must beOkLike({ case (a, b) => a must_== b }))
 
   def codecString = prop((c: Codec, s: String) => validForCodec(s, c) ==> {
     TemporaryS3.withS3Address(s3 => for {
-      _ <- s3.putWithEncoding(s, c).executeT(conf)
-      d <- s3.getWithEncoding(c).executeT(conf)
+      _ <- s3.putWithEncoding(s, c).execute(conf)
+      d <- s3.getWithEncoding(c).execute(conf)
     } yield d) must beOkValue(s) }
   )
 
@@ -216,8 +216,8 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
 
   def fromUri = prop((address: S3Address) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put("testing").executeT(conf)
-      e <- S3Address.fromUri(s"s3://${s3.bucket}/${s3.key}").executeT(conf)
+      _ <- s3.put("testing").execute(conf)
+      e <- S3Address.fromUri(s"s3://${s3.bucket}/${s3.key}").execute(conf)
     } yield s3 -> e) must beOkLike ({ case (s: S3Address, z: Option[S3Address]) => z must beSome(s) }))
 
 }

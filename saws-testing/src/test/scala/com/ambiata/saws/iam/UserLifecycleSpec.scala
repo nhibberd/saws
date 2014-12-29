@@ -30,10 +30,10 @@ class UserLifecycleSpec extends IntegrationSpec with BeforeAfterExample with Thr
 
 
   def before {
-    IAMUsers.deleteUser(user.name).eval.unsafePerformIO()
+    IAMUsers.deleteUser(user.name).eval.unsafePerformIO
   }
 
   def after {
-    IAMUsers.deleteUser(user.name).eval.unsafePerformIO()
+    IAMUsers.deleteUser(user.name).eval.unsafePerformIO
   }
 }

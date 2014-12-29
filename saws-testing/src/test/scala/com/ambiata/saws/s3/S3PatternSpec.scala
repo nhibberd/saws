@@ -46,29 +46,29 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
 
   def determineAddress = prop((address: S3Address, data: String) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
-    _ <- s3.put(data).executeT(conf)
-    s <- S3Pattern(s3.bucket, s3.key).determine.executeT(conf)
+    _ <- s3.put(data).execute(conf)
+    s <- S3Pattern(s3.bucket, s3.key).determine.execute(conf)
   } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isLeft must beTrue )))
 
   def determinePrefix = prop((prefix: S3Prefix, data: String) =>
     TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-    _ <- (s3 | "foo").put(data).executeT(conf)
-    s <- S3Pattern(s3.bucket, s3.prefix).determine.executeT(conf)
+    _ <- (s3 | "foo").put(data).execute(conf)
+    s <- S3Pattern(s3.bucket, s3.prefix).determine.execute(conf)
   } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isRight must beTrue )))
 
   def determineNone = prop((r: S3Pattern) =>
-    r.determine.executeT(conf) must beOkLike(_ must beNone ))
+    r.determine.execute(conf) must beOkLike(_ must beNone ))
 
   def determineFailure = prop((s3: S3Prefix, unknown: String) =>
-    (s3 | unknown).toS3Pattern.determine.executeT(conf) must beOkLike(_ must beNone ))
+    (s3 | unknown).toS3Pattern.determine.execute(conf) must beOkLike(_ must beNone ))
 
   def determineFailurex =
-    S3Pattern("", "").determine.executeT(conf) must beOkLike(_ must beNone )
+    S3Pattern("", "").determine.execute(conf) must beOkLike(_ must beNone )
 
   def listAddress = prop((address: S3Address, data: String) =>
     TemporaryS3.withS3Address(s3 => for {
-      _ <- s3.put(data).executeT(conf)
-      l <- S3Pattern(s3.bucket, s3.key).listKeys.executeT(conf)
+      _ <- s3.put(data).execute(conf)
+      l <- S3Pattern(s3.bucket, s3.key).listKeys.execute(conf)
     } yield s3 -> l) must beOkLike({
       case (a: S3Address, b: List[String]) => a.key must_== b.head
     })
@@ -76,9 +76,9 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
 
   def listPrefix = prop((prefix: S3Prefix, data: String, key1: S3Address, key2: S3Address) => (key1.key != key2.key) ==> {
     TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | key1.key).put(data).executeT(conf)
-      _ <- (s3 | key2.key).put(data).executeT(conf)
-      l <- s3.toS3Pattern.listKeys.executeT(conf)
+      _ <- (s3 | key1.key).put(data).execute(conf)
+      _ <- (s3 | key2.key).put(data).execute(conf)
+      l <- s3.toS3Pattern.listKeys.execute(conf)
     } yield s3 -> l) must beOkLike({
       case (a: S3Prefix, b: List[String]) =>
         b.toSet must_== List(key1.key, key2.key).map(s => S3Operations.concat(a.prefix, s)).toSet
@@ -86,30 +86,30 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
   })
 
   def listNone = prop((pattern: S3Pattern) =>
-    pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty))
+    pattern.listS3.execute(conf) must beOkLike(l => l.isEmpty))
 
   def listFailure = prop((s3: S3Prefix, unknown: String) =>
-    (s3 | unknown).toS3Pattern.listS3.executeT(conf) must beOkLike(l => l.isEmpty))
+    (s3 | unknown).toS3Pattern.listS3.execute(conf) must beOkLike(l => l.isEmpty))
 
   def existsAddress = prop((address: S3Address, data: String) =>
     TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).executeT(conf)
-      e <- S3Pattern(s3.bucket, s3.key).exists.executeT(conf)
+      _ <- s3.put(data).execute(conf)
+      e <- S3Pattern(s3.bucket, s3.key).exists.execute(conf)
     } yield e) must beOkValue(true)
   )
 
   def existsPrefix = prop((prefix: S3Prefix, data: String) =>
     TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | "foo").put(data).executeT(conf)
-      e <- S3Pattern(s3.bucket, s3.prefix).exists.executeT(conf)
+      _ <- (s3 | "foo").put(data).execute(conf)
+      e <- S3Pattern(s3.bucket, s3.prefix).exists.execute(conf)
     } yield e) must beOkValue(true)
   )
 
   def existsNone = prop((pattern: S3Pattern) =>
-    pattern.exists.executeT(conf) must beOkValue(false))
+    pattern.exists.execute(conf) must beOkValue(false))
 
   def existsFailure = prop((bucket: Clean, unknown: String) =>
-    S3Pattern(bucket.s, unknown).exists.executeT(conf) must beOkValue(false))
+    S3Pattern(bucket.s, unknown).exists.execute(conf) must beOkValue(false))
 
   def fromUri = prop((pattern: S3Pattern) =>
     S3Pattern.fromURI(s"s3://${pattern.render}") must beSome((a: S3Pattern) => a must_== pattern))

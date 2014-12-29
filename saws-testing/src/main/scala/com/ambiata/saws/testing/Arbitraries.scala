@@ -43,11 +43,7 @@ object Arbitraries {
       logs  <- Gen.choose(0, 4).flatMap(n => Gen.listOfN(n, arbitrary[AwsLog]))
       f     <- func
       base  <- arbitrary[Result[Int]]
-    } yield  Aws(
-      ActionT(r =>
-        ResultT[({ type l[+a] = WriterT[IO, Vector[AwsLog], a] })#l, Int => Int](
-          WriterT[IO, Vector[AwsLog], Result[Int => Int]](
-            IO { (logs.toVector, base.map(n => f(n))) })))))
+    } yield  Aws(c => RIO.result(base.map(n => f(n)).map(logs.toVector -> _))))
 
   def func: Gen[Int => Int => Int] = arbitrary[Int].flatMap(x => Gen.oneOf(
     (m: Int) => (n: Int) => n,

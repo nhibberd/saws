@@ -14,16 +14,19 @@ object AwsMatcher extends ThrownExpectations {
   /*  *** automatic value matchers *** */
 
   def beOk[R, A](implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runOk[R, A](_.eval)
+    runOk[R, A](_.eval.run)
 
   def beOkValue[R, A](expected: A)(implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runOkValue[R, A](_.eval)(expected)
+    runOkValue[R, A](_.eval.run)(expected)
+
+  def beOkValueWithLog[R, A](expected: A)(implicit client: Client[R]): Matcher[Aws[R, A]] =
+    runOkValue[R, A](_.eval.run)(expected)
 
   def beOkLike[R, A](check: A => SpecsResult)(implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runOkLike[R, A](_.eval)(check)
+    runOkLike[R, A](_.eval.run)(check)
 
   def beResultLike[R, A](check: Result[A] => SpecsResult)(implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runResultLike[R, A](_.eval)(check)
+    runResultLike[R, A](_.eval.run)(check)
 
   /*  *** manual value matchers *** */
 
@@ -47,33 +50,33 @@ object AwsMatcher extends ThrownExpectations {
   }
 
   /*  *** automatic value & log  matchers *** */
-
   def beLogOkValue[R, A](expectedValue: A, expectedLog: Vector[AwsLog])(implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runLogOkValue[R, A](_.evalWithLog)(expectedValue, expectedLog)
+    runLogOkValue[R, A](_.evalWithLog.run)(expectedValue, expectedLog)
 
-  def beLogOkLike[R, A](check: (A, Vector[AwsLog]) => SpecsResult)(implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runLogOkLike[R, A](_.evalWithLog)(check)
+  def beLogOkLike[R, A](check: (Vector[AwsLog], A) => SpecsResult)(implicit client: Client[R]): Matcher[Aws[R, A]] =
+    runLogOkLike[R, A](_.evalWithLog.run)(check)
 
-  def beLogResultLike[R, A](check: (Result[A], Vector[AwsLog]) => SpecsResult)(implicit client: Client[R]): Matcher[Aws[R, A]] =
-    runLogResultLike[R, A](_.evalWithLog)(check)
+  def beLogResultLike[R, A](check: Result[(Vector[AwsLog], A)] => SpecsResult)(implicit client: Client[R]): Matcher[Aws[R, A]] =
+    runLogResultLike[R, A](_.evalWithLog.run)(check)
 
   /*  *** manual value & log  matchers *** */
-
-  def runLogOkValue[R, A](f: Aws[R, A] => IO[(Log, Result[A])])(expectedValue: A, expectedLog: Vector[AwsLog]): Matcher[Aws[R, A]] =
-    runLogOkLike[R, A](f)((actualValue: A, actualLog: Vector[AwsLog]) =>
+  def runLogOkValue[R, A](f: Aws[R, A] => IO[Result[(Log, A)]])(expectedValue: A, expectedLog: Vector[AwsLog]): Matcher[Aws[R, A]] =
+    runLogOkLike[R, A](f)((actualLog: Vector[AwsLog], actualValue: A) =>
       new BeEqualTo(expectedValue).apply(createExpectable(actualValue)).toResult |+|
         new BeEqualTo(expectedLog).apply(createExpectable(actualLog)).toResult)
 
-  def runLogOkLike[R, A](f: Aws[R, A] => IO[(Log, Result[A])])(check: (A, Vector[AwsLog]) => SpecsResult): Matcher[Aws[R, A]] =
+  def runLogOkLike[R, A](f: Aws[R, A] => IO[Result[(Log, A)]])(check: (Vector[AwsLog], A) => SpecsResult): Matcher[Aws[R, A]] =
     runLogResultLike[R, A](f)({
-      case (Ok(actual), log)     => check(actual, log)
-      case (Error(error), log)   => Failure(s"""Result failed with <${Result.asString(error)}> and log <${log.mkString(", ")}>""")
+      case Ok((log, actual)) =>
+        check(log, actual)
+      case Error(error) =>
+        Failure(s"""Result failed with <${Result.asString(error)}>""")
     })
 
-  def runLogResultLike[R, A](f: Aws[R, A] => IO[(Log, Result[A])])(check: (Result[A], Vector[AwsLog]) => SpecsResult): Matcher[Aws[R, A]] = new Matcher[Aws[R, A]] {
+  def runLogResultLike[R, A](f: Aws[R, A] => IO[Result[(Log, A)]])(check: Result[(Vector[AwsLog], A)] => SpecsResult): Matcher[Aws[R, A]] = new Matcher[Aws[R, A]] {
     def apply[S <: Aws[R, A]](attempt: Expectable[S]) = {
-      val (log, v) = f(attempt.value).unsafePerformIO
-      val r = check(v, log)
+      val z: Result[(Log, A)] = f(attempt.value).unsafePerformIO
+      val r = check(z)
       result(r.isSuccess, r.message, r.message, attempt)
     }
   }
