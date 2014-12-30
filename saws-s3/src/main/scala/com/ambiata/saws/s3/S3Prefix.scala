@@ -48,7 +48,7 @@ case class S3Prefix(bucket: String, prefix: String) {
     pufFilesWithMetadata(dir, S3.ServerSideEncryption)
 
   def pufFilesWithMetadata(dir: DirPath, metadata: ObjectMetadata): S3Action[Unit] = for {
-    local <- S3Action.fromResultT(Directories.list(dir))
+    local <- S3Action.fromRIO(Directories.list(dir))
     _     <- local.traverse({ source =>
       val destination = source.toFile.getAbsolutePath.replace(dir.toFile.getAbsolutePath + "/", "")
       (this | destination).putFile(source)

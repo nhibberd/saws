@@ -10,12 +10,12 @@ import scalaz._, Scalaz._, effect._
 
 case class TemporaryS3Address(s3: S3Address) {
   def clean: RIO[Unit] =
-    s3.delete.executeT(conf)
+    s3.delete.run(conf).void
 }
 
 case class TemporaryS3Prefix(s3: S3Prefix) {
   def clean: RIO[Unit] =
-    s3.delete.executeT(conf)
+    s3.delete.run(conf).void
 }
 
 object TemporaryS3 {
@@ -33,13 +33,13 @@ object TemporaryS3 {
     runWithS3Address(S3Address(testBucket, s3TempPath))(f)
 
   def runWithS3Address[A](s3: S3Address)(f: S3Address => RIO[A]): RIO[A] =
-    ResultT.using(TemporaryS3Address(s3).pure[RIO])(tmp => f(tmp.s3))
+    RIO.using(TemporaryS3Address(s3).pure[RIO])(tmp => f(tmp.s3))
 
   def withS3Prefix[A](f: S3Prefix => RIO[A]): RIO[A] =
     runWithS3Prefix(S3Prefix(testBucket, s3TempPath))(f)
 
   def runWithS3Prefix[A](s3: S3Prefix)(f: S3Prefix => RIO[A]): RIO[A] =
-    ResultT.using(TemporaryS3Prefix(s3).pure[RIO])(tmp => f(tmp.s3))
+    RIO.using(TemporaryS3Prefix(s3).pure[RIO])(tmp => f(tmp.s3))
 
 
   def testBucket: String = Option(System.getenv("AWS_TEST_BUCKET")).getOrElse("ambiata-dev-view")

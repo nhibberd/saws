@@ -10,122 +10,120 @@ import scalaz.concurrent.Task
 import scalaz.effect._
 import com.ambiata.mundane.control._
 
-case class Aws[R, A](runT: AIO[Vector[AwsLog], R, A]) {
+case class Aws[R, A](run: R => RIO[(Vector[AwsLog], A)]) {
   def contramap[B](f: B => R): Aws[B, A] =
-    Aws(ActionT(r => runT.runT(f(r))))
+    Aws(b => run(f(b)))
 
   def map[B](f: A => B): Aws[R, B] =
-    Aws(runT.map(f))
+    Aws(r => run(r).map(_.map(f)))
 
   def flatMap[B](f: A => Aws[R, B]): Aws[R, B] =
-    Aws(runT.flatMap(a => f(a).runT))
+    Aws(r =>
+      run(r).flatMap({
+        case (log, a) =>
+          f(a).run(r).map({ case (bl, b) => log ++ bl -> b })
+      })
+    )
 
   def flatMapError(f: These[String, Throwable] => Aws[R, A]): Aws[R, A] =
-    Aws(runT.flatMapError(t => f(t).runT))
+    Aws(r => run(r).flatMapError(t => f(t).run(r)))
 
   def onResult[B](f: Result[A] => Result[B]): Aws[R, B] =
-    Aws(runT.onResult(f))
+    Aws(r => run(r).on({
+      case Ok((l, v)) =>
+        RIO.result(f(Result.ok(v))).map(l -> _)
+      case Error(e) =>
+        RIO.result(f(Result.these(e))).map(Vector.empty -> _)
+    }))
 
   def mapError(f: These[String, Throwable] => These[String, Throwable]): Aws[R, A] =
-    Aws(runT.mapError(f))
+    Aws(run(_).mapError(f))
 
-  def run(r: R): IO[(Vector[AwsLog], Result[A])] =
-    runT.run(r)
+  def execute(r: R): RIO[A] =
+    run(r).map(_._2)
 
-  def execute(r: R): IO[Result[A]] =
-    runT.execute(r)
-
-  def executeT(r: R): ResultT[IO, A] =
-    runT.executeT(r)
-
-  def evalWithLog(implicit client: Client[R]): IO[(Log, Result[A])] =
-    run(client.get())
-
-  def eval(implicit client: Client[R]): IO[Result[A]] =
+  def eval(implicit client: Client[R]): RIO[A] =
     execute(client.get())
 
-  def evalT(implicit client: Client[R]): ResultT[IO, A] =
-    executeT(client.get())
+  def evalWithLog(implicit client: Client[R]): RIO[(Log, A)] =
+    run(client.get())
 
   def liftAws[RR](implicit select: Select[RR, R]): Aws[RR, A] =
     contramap(Select[RR, R].contra)
 
   def |||(otherwise: => Aws[R, A]): Aws[R, A] =
-    Aws(runT ||| otherwise.runT)
+    Aws(r => run(r) ||| otherwise.run(r))
 
   def orElse(otherwise: => A): Aws[R, A] =
-    Aws(runT.orElse(otherwise))
+    Aws(run(_).orElse((Vector.empty, otherwise)))
 
-  // FIX Retry and flush are a port from old code, they need to be tidied up and simplified.
-  //     They exist as they are now, because I really don't understand what they are meant
-  //     to do.
+  def retry(i: Int, lf: (Int, These[String, Throwable]) => Aws[R, Unit]): Aws[R, A] =
+    Aws[R, A](r => run(r).onError(e =>
+      if (i > 0)
+        lf(i, e).run(r).map(_._1) >>= (l => retry(i - 1, lf).run(r).map({ case (ll, r) => (l ++ ll) -> r }))
+      else RIO.these(e)))
 
-  def retry(i: Int, lf: (Int, These[String, Throwable]) => Vector[AwsLog] = (_,_) => Vector()): Aws[R, A] =
-    Aws[R, A](ActionT(r => ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](runT.runT(r).run.run.flatMap(aa => aa match {
-      case (log, Ok(b))    => (log, Result.ok(b)).pure[IO]
-      case (log, Error(e)) => if(i > 0) retry(i - 1, lf).runT.runT(r).run.run.map(rr => rr match {
-        case (nlog, nattp) => (log ++ lf(i, e) ++ nlog, nattp)
-      }) else (log ++ lf(i, e), Result.these[A](e)).pure[IO]
-    })))))
-
-  /** after running the action, print the last log message to the console */
-  // FIX this looks unusual, should it print everything and take it out of writer?
-  def flush: Aws[R, A] =
-    Aws[R, A](ActionT(r => ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](runT.runT(r).run.run.flatMap({
-      case (log, a) =>
-        IO { log.lastOption.foreach(println) }.as((log, a))
-    })))))
+  def debug(tag: String): Aws[R, A] =
+    Aws(r => run(r).on(r => RIO.result(r.map({ case(l, a) => println(s"Log ($tag): $l"); (l, a) }))))
 }
 
 
 object Aws {
   def withClient[R, A](f: R => A): Aws[R, A] =
-    Aws(ActionT.reader(f))
+    Aws(r => RIO.safe[(Vector[AwsLog], A)](Vector.empty -> f(r)))
 
   def option[R, A](a: R => A): Aws[R, Option[A]] =
     withClient[R, A](a).map(Option.apply)
 
   def result[R, A](f: R => Result[A]): Aws[R, A] =
-    Aws(ActionT.result[IO, Vector[AwsLog], R, A](f))
+    Aws(r => RIO.result[(Vector[AwsLog], A)](f(r).map(Vector.empty -> _)))
 
   def io[R, A](f: R => IO[A]): Aws[R, A] =
-    Aws(ActionT(r => ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, A](WriterT[IO, Vector[AwsLog], Result[A]](f(r).map(a => (Vector[AwsLog](), Result.ok(a)))))))
+    Aws(r => RIO.fromIO(f(r)).map(Vector.empty -> _))
 
   def resultT[R, A](f: R => ResultT[IO, A]): Aws[R, A] =
-    Aws(ActionT.resultT(f))
+    Aws(r => RIO.resultT(f(r)).map(Vector.empty -> _))
 
   def safe[R, A](a: => A): Aws[R, A] =
-    Aws(ActionT.safe[IO, Vector[AwsLog], R, A](a))
+    Aws(_ => RIO.safe((Vector.empty, a)))
 
   def ok[R, A](a: => A): Aws[R, A] =
-    Aws(ActionT.ok[IO, Vector[AwsLog], R, A](a))
+    Aws(_ => RIO.ok((Vector.empty, a)))
 
   def exception[R, A](t: Throwable): Aws[R, A] =
-    Aws(ActionT.exception[IO, Vector[AwsLog], R, A](t))
+    Aws(_ => RIO.exception(t))
 
   def fail[R, A](message: String): Aws[R, A] =
-    Aws(ActionT.fail[IO, Vector[AwsLog], R, A](message))
+    Aws(_ => RIO.fail(message))
 
   def error[R, A](message: String, t: Throwable): Aws[R, A] =
-    Aws(ActionT.error[IO, Vector[AwsLog], R, A](message, t))
+    Aws(_ => RIO.error(message, t))
 
   def these[R, A](both: These[String, Throwable]): Aws[R, A] =
-    Aws(ActionT.these[IO, Vector[AwsLog], R, A](both))
+    Aws(_ => RIO.these(both))
 
   def fromDisjunction[R, A](either: These[String, Throwable] \/ A): Aws[R, A] =
-    Aws(ActionT.fromDisjunction(either))
+    Aws(_ => RIO.fromDisjunction(either).map(Vector.empty -> _))
 
   def fromDisjunctionString[R, A](either: String \/ A): Aws[R, A] =
-    Aws(ActionT.fromDisjunctionString(either))
+    Aws(_ => RIO.fromDisjunctionString(either).map(Vector.empty -> _))
 
   def fromDisjunctionThrowable[R, A](either: Throwable \/ A): Aws[R, A] =
-    Aws(ActionT.fromDisjunctionThrowable(either))
+    Aws(_ => RIO.fromDisjunctionThrowable(either).map(Vector.empty -> _))
 
   def fromIO[R, A](v: IO[A]): Aws[R, A] =
     io(_ => v)
 
   def using[A: Resource, B <: A, R, C](a: Aws[R, B])(run: B => Aws[R, C]): Aws[R, C] =
-    Aws(ActionT.using[A, B, Vector[AwsLog], R, C](a.runT)(run.apply(_).runT))
+    Aws(c => for {
+      ra      <- a.run(c)
+      (l1, b) = ra
+      r       = implicitly[Resource[A]]
+      rb      <- run(b).run(c).onError(e => RIO.fromIO(r.close(b)) >> RIO.these(e))
+      (l2, c) = rb
+      _       <- RIO.fromIO(r.close(b))
+    } yield (l1 |+| l2, c)
+    )
 
   def fromIOResult[R, A](v: IO[Result[A]]): Aws[R, A] =
     fromResultT(ResultT(v))
@@ -133,14 +131,11 @@ object Aws {
   def fromResultT[R, A](v: ResultT[IO, A]): Aws[R, A] =
     resultT(_ => v)
 
-  def log[R](l: AwsLog): Aws[R, Unit] =
-    Aws(ActionT(r =>
-      ResultT[({ type l[a] = WriterT[IO, Vector[AwsLog], a] })#l, Unit](
-        WriterT[IO, Vector[AwsLog], Result[Unit]](
-          (Vector[AwsLog](l), Result.ok(())).pure[IO]))))
+  def fromRIO[R, A](v: RIO[A]): Aws[R, A] =
+    Aws(_ => v.map(Vector.empty -> _))
 
-  def unlog[A, B](result: (A, B)): B =
-    result._2
+  def log[R](l: AwsLog): Aws[R, Unit] =
+    Aws(r => RIO.ok((Vector(l), ())))
 
   implicit def AwsMonad[R]: MonadIO[({ type l[a] = Aws[R, a] })#l] =
     new MonadIO[({ type l[a] = Aws[R, a] })#l] {
@@ -195,6 +190,9 @@ trait AwsSupport[R] {
 
   def fromResultT[A](v: ResultT[IO, A]): Aws[R, A] =
     Aws.fromResultT[R, A](v)
+
+  def fromRIO[A](v: RIO[A]): Aws[R, A] =
+    Aws.fromRIO[R, A](v)
 
   def fromTask[A](task: Task[A]): Aws[R, A] =
     task.attemptRun.fold(exception, a => ok(a))
