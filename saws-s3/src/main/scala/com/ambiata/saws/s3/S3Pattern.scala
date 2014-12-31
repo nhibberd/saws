@@ -20,7 +20,7 @@ case class S3Pattern(bucket: String, unknown: String) {
     S3Operations.removeCommonPrefix(bucket, unknown, data.bucket, data.unknown)
 
   def render: String =
-    Op.render(bucket, unknown)
+    Op.render("S3Pattern", bucket, unknown)
 
   def resolve: S3Action[List[S3Address]] =
     listS3.map(_.map(obj => obj.s3))
@@ -53,7 +53,11 @@ case class S3Pattern(bucket: String, unknown: String) {
     listS3.map(_.map(_.s3.key))
 
   def delete: S3Action[Unit] =
-    resolve.map(_.map(_.delete))
+    determine.flatMap({
+      case Some(\/-(v)) => v.delete
+      case Some(-\/(v)) => v.delete
+      case None         => S3Action.unit
+    })
 
   def exists: S3Action[Boolean] =
     determine.flatMap({

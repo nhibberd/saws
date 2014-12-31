@@ -67,7 +67,7 @@ class AwsSpec extends UnitSpec with ScalaCheck { def is = s2"""
     def logf(n: Int)(i: Int, e: These[String, Throwable]): Aws[Int, Unit] =
       Aws.safe[Int, Unit](println("\tdebug")).debug("aa") >> Aws.log(AwsLog.Warn(s"Result ${(n + 1) - i}/${n + 1} failed with err - ${Result.asString(e)}")).debug("log")
 
-    action.retry(5, logf(5)).debug("end") must runLogOkValue[Int, Int](_.run(1).run)(1, Vector(
+    action.retry(5, logf(5)).debug("end") must runLogOkValue[Int, Int](_.run(1))(1, Vector(
       AwsLog.Warn("Result 1/6 failed with err - fail"),
       AwsLog.Warn("Result 2/6 failed with err - fail"),
       AwsLog.Warn("Result 3/6 failed with err - fail")))

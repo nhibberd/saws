@@ -53,9 +53,11 @@ class RoleLifecycleSpec extends IntegrationSpec with BeforeAfterExample with Thr
 
   def before {
     iam.deleteRole(role.name)
+    ()
   }
 
   def after {
     iam.deleteRole(role.name)
+    ()
   }
 }

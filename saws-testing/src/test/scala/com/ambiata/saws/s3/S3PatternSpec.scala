@@ -1,16 +1,19 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.saws.core._
+import com.ambiata.disorder._
+import com.ambiata.saws.core.{AwsSpec => _, _}
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.Arbitraries._
-import com.ambiata.mundane.testing.RIOMatcher._
+import com.ambiata.saws.testing.AwsMatcher._
+import com.ambiata.saws.s3.S3Temporary._
+import com.ambiata.mundane.control._
 import com.ambiata.mundane.io._
+import com.ambiata.mundane.io.Temporary._
 import org.specs2._
-import org.specs2.matcher.Parameters
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3PatternSpec extends Specification with ScalaCheck { def is = section("aws") ^ s2"""
+class S3PatternSpec extends AwsSpec(5) { def is = s2"""
 
   S3Pattern should perform as expected
   ====================================
@@ -31,6 +34,10 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
     exists from invalid S3Pattern      $existsNone
     exists form failure                $existsFailure
 
+    delete from S3Address              $deleteAddress
+    delete from S3Prefix               $deletePrefix
+    delete from invalid S3Pattern      $deleteNone
+    delete from failure                $deleteFailure
 
   Support functions
   =================
@@ -38,80 +45,84 @@ class S3PatternSpec extends Specification with ScalaCheck { def is = section("aw
     can retrieve S3Pattern from uri    $fromUri
 
 """
+  def determineAddress = prop((s3: S3Temporary, data: String) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    s <- a.toS3Pattern.determine
+  } yield s ==== a.left[S3Prefix].some)
 
-  override implicit def defaultParameters: Parameters =
-    new Parameters(minTestsOk = 3, workers = 3)
-
-  val conf = Clients.s3
-
-  def determineAddress = prop((address: S3Address, data: String) =>
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-    _ <- s3.put(data).execute(conf)
-    s <- S3Pattern(s3.bucket, s3.key).determine.execute(conf)
-  } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isLeft must beTrue )))
-
-  def determinePrefix = prop((prefix: S3Prefix, data: String) =>
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-    _ <- (s3 | "foo").put(data).execute(conf)
-    s <- S3Pattern(s3.bucket, s3.prefix).determine.execute(conf)
-  } yield s) must beOkLike(_ must beSome((z: S3Address \/ S3Prefix) => z.isRight must beTrue )))
+  def determinePrefix = prop((s3: S3Temporary, id: Ident, data: String) => for {
+    p <- s3.prefix
+    _ <- (p | id.value).put(data)
+    s <- p.toS3Pattern.determine
+  } yield s ==== p.right[S3Address].some)
 
   def determineNone = prop((r: S3Pattern) =>
-    r.determine.execute(conf) must beOkLike(_ must beNone ))
+    r.determine.map(_ must beNone))
 
-  def determineFailure = prop((s3: S3Prefix, unknown: String) =>
-    (s3 | unknown).toS3Pattern.determine.execute(conf) must beOkLike(_ must beNone ))
+  def determineFailure = prop((s3: S3Prefix, unknown: Ident) =>
+    (s3 | unknown.value).toS3Pattern.determine.map(_ must beNone))
 
   def determineFailurex =
-    S3Pattern("", "").determine.execute(conf) must beOkLike(_ must beNone )
+    S3Pattern("", "").determine.map(_ must beNone)
 
-  def listAddress = prop((address: S3Address, data: String) =>
-    TemporaryS3.withS3Address(s3 => for {
-      _ <- s3.put(data).execute(conf)
-      l <- S3Pattern(s3.bucket, s3.key).listKeys.execute(conf)
-    } yield s3 -> l) must beOkLike({
-      case (a: S3Address, b: List[String]) => a.key must_== b.head
-    })
-  )
+  def listAddress = prop((s3: S3Temporary, data: String) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    l <- a.toS3Pattern.listKeys
+  } yield l ==== List(a.key))
 
-  def listPrefix = prop((prefix: S3Prefix, data: String, key1: S3Address, key2: S3Address) => (key1.key != key2.key) ==> {
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | key1.key).put(data).execute(conf)
-      _ <- (s3 | key2.key).put(data).execute(conf)
-      l <- s3.toS3Pattern.listKeys.execute(conf)
-    } yield s3 -> l) must beOkLike({
-      case (a: S3Prefix, b: List[String]) =>
-        b.toSet must_== List(key1.key, key2.key).map(s => S3Operations.concat(a.prefix, s)).toSet
-    })
-  })
+  def listPrefix = prop((s3: S3Temporary, key: DistinctPair[Ident], data: String) => for {
+    p <- s3.prefix
+    _ <- (p | key.first.value).put(data)
+    _ <- (p | key.second.value).put(data)
+    l <- p.toS3Pattern.listKeys
+  } yield l.sorted ==== List((p | key.first.value).key, (p | key.second.value).key).sorted)
 
   def listNone = prop((pattern: S3Pattern) =>
-    pattern.listS3.execute(conf) must beOkLike(l => l.isEmpty))
+    pattern.listS3.map(_ ==== nil))
 
-  def listFailure = prop((s3: S3Prefix, unknown: String) =>
-    (s3 | unknown).toS3Pattern.listS3.execute(conf) must beOkLike(l => l.isEmpty))
+  def listFailure = prop((s3: S3Prefix, unknown: Ident) =>
+    (s3 | unknown.value).toS3Pattern.listS3.map(_ ==== nil))
 
-  def existsAddress = prop((address: S3Address, data: String) =>
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).execute(conf)
-      e <- S3Pattern(s3.bucket, s3.key).exists.execute(conf)
-    } yield e) must beOkValue(true)
-  )
+  def existsAddress = prop((s3: S3Temporary, data: String) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    e <- a.toS3Pattern.exists
+  } yield e ==== true)
 
-  def existsPrefix = prop((prefix: S3Prefix, data: String) =>
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | "foo").put(data).execute(conf)
-      e <- S3Pattern(s3.bucket, s3.prefix).exists.execute(conf)
-    } yield e) must beOkValue(true)
-  )
+  def existsPrefix = prop((s3: S3Temporary, id: Ident, data: String) => for {
+    p <- s3.prefix
+    _ <- (p | id.value).put(data)
+    e <- p.toS3Pattern.exists
+  } yield e ==== true)
 
   def existsNone = prop((pattern: S3Pattern) =>
-    pattern.exists.execute(conf) must beOkValue(false))
+    pattern.exists.map(_ ==== false))
 
-  def existsFailure = prop((bucket: Clean, unknown: String) =>
-    S3Pattern(bucket.s, unknown).exists.execute(conf) must beOkValue(false))
+  def existsFailure = prop((bucket: Ident, unknown: Ident) =>
+    S3Pattern(bucket.value, unknown.value).exists.map(_ ==== false))
+
+  def deleteAddress = prop((s3: S3Temporary, data: String) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    _ <- a.toS3Pattern.delete
+    e <- a.exists
+  } yield e ==== false)
+
+  def deletePrefix = prop((s3: S3Temporary, id: Ident, data: String) => for {
+    p <- s3.prefix
+    _ <- (p | id.value).put(data)
+    _ <- p.toS3Pattern.delete
+    e <- p.exists
+  } yield e ==== false)
+
+  def deleteNone = prop((pattern: S3Pattern) =>
+    pattern.delete.as(ok))
+
+  def deleteFailure = prop((bucket: Ident, unknown: Ident) =>
+    S3Pattern(bucket.value, unknown.value).delete.as(ok))
 
   def fromUri = prop((pattern: S3Pattern) =>
-    S3Pattern.fromURI(s"s3://${pattern.render}") must beSome((a: S3Pattern) => a must_== pattern))
-
+    S3Pattern.fromURI(s"s3://${pattern.bucket}/${pattern.unknown}") ==== pattern.some)
 }

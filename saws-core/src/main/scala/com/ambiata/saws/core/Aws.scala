@@ -54,8 +54,8 @@ case class Aws[R, A](run: R => RIO[(Vector[AwsLog], A)]) {
   def |||(otherwise: => Aws[R, A]): Aws[R, A] =
     Aws(r => run(r) ||| otherwise.run(r))
 
-  def orElse(otherwise: => A): Aws[R, A] =
-    Aws(run(_).orElse((Vector.empty, otherwise)))
+  def orElse(otherwise: => Aws[R, A]): Aws[R, A] =
+    |||(otherwise)
 
   def retry(i: Int, lf: (Int, These[String, Throwable]) => Aws[R, Unit]): Aws[R, A] =
     Aws[R, A](r => run(r).onError(e =>
@@ -83,6 +83,9 @@ object Aws {
 
   def resultT[R, A](f: R => ResultT[IO, A]): Aws[R, A] =
     Aws(r => RIO.resultT(f(r)).map(Vector.empty -> _))
+
+  def rio[R, A](f: R => RIO[A]): Aws[R, A] =
+    Aws(r => f(r).map(Vector.empty -> _))
 
   def safe[R, A](a: => A): Aws[R, A] =
     Aws(_ => RIO.safe((Vector.empty, a)))
@@ -143,6 +146,15 @@ object Aws {
       def point[A](a: => A) = ok(a)
       def bind[A, B](a: Aws[R, A])(f: A => Aws[R, B]) = a flatMap f
     }
+
+  def addFinalizer[R](finalizer: Aws[R, Unit]): Aws[R, Unit] =
+    Aws(r => RIO.addFinalizer(Finalizer(finalizer.run(r).void)).map(Vector.empty -> _))
+
+  def unit[R]: Aws[R, Unit] =
+    Aws(_  => RIO.unit.map(Vector.empty -> _))
+
+  def putStrLn[R](msg: String): Aws[R, Unit] =
+    Aws(_ => RIO.putStrLn(msg).map(Vector.empty -> _))
 }
 
 trait AwsSupport[R] {
@@ -163,6 +175,9 @@ trait AwsSupport[R] {
 
   def resultT[A](f: R => ResultT[IO, A]): Aws[R, A] =
     Aws.resultT[R, A](f)
+
+  def rio[A](f: R => RIO[A]): Aws[R, A] =
+    Aws.rio[R, A](f)
 
   def safe[A](a: => A): Aws[R, A] =
     Aws.safe[R, A](a)
@@ -196,6 +211,18 @@ trait AwsSupport[R] {
 
   def fromTask[A](task: Task[A]): Aws[R, A] =
     task.attemptRun.fold(exception, a => ok(a))
+
+  def addFinalizer(finalizer: Aws[R, Unit]): Aws[R, Unit] =
+    Aws.addFinalizer(finalizer)
+
+  def unit: Aws[R, Unit] =
+    Aws.unit
+
+  def putStrLn(msg: String): Aws[R, Unit] =
+    Aws.putStrLn(msg)
+
+  def using[A: Resource, B <: A, C](a: Aws[R, B])(run: B => Aws[R, C]): Aws[R, C] =
+    Aws.using[A, B, R, C](a)(run)
 }
 
 object EC2Action extends AwsSupport[AmazonEC2Client]

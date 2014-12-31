@@ -13,7 +13,7 @@ object S3 {
     S3Action(_.listBuckets.toList).onResult(_.prependErrorMessage(s"Could access the buckets list"))
 
   def isS3Accessible: S3Action[Unit] =
-    listBuckets.map(_ => ()).orElse(S3Action.fail("S3 is not accessible"))
+    listBuckets.orElse(S3Action.fail("S3 is not accessible")).void
 
   /** Object metadata that enables AES256 server-side encryption. */
   def ServerSideEncryption: ObjectMetadata = {

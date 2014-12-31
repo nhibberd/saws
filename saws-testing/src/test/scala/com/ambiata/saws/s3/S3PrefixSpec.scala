@@ -1,16 +1,20 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.saws.core._
+import com.ambiata.disorder._
+import com.ambiata.saws.core.{AwsSpec => _, _}
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.Arbitraries._
-import com.ambiata.mundane.testing.RIOMatcher._
+import com.ambiata.saws.testing.AwsMatcher._
+import com.ambiata.saws.s3.S3Temporary._
+import com.ambiata.mundane.control._
 import com.ambiata.mundane.io._
+import com.ambiata.mundane.io.Arbitraries._
+import com.ambiata.mundane.io.Temporary._
 import org.specs2._
-import org.specs2.matcher.Parameters
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3PrefixSpec extends Specification with ScalaCheck { def is = section("aws") ^ s2"""
+class S3PrefixSpec extends AwsSpec(5) { def is = s2"""
 
  S3 file interactions
  ====================
@@ -21,9 +25,8 @@ class S3PrefixSpec extends Specification with ScalaCheck { def is = section("aws
    delete multiple files from S3       $delete
    check existence of prefix on S3     $exists
    check existence can fail on S3      $existsFail
-   delete all files from a base path   $deletePrefix
    list all files in prefix on S3      $list
-   list all S3Prefix's in prefix on S3 $listPrefix
+   list all S3Address's in prefix      $listAddress
    get list of file sizes              $fileSizes
 
  Test that we can remove common prefix's from S3Address
@@ -38,96 +41,71 @@ class S3PrefixSpec extends Specification with ScalaCheck { def is = section("aws
   Can retrieve S3Prefix from uri        $fromUri
 
 """
+  def upload = prop((data: String, s3: S3Temporary, local: LocalTemporary, dp: DistinctPair[Ident]) => for {
+    p <- s3.prefix
+    d <- S3Action.fromRIO(local.directory)
+    _ <- S3Action.fromRIO(Files.write(d </> FilePath.unsafe(dp.first.value), data))
+    _ <- S3Action.fromRIO(Files.write(d </> FilePath.unsafe(dp.second.value), data))
+    _ <- p.putFiles(d)
+    f <- (p | dp.first.value).exists
+    s <- (p | dp.second.value).exists
+  } yield f -> s ==== true -> true)
 
-  override implicit def defaultParameters: Parameters =
-    new Parameters(minTestsOk = 3, workers = 3)
+  def download = prop((data: DistinctPair[String], key: DistinctPair[Ident], s3: S3Temporary, local: LocalTemporary) => for {
+    p <- s3.prefix
+    d <- S3Action.fromRIO(local.directory)
+    _ <- (p | key.first.value).put(data.first)
+    _ <- (p | key.second.value).put(data.second)
+    _ <- p.getFiles(d)
+    f <- S3Action.fromRIO(Files.read(d </> FilePath.unsafe(key.first.value)))
+    s <- S3Action.fromRIO(Files.read(d </> FilePath.unsafe(key.second.value)))
+  } yield f -> s ==== data.first -> data.second)
 
-  val conf = Clients.s3
+  def delete = prop((s3: S3Temporary, key: Ident) => for {
+    p <- s3.prefix
+    _ <- (p | key.value).put("")
+    a <- (p | key.value).exists
+    b <- p.exists
+    _ <- p.delete
+    d <- p.exists
+    e <- (p | key.value).exists
+  } yield (a, b, d, e) ==== ((true, true, false, false)))
 
-  def upload = prop((prefix: S3Prefix, data: String, one: S3Address, two: S3Address) =>
-    TemporaryDirPath.withDirPath(dir => for {
-      _ <- Files.write(dir </> FilePath.unsafe(one.key), data)
-      _ <- Files.write(dir </> FilePath.unsafe(two.key), data)
-      e <- TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-        _ <- s3.putFiles(dir).execute(conf)
-        f <- (s3 | one.key).exists.execute(conf)
-        b <- (s3 | two.key).exists.execute(conf)
-      } yield f -> b)
-    } yield e) must beOkValue (true -> true))
+  def exists = prop((s3: S3Temporary, key: Ident, data: String) => for {
+    p <- s3.prefix
+    _ <- (p | key.value).put(data)
+    e <- p.exists
+  } yield e ==== true)
 
-  def download = prop((dataOne: String, dataTwo: String, prefix: S3Prefix, one: S3Prefix, two: S3Prefix) =>
-    TemporaryDirPath.withDirPath(dir => for {
-      e <- TemporaryS3.withS3Prefix(s3 => for {
-        _ <- (s3 | one.prefix).put(dataOne).execute(conf)
-        _ <- (s3 | two.prefix).put(dataTwo).execute(conf)
-        _ <- s3.getFiles(dir).execute(conf)
-        o <- Files.read(dir </> FilePath.unsafe(one.prefix))
-        t <- Files.read(dir </> FilePath.unsafe(two.prefix))
-      } yield o -> t)
-    } yield e) must beOkLike ({ case (a, b) => { a must_== dataOne; b must_== dataTwo }  }))
+  def existsFail = prop((s3: S3Temporary) => for {
+    p <- s3.prefix
+    e <- p.exists
+  } yield e ==== false)
 
-  def delete = prop((prefix: S3Prefix, one: S3Prefix, two: S3Prefix) =>
-    TemporaryS3.withS3Prefix(s3 => for {
-      _  <- (s3 | one.prefix).put("").execute(conf)
-      _  <- (s3 | two.prefix).put("").execute(conf)
-      f  <- (s3 | one.prefix).exists.execute(conf)
-      b  <- (s3 | two.prefix).exists.execute(conf)
-      _  <- s3.delete.execute(conf)
-      df <- (s3 | one.prefix).exists.execute(conf)
-      db <- (s3 | two.prefix).exists.execute(conf)
-    } yield (f, b, df, db)) must beOkValue (true, true, false, false))
+  def list = prop((s3: S3Temporary, keys: DistinctPair[Ident]) => for {
+    p <- s3.prefix
+    _ <- (p | keys.first.value).put("")
+    _ <- (p | keys.second.value).put("")
+    l <- p.listKeys
+  } yield l.sorted ==== List((p | keys.first.value).key, (p | keys.second.value).key).sorted)
 
-  def exists = prop((prefix: S3Prefix, key: String, data: String) =>
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _  <- (s3 | key).put(data).execute(conf)
-      e  <- s3.exists.execute(conf)
-    } yield e) must beOkValue (true))
+  def listAddress = prop((s3: S3Temporary, keys: DistinctPair[Ident]) => for {
+    p <- s3.prefix
+    _ <- (p | keys.first.value).put("")
+    _ <- (p | keys.second.value).put("")
+    l <- p.listAddress
+  } yield l.toSet ==== List((p | keys.first.value), (p | keys.second.value)).toSet)
 
-  def existsFail = prop((prefix: S3Prefix) =>
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      e  <- s3.exists.execute(conf)
-    } yield e) must beOkValue (false))
-
-  def deletePrefix = prop((prefix: S3Prefix, key: String, data:String) =>
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | key).put(data).execute(conf)
-      b <- s3.exists.execute(conf)
-      _ <- s3.delete.execute(conf)
-      e <- s3.exists.execute(conf)
-    } yield b -> e) must beOkValue (true -> false))
-
-  def list = prop((prefix: S3Prefix, one: S3Address, two: S3Address) => (one.key != two.key) ==> {
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | one.key).put("").execute(conf)
-      _ <- (s3 | two.key).put("").execute(conf)
-      l <- s3.listKeys.execute(conf)
-    } yield s3 -> l) must beOkLike({
-      case (a: S3Prefix, b: List[String]) =>
-        List(one.key, two.key).map(s => S3Operations.concat(a.prefix, s)).toSet must_== b.toSet
-    })
-  })
-
-  def listPrefix = prop((prefix: S3Prefix, one: S3Prefix, two: S3Prefix) => (one.prefix != two.prefix) ==> {
-    TemporaryS3.withS3Prefix(s3 => for {
-      _ <- (s3 | one.prefix).put("").execute(conf)
-      _ <- (s3 | two.prefix).put("").execute(conf)
-      l <- s3.listPrefix.execute(conf)
-    } yield s3 -> l) must beOkLike({
-      case (a: S3Prefix, b: List[S3Prefix]) =>
-        List(one.prefix, two.prefix).map(s => a / s).toSet must_== b.toSet
-    })
-  })
-
-  def fileSizes = TemporaryDirPath.withDirPath(dir => for {
-    _  <- Files.write(dir </> FilePath("foo"), "1")
-    _  <- Files.write(dir </> DirPath("foos") </> FilePath("bar"), "testing")
-    s1 = (dir </> FilePath("foo")).toFile.length()
-    s2 = (dir </> DirPath("foos") </> FilePath("bar")).toFile.length()
-    s3 <- TemporaryS3.withS3Prefix(s3 => for {
-      _ <- s3.putFiles(dir).execute(conf)
-      s <- s3.size.execute(conf)
-    } yield s)
-  } yield (s1, s2, s3)) must beOkLike({ case (a: Long, b: Long, s3: Long) => a + b must_== s3 })
+  def fileSizes = prop((s3: S3Temporary, local: LocalTemporary, dp: DistinctPair[Ident], key: Ident) => for {
+    d <- S3Action.fromRIO(local.directory)
+    p <- s3.prefix
+    _ <- S3Action.fromRIO(Files.write(d </> FilePath.unsafe(dp.first.value), ""))
+    _ <- S3Action.fromRIO(Files.write(d </> DirPath.unsafe(dp.second.value) </> FilePath.unsafe(key.value), ""))
+    f <- S3Action.safe((d </> FilePath.unsafe(dp.first.value)).toFile.length())
+    k <- S3Action.safe((d </> DirPath.unsafe(dp.second.value) </> FilePath.unsafe(key.value)).toFile.length())
+    _ <- p.putFiles(d)
+    s <- p.size
+  } yield s ==== f + k)
 
   def succesfullCommonPrefix = prop((prefix: S3Prefix, key: String) => {
     val s3 = prefix | key
@@ -140,10 +118,10 @@ class S3PrefixSpec extends Specification with ScalaCheck { def is = section("aws
     s3.removeCommonPrefix(foo) must_== None
   }
 
-  def fromUri = prop((prefix: S3Prefix, key: String, data: String) => (key.length != 0) ==> {
-    TemporaryS3.runWithS3Prefix(prefix)(s3 => for {
-      _ <- (s3 | key).put(data).execute(conf)
-      e <- S3Prefix.fromUri(s"s3://${prefix.bucket}/${prefix.prefix}").execute(conf)
-    } yield s3 -> e) must beOkLike({ case (s: S3Prefix, z: Option[S3Prefix]) => z must beSome(s)})
-  })
+
+  def fromUri = prop((s3: S3Temporary, key: Ident) => for {
+    p <- s3.prefix
+    _ <- (p | key.value).put("")
+    e <- S3Prefix.fromUri(s"s3://${p.bucket}/${p.prefix}")
+  } yield e ==== p.some)
 }

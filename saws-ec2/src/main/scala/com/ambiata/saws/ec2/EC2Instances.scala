@@ -76,7 +76,7 @@ object EC2Instances {
 
   def completeOrFault(reqIds: List[String]): EC2Action[Boolean] =
     spots(reqIds).map(reqs =>
-      reqs.forall(x => x.getInstanceId != null || x.getFault != null)).orElse(false)
+      reqs.forall(x => x.getInstanceId != null || x.getFault != null)).orElse(EC2Action.ok(false))
 
   def spots(reqIds: List[String]): EC2Action[List[SpotInstanceRequest]] =
     EC2Action(client =>
@@ -93,13 +93,13 @@ object EC2Instances {
     EC2Action(client =>
       client.stopInstances(
         new StopInstancesRequest()
-         .withInstanceIds(instanceIds.asJava)))
+         .withInstanceIds(instanceIds.asJava))).void
 
   def terminate(instanceIds: List[String]): EC2Action[Unit] =
     EC2Action(client =>
       client.terminateInstances(
         new TerminateInstancesRequest()
-          .withInstanceIds(instanceIds.asJava)))
+          .withInstanceIds(instanceIds.asJava))).void
 
   def findById(instanceId: String): EC2Action[Option[Instance]] =
     list.map(_.find(_.getInstanceId == instanceId))
