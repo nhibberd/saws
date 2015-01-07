@@ -90,16 +90,17 @@ class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables
   val CiRole = "ci-only-role"
 
 
-  def createFiles {
+  def createFiles(): Unit = {
     val tmpFile1 = File.createTempFile(file1, "tmp")
     val tmpFile2 = File.createTempFile(file2, "tmp")
     s3.client.putObject(new PutObjectRequest(TestBucket, key1, tmpFile1))
     s3.client.putObject(new PutObjectRequest(TestBucket, key2, tmpFile2))
     s3.client.putObject(new PutObjectRequest(OtherTestBucket, key1, tmpFile1))
+    ()
   }
 
 
-  def removeFiles {
+  def removeFiles(): Unit = {
     Seq(TestBucket, OtherTestBucket) foreach { bucket =>
       val keys = s3.client.listObjects(bucket).getObjectSummaries.map(_.getKey)
       keys foreach { key => s3.client.deleteObject(bucket, key)}

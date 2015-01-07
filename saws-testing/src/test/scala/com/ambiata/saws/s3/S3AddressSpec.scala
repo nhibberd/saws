@@ -2,20 +2,23 @@ package com.ambiata.saws.s3
 
 import java.security.MessageDigest
 
+import com.ambiata.disorder._
 import com.ambiata.mundane.control._
-import com.ambiata.saws.core._
-import com.ambiata.saws.testing._
-import com.ambiata.saws.testing.Arbitraries._
-import com.ambiata.mundane.testing.RIOMatcher._
 import com.ambiata.mundane.io._
+import com.ambiata.mundane.io.Arbitraries._
+import com.ambiata.mundane.io.Temporary._
 import com.ambiata.mundane.io.MemoryConversions._
+import com.ambiata.saws.core.{AwsSpec => _, _}
+import com.ambiata.saws.testing._
+import com.ambiata.saws.testing.AwsMatcher._
+import com.ambiata.saws.testing.Arbitraries._
+import com.ambiata.saws.s3.S3Temporary._
 import org.specs2._
-import org.specs2.matcher.Parameters
 
 import scala.io.{Source, Codec}
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3AddressSpec extends Specification with ScalaCheck { def is = section("aws") ^ s2"""
+class S3AddressSpec extends AwsSpec(5) { def is = s2"""
 
  S3 file interactions
  ========================================
@@ -50,93 +53,78 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
   A range of longs from 0 to size can be partitioned in n ranges of size m (the last range might be shorter) $partition
 
 """
+  def putString = prop((data: String, s3: S3Temporary) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    e <- a.get
+  } yield e ==== data)
 
-  override implicit def defaultParameters: Parameters =
-    new Parameters(minTestsOk = 5, workers = 3)
+  def upload = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
+    f <- S3Action.fromRIO(local.fileWithContent(data))
+    a <- s3.address
+    _ <- a.putFile(f)
+    e <- a.get
+  } yield e ==== data)
 
-  val conf = Clients.s3
+  def downloadStream = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
+    f <- S3Action.fromRIO(local.fileWithContent(data))
+    a <- s3.address
+    _ <- a.putFile(f)
+    e <- a.withStream(is => Streams.read(is, "UTF-8"))
+  } yield e ==== data)
 
-  def putString = prop((data: String, address: S3Address) => {
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).execute(conf)
-      e <- s3.get.execute(conf)
-    } yield e) must beOkValue (data)
-  })
+  def download = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
+    a <- s3.address
+    f <- S3Action.fromRIO(local.file)
+    _ <- a.put(data)
+    _ <- a.getFile(f)
+    e <- S3Action.fromRIO(Files.exists(f))
+    d <- S3Action.fromRIO(Files.read(f))
+  } yield e -> d ==== true -> data)
 
-  def upload = prop((data: String, address: S3Address) => {
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- Files.write(f, data)
-      e <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putFile(f).execute(conf)
-        e <- s3.get.execute(conf)
-      } yield e)
-    } yield e) must beOkValue (data)
-  })
+  def downloadTo = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
+    d <- S3Action.fromRIO(local.directory)
+    a <- s3.address
+    _ <- a.put(data)
+    _ <- a.getFileTo(d)
+    e <- S3Action.fromRIO(Files.exists(d </> FilePath.unsafe(a.key)))
+    d <- S3Action.fromRIO(Files.read(d </> FilePath.unsafe(a.key)))
+  } yield e -> d ==== true -> data)
 
-  def downloadStream = prop((data: String, address: S3Address) => {
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- Files.write(f, data)
-      e <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putFile(f).execute(conf)
-        e <- s3.withStream(is => Streams.read(is, "UTF-8")).execute(conf)
-      } yield e)
-    } yield e) must beOkValue (data)
-  })
+  def delete = prop((data: String, s3: S3Temporary) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    b <- a.exists
+    _ <- a.delete
+    e <- a.exists
+  } yield b -> e ==== true -> false)
 
-  def download = prop((data: String, address: S3Address) =>
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.put(data).execute(conf)
-        _ <- s3.getFile(f).execute(conf)
-      } yield ())
-      e <- Files.exists(f)
-      d <- Files.read(f)
-    } yield e -> d) must beOkValue (true -> data))
 
-  def downloadTo = prop((data: String, address: S3Address) =>
-    TemporaryDirPath.withDirPath(dir => for {
-      r <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.put(data).execute(conf)
-        _ <- s3.getFileTo(dir).execute(conf)
-        e <- Files.exists(dir </> FilePath.unsafe(s3.key))
-        d <- Files.read(dir </> FilePath.unsafe(s3.key))
-      } yield e -> d)
-    } yield r) must beOkValue (true -> data))
+  def exists = prop((data: String, s3: S3Temporary) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    e <- a.exists
+  } yield e ==== true)
 
-  def delete = prop((data: String, address: S3Address) =>
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).execute(conf)
-      e <- s3.exists.execute(conf)
-      _ <- s3.delete.execute(conf)
-      d <- s3.exists.execute(conf)
-    } yield e -> d) must beOkValue (true -> false))
-
-  def exists = prop((data: String, address: S3Address) =>
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).execute(conf)
-      e <- s3.exists.execute(conf)
-    } yield e) must beOkValue (true))
-
-  def md5 = prop((data: String, address: S3Address) =>
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put(data).execute(conf)
-      d <- s3.get.execute(conf)
-      m <- s3.md5.execute(conf)
-    } yield d -> m) must beOkValue (data -> md5Hex(data.getBytes("UTF8"))))
+  def md5 = prop((data: String, s3: S3Temporary) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    d <- a.get
+    m <- a.md5
+  } yield d -> m ==== data -> md5Hex(data.getBytes("UTF8")))
 
   def md5Hex(bytes: Array[Byte]): String =
     MessageDigest.getInstance("MD5").digest(bytes).map("%02X".format(_)).mkString.toLowerCase
 
-  def copy = prop((data: String, address: S3Address, to: S3Address) =>
-    TemporaryS3.runWithS3Address(address)(origin => for {
-      _ <- origin.put(data).execute(conf)
-      r <- TemporaryS3.runWithS3Address(to)(s3 => for {
-        _ <- origin.copy(s3).execute(conf)
-        o <- origin.exists.execute(conf)
-        e <- s3.exists.execute(conf)
-        d <- s3.get.execute(conf)
-      } yield (o, e, d))
-    } yield r) must beOkValue (true, true, data))
+  def copy = prop((data: String, s3: S3Temporary) => for {
+    o <- s3.address
+    _ <- o.put(data)
+    d <- s3.address
+    _ <- o.copy(d)
+    e <- o.exists
+    z <- d.exists
+    r <- d.get
+  } yield (e, z, r) ==== ((true, true, data)))
 
   val smallData: List[String] = List.fill(120)("testing")
 
@@ -146,56 +134,51 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     x
   })
 
-  def downloadParts = prop((address: S3Address) =>
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putLines(smallData).execute(conf)
-        _ <- RIO.using(f.toOutputStream)( out => s3.withStreamMultipart(50.bytes, in => Streams.pipe(in, out), S3.NoTick).execute(conf))
-      } yield ())
-      e <- Files.readLines(f)
-    } yield e.toList) must beOkValue(smallData))
+  def downloadParts = prop((s3: S3Temporary, local: LocalTemporary) => for {
+    a <- s3.address
+    f <- S3Action.fromRIO(local.fileWithParent)
+    _ <- a.putLines(smallData)
+    _ <- S3Action.using(S3Action.fromRIO(f.toOutputStream))(out => a.withStreamMultipart(50.bytes, in => Streams.pipe(in, out), S3.NoTick))
+    r <- S3Action.fromRIO(Files.readLines(f))
+  } yield r.toList ==== smallData)
 
-  def uploadPartsSmall = prop((address: S3Address) =>
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- Files.writeLines(f, smallData)
-      s <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).execute(conf)
-        z <- s3.getLines.execute(conf)
-      } yield z)
-    } yield s) must beOkValue(smallData))
+  def uploadPartsSmall = prop((s3: S3Temporary, local: LocalTemporary) => for {
+    f <- S3Action.fromRIO(local.file)
+    _ <- S3Action.fromRIO(Files.writeLines(f, smallData))
+    a <- s3.address
+    _ <- a.putFileMultiPart(5.mb, f, S3.NoTickX)
+    r <- a.getLines
+  } yield r ==== smallData)
 
-  def uploadParts = prop((address: S3Address) =>
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- Files.write(f, bigData)
-      s <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _  <- s3.putFileMultiPart(5.mb, f, S3.NoTickX).execute(conf)
-        z <- s3.get.execute(conf)
-      } yield z)
-    } yield s) must beOkValue(bigData))
+  def uploadParts = prop((s3: S3Temporary, local: LocalTemporary) => for {
+    f <- S3Action.fromRIO(local.file)
+    _ <- S3Action.fromRIO(Files.write(f, bigData))
+    a <- s3.address
+    _ <- a.putFileMultiPart(5.mb, f, S3.NoTickX)
+    r <- a.get
+  } yield r ==== bigData)
 
-  def fileSizes = prop((data: String, address: S3Address) =>
-    TemporaryFilePath.withFilePath(f => for {
-      _ <- Files.write(f, data)
-      s = f.toFile.length()
-      e <- TemporaryS3.runWithS3Address(address)(s3 => for {
-        _ <- s3.putFile(f).execute(conf)
-        e <- s3.size.execute(conf)
-      } yield e)
-    } yield s -> e) must beOkLike({ case (a, b) => a must_== b }))
-
-  def codecString = prop((c: Codec, s: String) => validForCodec(s, c) ==> {
-    TemporaryS3.withS3Address(s3 => for {
-      _ <- s3.putWithEncoding(s, c).execute(conf)
-      d <- s3.getWithEncoding(c).execute(conf)
-    } yield d) must beOkValue(s) }
-  )
+  def fileSizes = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
+    f <- S3Action.fromRIO(local.file)
+    _ <- S3Action.fromRIO(Files.write(f, data))
+    s <- S3Action.safe(f.toFile.length)
+    a <- s3.address
+    _ <- a.putFile(f)
+    r <- a.size
+  } yield s ==== r)
 
   def validForCodec(s: String, c: Codec): Boolean =
     new String(s.getBytes(c.name), c.name) == s
 
-  def succesfullCommonPrefix = prop((key: String, prefix: S3Prefix) => {
-    val s3 = prefix / key
-    s3.removeCommonPrefix(prefix) must_== Some(key)
+  def codecString = prop((c: Codec, s: String, s3: S3Temporary) => validForCodec(s, c) ==> (for {
+    a <- s3.address
+    _ <- a.putWithEncoding(s, c)
+    d <- a.getWithEncoding(c)
+  } yield d ==== s))
+
+  def succesfullCommonPrefix = prop((id: Ident, prefix: S3Prefix) => {
+    val s3 = prefix / id.value
+    s3.removeCommonPrefix(prefix) must_== Some(id.value)
   })
 
   def noCommonPrefix = {
@@ -214,10 +197,10 @@ class S3AddressSpec extends Specification with ScalaCheck { def is = section("aw
     S3Address.partition(10, 4) must_== Seq((0, 3), (4, 7), (8, 9))
   }
 
-  def fromUri = prop((address: S3Address) =>
-    TemporaryS3.runWithS3Address(address)(s3 => for {
-      _ <- s3.put("testing").execute(conf)
-      e <- S3Address.fromUri(s"s3://${s3.bucket}/${s3.key}").execute(conf)
-    } yield s3 -> e) must beOkLike ({ case (s: S3Address, z: Option[S3Address]) => z must beSome(s) }))
+  def fromUri = prop((data: String, s3: S3Temporary) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    e <- S3Address.fromUri(s"s3://${a.bucket}/${a.key}")
+  } yield e ==== a.some)
 
 }

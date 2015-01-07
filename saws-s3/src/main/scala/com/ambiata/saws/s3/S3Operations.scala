@@ -5,8 +5,8 @@ import scalaz._, Scalaz._
 object S3Operations {
   val DELIMITER: String = "/"
 
-  def render(bucket: String, s: String): String =
-    bucket + "/" + s
+  def render(name: String, bucket: String, s: String): String =
+    s"$name($bucket/$s)"
 
   def concat(one: String, two: String): String =
     if (one.endsWith(DELIMITER) || one.isEmpty) one + two

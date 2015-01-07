@@ -33,7 +33,7 @@ object EC2IPs {
       client.associateAddress(
         (new AssociateAddressRequest)
           .withAllocationId(allocationId)
-          .withInstanceId(instance)))
+          .withInstanceId(instance))).void
 
   def disassociate(address: Address): EC2Action[Unit] =
     Option(address.getAssociationId) match {

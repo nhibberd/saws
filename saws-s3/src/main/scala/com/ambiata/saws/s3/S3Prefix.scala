@@ -24,7 +24,7 @@ case class S3Prefix(bucket: String, prefix: String) {
     Op.removeCommonPrefix(bucket, prefix, data.bucket, data.prefix)
 
   def render: String =
-    Op.render(bucket, prefix)
+    Op.render("S3Prefix", bucket, prefix)
 
   def awsPrefix: String = {
     if (prefix.endsWith(Op.DELIMITER) || prefix.isEmpty)
@@ -85,8 +85,8 @@ case class S3Prefix(bucket: String, prefix: String) {
       allObjects(client.listObjects(bucket, awsPrefix), List())
     }).flatMap(x => x)
 
-  def listPrefix: S3Action[List[S3Prefix]] =
-    listKeys.map(_.map(s => S3Prefix(bucket, s)))
+  def listAddress: S3Action[List[S3Address]] =
+    listKeys.map(_.map(s => S3Address(bucket, s)))
 
   def listKeys: S3Action[List[String]] =
     listSummary.map(_.map(_.getKey))

@@ -19,7 +19,7 @@ object EC2Images {
 
   def describeImages(imageIds: List[String]): EC2Action[List[Image]] =
     EC2Action(client => client.describeImages(
-      new DescribeImagesRequest().withImageIds(imageIds.asJava)).getImages.asScala.toList).orElse(List())
+      new DescribeImagesRequest().withImageIds(imageIds.asJava)).getImages.asScala.toList).orElse(EC2Action.ok(List()))
 
   def isAvailable(imageId: String): EC2Action[Boolean] =
     describeImages(List(imageId)).map(_.find(_.getImageId == imageId).exists(_.getState.toLowerCase == "available"))

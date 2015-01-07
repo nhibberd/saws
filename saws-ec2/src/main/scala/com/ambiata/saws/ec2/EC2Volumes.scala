@@ -9,6 +9,8 @@ import com.ambiata.saws.ec2._
 
 import scala.collection.JavaConverters._
 
+import scalaz._, Scalaz._
+
 object EC2Volumes {
   def create(snapshotId: String, availabilityZone: String): EC2Action[Volume] =
     EC2Action(client =>
@@ -31,5 +33,5 @@ object EC2Volumes {
         new DetachVolumeRequest(volume.getVolumeId)
          .withInstanceId(instance.getInstanceId)
          .withDevice(device)
-      ))
+      )).void
 }

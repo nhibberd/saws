@@ -7,13 +7,17 @@ object depend {
 
   val scalazStream = Seq("org.scalaz.stream" %% "scalaz-stream" % "0.5a")
 
-  val mundaneVersion = "1.2.1-20141230225616-50fc792"
+  val mundaneVersion = "1.2.1-20150107003549-82c44fb"
   val mundane = Seq(
       "com.ambiata" %% "mundane-io"
-    , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion)
+    , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion) ++ Seq(
+      "com.ambiata" %% "mundane-io" % mundaneVersion % "test->test")
 
   val mundaneTesting = Seq(
       "com.ambiata" %% "mundane-testing"   % mundaneVersion)
+
+  val disorder =
+    Seq("com.ambiata" %% "disorder" % "0.0.1-20150102073535-5c2d9d6" % "test")
 
   val aws = Seq(
       "com.ambiata" %% "saws-aws"          % "1.2.1-20141114025437-6525723" intransitive()

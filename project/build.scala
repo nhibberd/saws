@@ -68,14 +68,24 @@ object build extends Build {
     id = "testing"
   , base = file("saws-testing")
   , settings = standardSettings ++ lib("testing") ++ Seq[Settings](name := "saws-testing"
-    ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane ++ depend.mundaneTesting)
+    ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane ++ depend.mundaneTesting ++ depend.disorder)
   ).dependsOn(iam, emr, ec2, ses, s3)
 
   lazy val compilationSettings: Seq[Settings] = Seq(
     javacOptions ++= Seq("-Xmx3G", "-Xms512m", "-Xss4m"),
     maxErrors := 10,
     scalacOptions ++= Seq("-feature", "-language:_"),
-    scalacOptions in Compile ++= Seq("-deprecation", "-unchecked", "-Xfatal-warnings"),
+    scalacOptions in Compile ++= Seq(
+      "-target:jvm-1.6"
+    , "-deprecation"
+    , "-unchecked"
+    , "-feature"
+    , "-language:_"
+    , "-Ywarn-value-discard"
+    , "-Yno-adapted-args"
+    , "-Xlint"
+    , "-Xfatal-warnings"
+    , "-Yinline-warnings"),
     scalacOptions in Test ++= Seq("-Yrangepos")
   )
 

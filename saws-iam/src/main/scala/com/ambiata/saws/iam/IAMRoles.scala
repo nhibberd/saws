@@ -6,10 +6,12 @@ import com.ambiata.saws.core._
 import com.ambiata.saws.iam._
 import scala.collection.JavaConverters._
 
+import scalaz._, Scalaz._
+
 object IAMRoles {
   // FIX follow ensure/create pattern, add AwsLog.
   def create(role: Role): IAMAction[Unit] =
-    IAMAction(client => IAM(client).createRole(role))
+    IAMAction(client => IAM(client).createRole(role)).void
 
   def list: IAMAction[List[AwsRole]] =
     IAMAction(_.listRoles.getRoles.asScala.toList)

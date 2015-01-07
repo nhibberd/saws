@@ -62,10 +62,6 @@ object Arbitraries {
 
   def testBucket: String = Option(System.getenv("AWS_TEST_BUCKET")).getOrElse("ambiata-dev-view")
 
-  case class Clean(s: String)
-  implicit def CleanArbitrary: Arbitrary[Clean] =
-    Arbitrary(Gen.identifier.map(Clean.apply))
-
   implicit def S3AddressArbitrary: Arbitrary[S3Address] = Arbitrary(for {
     p <- arbitrary[S3Prefix]
     k <- Gen.identifier
@@ -80,4 +76,8 @@ object Arbitraries {
 
   implicit def S3PatternArbitrary: Arbitrary[S3Pattern] =
     Arbitrary(Gen.oneOf(arbitrary[S3Prefix].map(_.toS3Pattern), arbitrary[S3Address].map(_.toS3Pattern)))
+
+  implicit def S3TemporaryArbitrary: Arbitrary[S3Temporary] =
+    Arbitrary(arbitrary[S3Prefix].map(s => S3Temporary(s.prefix)))
+
 }

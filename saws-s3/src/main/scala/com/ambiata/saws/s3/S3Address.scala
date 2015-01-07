@@ -36,7 +36,7 @@ case class S3Address(bucket: String, key: String) {
     Op.removeCommonPrefix(bucket, key, data.bucket, data.prefix)
 
   def render: String =
-    Op.render(bucket, key)
+    Op.render("S3Address", bucket, key)
 
   def /(suffix: String): S3Address =
     S3Address(bucket, Op.concat(key, suffix))
