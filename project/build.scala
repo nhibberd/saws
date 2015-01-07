@@ -24,6 +24,7 @@ object build extends Build {
     , organization := "com.ambiata"
     , scalaVersion := "2.11.2"
     , crossScalaVersions := Seq(scalaVersion.value)
+    , publishArtifact in (Test, packageBin) := true
   ) ++ Seq(prompt)
 
   lazy val core = Project(
