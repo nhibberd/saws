@@ -1,7 +1,7 @@
 package com.ambiata.saws.s3
 
 import com.ambiata.disorder._
-import com.ambiata.saws.core.{AwsSpec => _, _}
+import com.ambiata.saws.core._
 import com.ambiata.saws.s3._
 import com.ambiata.saws.s3.S3Temporary._
 import com.ambiata.saws.testing._
@@ -12,7 +12,7 @@ import org.specs2._
 
 import scalaz.{Store => _, _}, Scalaz._
 
-class S3TemporarySpec extends AwsSpec(5) { def is =  s2"""
+class S3TemporarySpec extends AwsScalaCheckSpec(5) { def is =  s2"""
 
  TemporaryS3 should clean up its own resources
  =============================================

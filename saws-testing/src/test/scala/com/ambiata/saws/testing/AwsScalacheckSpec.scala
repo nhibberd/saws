@@ -5,7 +5,7 @@ import org.specs2.ScalaCheck
 import org.specs2.Specification
 import org.specs2.specification.Fragments
 
-abstract class AwsSpec(tests: Int) extends Specification with ScalaCheck {
+abstract class AwsScalaCheckSpec(tests: Int) extends Specification with ScalaCheck {
   override def map(fs: =>Fragments) = section("aws") ^ super.map(fs)
 
   override implicit def defaultParameters: Parameters =

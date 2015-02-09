@@ -6,7 +6,7 @@ import com.ambiata.saws.testing._
 import org.specs2._, specification._
 import scalaz._, Scalaz._
 
-class IAMAliasSpec extends UnitSpec with ScalaCheck { def is = s2"""
+class IAMAliasSpec extends IntegrationSpec with ScalaCheck { def is = s2"""
 
  IAMAlias
  ========

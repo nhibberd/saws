@@ -15,7 +15,7 @@ import org.specs2._, specification._, matcher._
 import scalaz._, Scalaz._, \&/._
 import scalaz.effect.IO
 
-class AwsSpec extends UnitSpec with ScalaCheck { def is = s2"""
+class AwsActionSpec extends UnitSpec with ScalaCheck { def is = s2"""
 
  AwsAction Laws
  ==============

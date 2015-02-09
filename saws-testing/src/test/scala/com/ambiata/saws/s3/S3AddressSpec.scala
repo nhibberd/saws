@@ -8,7 +8,7 @@ import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.Arbitraries._
 import com.ambiata.mundane.io.Temporary._
 import com.ambiata.mundane.io.MemoryConversions._
-import com.ambiata.saws.core.{AwsSpec => _, _}
+import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.AwsMatcher._
 import com.ambiata.saws.testing.Arbitraries._
@@ -18,7 +18,7 @@ import org.specs2._
 import scala.io.{Source, Codec}
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3AddressSpec extends AwsSpec(5) { def is = s2"""
+class S3AddressSpec extends AwsScalaCheckSpec(5) { def is = s2"""
 
  S3 file interactions
  ========================================

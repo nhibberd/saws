@@ -1,7 +1,7 @@
 package com.ambiata.saws.s3
 
 import com.ambiata.disorder._
-import com.ambiata.saws.core.{AwsSpec => _, _}
+import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.Arbitraries._
 import com.ambiata.saws.testing.AwsMatcher._
@@ -14,7 +14,7 @@ import execute.AsResult
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3PatternSpec extends AwsSpec(5) { def is = s2"""
+class S3PatternSpec extends AwsScalaCheckSpec(5) { def is = s2"""
 
   S3Pattern should perform as expected
   ====================================
@@ -80,16 +80,16 @@ class S3PatternSpec extends AwsSpec(5) { def is = s2"""
     s <- a.toS3Pattern.determineAddress
   } yield s ==== a)
 
-  def determineAddressAndFail = prop((s3: S3Temporary, data: String) =>
+  def determineAddressAndFail = prop((s3: S3Temporary) =>
     AsResult(s3.prefix.flatMap(_.toS3Pattern.determineAddress) >> S3Action.safe(ok)).not)
 
-  def determinePrefixAndSucceed = prop((s3: S3Temporary, data: String) => for {
+  def determinePrefixAndSucceed = prop((s3: S3Temporary, data: String, suffix: NonEmptyString) => for {
     a <- s3.prefix
-    _ <- (a | "test").put(data)
+    _ <- (a | suffix.value).put(data)
     s <- a.toS3Pattern.determinePrefix
   } yield s ==== a)
 
-  def determinePrefixAndFail = prop((s3: S3Temporary, data: String) =>
+  def determinePrefixAndFail = prop((s3: S3Temporary) =>
     AsResult(s3.address.flatMap(_.toS3Pattern.determinePrefix) >> S3Action.safe(ok)).not)
 
   def listAddress = prop((s3: S3Temporary, data: String) => for {
