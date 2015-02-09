@@ -10,6 +10,7 @@ import com.ambiata.mundane.control._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.Temporary._
 import org.specs2._
+import execute.AsResult
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
@@ -18,11 +19,18 @@ class S3PatternSpec extends AwsSpec(5) { def is = s2"""
   S3Pattern should perform as expected
   ====================================
 
-    determine a S3Address              $determineAddress
-    determine a S3Prefix               $determinePrefix
-    determine an invalid S3Pattern     $determineNone
-    determine an failure               $determineFailure
-    determine an failure               $determineFailurex
+    determine either a S3Address or a S3Prefix from a S3Pattern
+      determine a S3Address           $determineAddress
+      determine a S3Prefix            $determinePrefix
+      determine a failure as None     $determineFailure
+      determine a failure as None     $determineFailurex
+      determine an invalid S3Pattern  $determineNone
+
+    determine a S3Address or a S3Prefix from a S3Pattern or fail
+      determine an address and succeed $determineAddressAndSucceed
+      determine an address and fail    $determineAddressAndFail
+      determine a prefix and succeed   $determinePrefixAndSucceed
+      determine a prefix and fail      $determinePrefixAndFail
 
     listSummary from S3Address         $listAddress
     listSummary from S3Prefix          $listPrefix
@@ -65,6 +73,24 @@ class S3PatternSpec extends AwsSpec(5) { def is = s2"""
 
   def determineFailurex =
     S3Pattern("", "").determine.map(_ must beNone)
+
+  def determineAddressAndSucceed = prop((s3: S3Temporary, data: String) => for {
+    a <- s3.address
+    _ <- a.put(data)
+    s <- a.toS3Pattern.determineAddress
+  } yield s ==== a)
+
+  def determineAddressAndFail = prop((s3: S3Temporary, data: String) =>
+    AsResult(s3.prefix.flatMap(_.toS3Pattern.determineAddress) >> S3Action.safe(ok)).not)
+
+  def determinePrefixAndSucceed = prop((s3: S3Temporary, data: String) => for {
+    a <- s3.prefix
+    _ <- (a | "test").put(data)
+    s <- a.toS3Pattern.determinePrefix
+  } yield s ==== a)
+
+  def determinePrefixAndFail = prop((s3: S3Temporary, data: String) =>
+    AsResult(s3.address.flatMap(_.toS3Pattern.determinePrefix) >> S3Action.safe(ok)).not)
 
   def listAddress = prop((s3: S3Temporary, data: String) => for {
     a <- s3.address
