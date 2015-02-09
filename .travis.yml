@@ -5,3 +5,5 @@ jdk:
   - oraclejdk7
 env:
  - NO_FORK=true
+
+script: sbt -scala-version $TRAVIS_SCALA_VERSION 'test-only -- xonly exclude aws'

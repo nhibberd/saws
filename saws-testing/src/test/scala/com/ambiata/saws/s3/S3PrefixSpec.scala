@@ -1,7 +1,7 @@
 package com.ambiata.saws.s3
 
 import com.ambiata.disorder._
-import com.ambiata.saws.core.{AwsSpec => _, _}
+import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.Arbitraries._
 import com.ambiata.saws.testing.AwsMatcher._
@@ -14,7 +14,7 @@ import org.specs2._
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
 
-class S3PrefixSpec extends AwsSpec(5) { def is = s2"""
+class S3PrefixSpec extends AwsScalaCheckSpec(5) { def is = s2"""
 
  S3 file interactions
  ====================

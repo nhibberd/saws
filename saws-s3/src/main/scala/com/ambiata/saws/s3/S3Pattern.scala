@@ -35,6 +35,18 @@ case class S3Pattern(bucket: String, unknown: String) {
               })
           })
 
+  def determineAddress: S3Action[S3Address] =
+    determine.flatMap {
+      case Some(-\/(address)) => S3Action.ok(address)
+      case _                  => S3Action.fail(s"$render is not a S3 address")
+    }
+
+  def determinePrefix: S3Action[S3Prefix] =
+    determine.flatMap {
+      case Some(\/-(prefix)) => S3Action.ok(prefix)
+      case _                 => S3Action.fail(s"$render is not a S3 prefix")
+    }
+
   def size: S3Action[Option[Long]] =
     determine.flatMap({
       case Some(\/-(v)) => v.size.map(Some(_))
