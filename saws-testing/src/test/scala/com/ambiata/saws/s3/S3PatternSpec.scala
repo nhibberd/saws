@@ -40,7 +40,7 @@ class S3PatternSpec extends AwsScalaCheckSpec(5) { def is = s2"""
     exists from S3Address              $existsAddress
     exists from S3Prefix               $existsPrefix
     exists from invalid S3Pattern      $existsNone
-    exists form failure                $existsFailure
+    exists from failure                $existsFailure
 
     delete from S3Address              $deleteAddress
     delete from S3Prefix               $deletePrefix
@@ -127,7 +127,7 @@ class S3PatternSpec extends AwsScalaCheckSpec(5) { def is = s2"""
     pattern.exists.map(_ ==== false))
 
   def existsFailure = prop((bucket: Ident, unknown: Ident) =>
-    S3Pattern(bucket.value, unknown.value).exists.map(_ ==== false))
+    S3Pattern(bucket.value + java.util.UUID.randomUUID().toString, unknown.value).exists.map(_ ==== false))
 
   def deleteAddress = prop((s3: S3Temporary, data: String) => for {
     a <- s3.address
