@@ -64,12 +64,13 @@ object Arbitraries {
 
   implicit def S3AddressArbitrary: Arbitrary[S3Address] = Arbitrary(for {
     p <- arbitrary[S3Prefix]
-    k <- Gen.identifier
+    k <- Gen.identifier.map(_.take(128))
   } yield p | k)
 
   implicit def S3PrefixArbitrary: Arbitrary[S3Prefix] = Arbitrary(for {
     i <- Gen.choose(1, 5)
-    a <- Gen.listOfN(i, Gen.identifier)
+    // The maximum length of a key is 1024 - make sure we've got a little bit of breathing room for prefix (and address)
+    a <- Gen.listOfN(i, Gen.identifier.map(_.take(128)))
     z = a.mkString("/")
     f <- Gen.oneOf("", "/")
   } yield S3Prefix(testBucket, s"tests-${java.util.UUID.randomUUID().toString}/" + z + f))
