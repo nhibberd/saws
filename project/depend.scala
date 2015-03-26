@@ -20,7 +20,7 @@ object depend {
     Seq("com.ambiata" %% "disorder" % "0.0.1-20150102073535-5c2d9d6" % "test")
 
   val aws = Seq(
-      "com.ambiata" %% "saws-aws"          % "1.2.1-20141114025437-6525723" intransitive()
+      "com.ambiata" %% "saws-aws"          % "1.2.1-20150326052208-6f1fc2a" intransitive()
     , "commons-logging"            % "commons-logging"     % "1.1.1"
     , "com.owtelse.codec"          % "base64"              % "1.0.6"
     , "javax.mail"                 % "mail"                % "1.4.7")
