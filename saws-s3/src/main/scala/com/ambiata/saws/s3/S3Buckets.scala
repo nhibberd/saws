@@ -9,7 +9,6 @@ import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 
 object S3Buckets {
-  val VersioningOff = new BucketVersioningConfiguration(BucketVersioningConfiguration.OFF)
   val VersioningEnabled = new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)
   val VersioningSuspended = new BucketVersioningConfiguration(BucketVersioningConfiguration.SUSPENDED)
 
