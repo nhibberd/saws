@@ -159,9 +159,6 @@ object Aws {
   def addFinalizer[R](finalizer: Aws[R, Unit]): Aws[R, Unit] =
     Aws(r => RIO.addFinalizer(Finalizer(finalizer.run(r).void)).map(Vector.empty -> _))
 
-  def unit[R]: Aws[R, Unit] =
-    Aws(_  => RIO.unit.map(Vector.empty -> _))
-
   def putStrLn[R](msg: String): Aws[R, Unit] =
     Aws(_ => RIO.putStrLn(msg).map(Vector.empty -> _))
 }
@@ -181,9 +178,6 @@ trait AwsSupport[R] {
 
   def io[A](f: R => IO[A]): Aws[R, A] =
     Aws.io[R, A](f)
-
-  def unit: Aws[R, Unit] =
-    ok(())
 
   def resultT[A](f: R => ResultT[IO, A]): Aws[R, A] =
     Aws.resultT[R, A](f)
