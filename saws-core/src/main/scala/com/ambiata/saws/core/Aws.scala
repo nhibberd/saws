@@ -81,6 +81,9 @@ object Aws {
   def io[R, A](f: R => IO[A]): Aws[R, A] =
     Aws(r => RIO.fromIO(f(r)).map(Vector.empty -> _))
 
+  def unit[R]: Aws[R, Unit] =
+    ok(())
+
   def resultT[R, A](f: R => ResultT[IO, A]): Aws[R, A] =
     Aws(r => RIO.resultT(f(r)).map(Vector.empty -> _))
 
@@ -104,6 +107,12 @@ object Aws {
 
   def these[R, A](both: These[String, Throwable]): Aws[R, A] =
     Aws(_ => RIO.these(both))
+
+  def when[R](v: Boolean, thunk: => Aws[R, Unit]): Aws[R, Unit] =
+    if (v) thunk else unit
+
+  def unless[R](v: Boolean, thunk: => Aws[R, Unit]): Aws[R, Unit] =
+    when(!v, thunk)
 
   def fromDisjunction[R, A](either: These[String, Throwable] \/ A): Aws[R, A] =
     Aws(_ => RIO.fromDisjunction(either).map(Vector.empty -> _))
@@ -150,9 +159,6 @@ object Aws {
   def addFinalizer[R](finalizer: Aws[R, Unit]): Aws[R, Unit] =
     Aws(r => RIO.addFinalizer(Finalizer(finalizer.run(r).void)).map(Vector.empty -> _))
 
-  def unit[R]: Aws[R, Unit] =
-    Aws(_  => RIO.unit.map(Vector.empty -> _))
-
   def putStrLn[R](msg: String): Aws[R, Unit] =
     Aws(_ => RIO.putStrLn(msg).map(Vector.empty -> _))
 }
@@ -196,6 +202,12 @@ trait AwsSupport[R] {
 
   def these[A](both: These[String, Throwable]): Aws[R, A] =
     Aws.these[R, A](both)
+
+  def when(v: Boolean, thunk: => Aws[R, Unit]): Aws[R, Unit] =
+    Aws.when[R](v, thunk)
+
+  def unless(v: Boolean, thunk: => Aws[R, Unit]): Aws[R, Unit] =
+    Aws.unless[R](v, thunk)
 
   def fromIO[A](v: IO[A]): Aws[R, A] =
     Aws.fromIO[R, A](v)

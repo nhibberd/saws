@@ -9,6 +9,9 @@ import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 
 object S3Buckets {
+  val VersioningEnabled = new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)
+  val VersioningSuspended = new BucketVersioningConfiguration(BucketVersioningConfiguration.SUSPENDED)
+
   def list: S3Action[List[Bucket]] =
     S3Action(client => client.listBuckets.asScala.toList)
 
@@ -26,4 +29,23 @@ object S3Buckets {
   def create(name: String): S3Action[Bucket] =
     S3Action(client => client.createBucket(name, Region.AP_Sydney)) <*
       AwsLog.CreateBucket(name).log
+
+  def isVersioned(bucket: String): S3Action[Boolean] =
+    S3Action(client =>
+      client
+        .getBucketVersioningConfiguration(bucket)
+        .getStatus == BucketVersioningConfiguration.ENABLED)
+
+  def enableVersioning(bucket: String): S3Action[Unit] =
+    setBucketVersioningConfiguration(bucket, VersioningEnabled)
+
+  def disableVersioning(bucket: String): S3Action[Unit] = for {
+    v <- isVersioned(bucket)
+    _ <- S3Action.when(v, setBucketVersioningConfiguration(bucket, VersioningSuspended))
+  } yield ()
+
+  def setBucketVersioningConfiguration(bucket: String, configuration: BucketVersioningConfiguration): S3Action[Unit] =
+    S3Action(client =>
+      client.setBucketVersioningConfiguration(
+        new SetBucketVersioningConfigurationRequest(bucket, configuration)))
 }
