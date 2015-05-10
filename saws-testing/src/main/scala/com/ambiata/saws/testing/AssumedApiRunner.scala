@@ -60,7 +60,7 @@ case class AssumedApiRunner(assumedInstanceName: String, login: String, password
     } yield (result)
 
   def sshCmds(cmds: List[String]): Validated[List[CommandResult]] =
-    dns.flatMap(h => SSH(h, config)(c => SSH.Result(cmds.map(cmd => c.exec(cmd)).sequence)))
+    dns.flatMap(h => SSH(h, HostConfig(config, hostKeyVerifier = HostKeyVerifiers.DontVerify))(c => SSH.Result(cmds.map(cmd => c.exec(cmd)).sequence)))
 }
 
 
