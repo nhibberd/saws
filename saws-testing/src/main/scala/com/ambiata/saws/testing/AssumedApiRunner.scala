@@ -56,7 +56,7 @@ case class AssumedApiRunner(assumedInstanceName: String, login: String, password
   def ssh(cmd: String): Validated[CommandResult] =
     for {
       host <- dns
-      result <- SSH(host, config)(_.exec(cmd))
+      result <- SSH(host, HostConfig(config, hostKeyVerifier = HostKeyVerifiers.DontVerify))(_.exec(cmd))
     } yield (result)
 
   def sshCmds(cmds: List[String]): Validated[List[CommandResult]] =
