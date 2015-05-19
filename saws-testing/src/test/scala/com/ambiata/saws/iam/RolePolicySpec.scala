@@ -38,13 +38,17 @@ class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables
 """
 
   def exS3 = {
-    "policy"                                           | "read key1" | "read key2" | "write key1" | "write key2" |
-    allowS3ReadPath(TestBucket, false)                 ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
-    allowS3ReadPath(s"$TestBucket/$path1", false)      ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
-    allowS3WritePath(TestBucket, false)                ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
-    allowS3WritePath(s"$TestBucket/$path1", false)     ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
-    allowS3ReadWritePath(TestBucket, false)            ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
-    allowS3ReadWritePath(s"$TestBucket/$path1", false) ! beGranted   ! beDenied    ! beGranted    ! beDenied     |> {
+    "policy"                                              | "read key1" | "read key2" | "write key1" | "write key2" |
+    allowS3ReadPath(TestBucket, false)                    ! beGranted   ! beGranted   ! beDenied     ! beDenied     |
+    allowS3ReadPath(s"$TestBucket/$path1", false)         ! beGranted   ! beDenied    ! beDenied     ! beDenied     |
+    allowS3WritePath(TestBucket, false)                   ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
+    allowS3WritePath(s"$TestBucket/$path1", false)        ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
+    allowS3WriteAclPath(TestBucket, false)                ! beDenied    ! beDenied    ! beGranted    ! beGranted    |
+    allowS3WriteAclPath(s"$TestBucket/$path1", false)     ! beDenied    ! beDenied    ! beGranted    ! beDenied     |
+    allowS3ReadWritePath(TestBucket, false)               ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
+    allowS3ReadWritePath(s"$TestBucket/$path1", false)    ! beGranted   ! beDenied    ! beGranted    ! beDenied     |
+    allowS3ReadWriteAclPath(TestBucket, false)            ! beGranted   ! beGranted   ! beGranted    ! beGranted    |
+    allowS3ReadWriteAclPath(s"$TestBucket/$path1", false) ! beGranted   ! beDenied    ! beGranted    ! beDenied     |> {
 
       (policy, rk1, rk2, wk1, wk2) => {
 

@@ -21,16 +21,34 @@ object Policy {
     Policy(name, allowS3PathForActions(path, Seq("PutObject"), constrainList))
   }
 
+  /** Create a policy allowing 'PutObject', 'PutObjectACL' and 'ListBucket' for the specified S3 path. */
+  def allowS3WriteAclPath(path: String, constrainList: Boolean): Policy  = {
+    val name = s"WriteAccessTo_$path".replace('/', '+')
+    Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl"), constrainList))
+  }
+
   /** Create a policy allowing 'PutObject', 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$path".replace('/', '+')
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject"), constrainList))
   }
 
+  /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadWriteAclPath(path: String, constrainList: Boolean): Policy  = {
+    val name = s"ReadWriteAccessTo_$path".replace('/', '+')
+    Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
+  }
+
   /** Create a policy allowing 'PutObject', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteDeletePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$path".replace('/', '+')
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
+  }
+
+  /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadWriteAclDeletePath(path: String, constrainList: Boolean): Policy  = {
+    val name = s"ReadWriteDeleteAccessTo_$path".replace('/', '+')
+    Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'ListBucket' and other S3 actions for the specified S3 path. */
