@@ -1,5 +1,6 @@
 package com.ambiata.saws
 
+import com.ambiata.com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
 import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
 import com.ambiata.com.amazonaws.services.ec2.AmazonEC2Client
 import com.ambiata.com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
@@ -17,6 +18,7 @@ package object core {
   type EC2Action[A] = Aws[AmazonEC2Client, A]
   type IAMAction[A] = Aws[AmazonIdentityManagementClient, A]
   type EMRAction[A] = Aws[AmazonElasticMapReduceClient, A]
+  type CloudWatchAction[A] = Aws[AmazonCloudWatchClient, A]
   type S3EC2Action[A] = Aws[(AmazonS3Client, AmazonEC2Client), A]
   type EC2IAMAction[A] = Aws[(AmazonEC2Client, AmazonIdentityManagementClient), A]
   type S3EC2IAMAction[A] = Aws[(AmazonS3Client, AmazonEC2Client, AmazonIdentityManagementClient), A]
