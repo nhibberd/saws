@@ -2,6 +2,7 @@ package com.ambiata.saws
 package core
 
 import com.ambiata.com.amazonaws.AmazonWebServiceClient
+import com.ambiata.com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
 import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
 import com.ambiata.com.amazonaws.services.ec2.AmazonEC2Client
 import com.ambiata.com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
@@ -14,6 +15,7 @@ object Clients {
   def iam = configured(new AmazonIdentityManagementClient(), "https://iam.amazonaws.com")
   def emr = configured(new AmazonElasticMapReduceClient(), "elasticmapreduce.ap-southeast-2.amazonaws.com")
   def ses = configured(new AmazonSimpleEmailServiceClient(), "email.us-east-1.amazonaws.com")
+  def cw = configured(new AmazonCloudWatchClient(), "monitoring.ap-southeast-2.amazonaws.com")
 
   def configured[A <: AmazonWebServiceClient](a: A, endpoint: String): A = {
     a.setEndpoint(endpoint)

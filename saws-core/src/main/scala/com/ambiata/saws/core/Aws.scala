@@ -1,6 +1,7 @@
 package com.ambiata.saws
 package core
 
+import com.ambiata.com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
 import com.ambiata.com.amazonaws.services.ec2.AmazonEC2Client
 import com.ambiata.com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
@@ -241,3 +242,4 @@ object EC2Action extends AwsSupport[AmazonEC2Client]
 object S3Action extends AwsSupport[AmazonS3Client]
 object IAMAction extends AwsSupport[AmazonIdentityManagementClient]
 object EMRAction extends AwsSupport[AmazonElasticMapReduceClient]
+object CloudWatchAction extends AwsSupport[AmazonCloudWatchClient]
