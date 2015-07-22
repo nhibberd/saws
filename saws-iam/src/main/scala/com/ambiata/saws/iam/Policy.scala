@@ -236,4 +236,23 @@ object Policy {
       allowS3ReadPath("ap-southeast-2.elasticmapreduce", false)
     )
   }
+
+  /** Create a policy for allowing put metric data to cloudwatch
+   */
+  val allowCloudWatchPutMetric: Policy = {
+    val doc =
+      s"""{
+         |  "Version": "2012-10-17",
+         |  "Statement": [
+         |    {
+         |      "Action": [
+         |        "cloudwatch:PutMetricData"
+         |      ],
+         |      "Effect": "Allow",
+         |      "Resource": "*"
+         |    }
+         |  ]
+         |}""".stripMargin
+    Policy("cloudwatch-put-metric-access", doc)
+  }
 }
