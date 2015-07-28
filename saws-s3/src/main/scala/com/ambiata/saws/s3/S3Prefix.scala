@@ -7,7 +7,7 @@ import com.ambiata.mundane.io.{FilePath, DirPath, Directories}
 import com.ambiata.saws.core._
 import com.ambiata.saws.s3.{S3Operations => Op}
 
-import scalaz._, Scalaz._, effect._, stream._, concurrent.Task
+import scalaz._, Scalaz._, effect._, concurrent.Task
 
 import scala.collection.JavaConverters._
 import scala.annotation.tailrec
