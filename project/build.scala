@@ -9,8 +9,8 @@ object build extends Build {
     id = "saws",
     base = file("."),
     settings = standardSettings ++ promulgate.library("com.ambiata.saws", "ambiata-oss"),
-    aggregate = Seq(core, ec2, s3, iam, emr, ses, testing)
-    ).dependsOn(core, ec2, s3, iam, emr, ses)
+    aggregate = Seq(core, ec2, s3, iam, emr, ses, cw, testing)
+    ).dependsOn(core, ec2, s3, iam, emr, ses, cw)
 
   lazy val standardSettings = Defaults.coreDefaultSettings ++
                    projectSettings          ++
@@ -65,12 +65,19 @@ object build extends Build {
   , settings = standardSettings ++ lib("ses") ++ Seq[Settings](name := "saws-ses")
   ).dependsOn(core)
 
+  lazy val cw = Project(
+      id = "cw"
+    , base = file("saws-cw")
+    , settings = standardSettings ++ lib("cw") ++ Seq[Settings](name := "saws-cw")  ++
+        Seq[Settings](libraryDependencies ++= depend.scalaz ++ depend.testing ++ depend.disorder ++ depend.mundaneTesting)
+  ).dependsOn(core)
+
   lazy val testing = Project(
     id = "testing"
   , base = file("saws-testing")
   , settings = standardSettings ++ lib("testing") ++ Seq[Settings](name := "saws-testing"
     ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane ++ depend.mundaneTesting ++ depend.disorder)
-  ).dependsOn(iam, emr, ec2, ses, s3)
+  ).dependsOn(iam, emr, ec2, ses, s3, cw, cw % "test->test")
 
   lazy val compilationSettings: Seq[Settings] = Seq(
     javacOptions ++= Seq("-Xmx3G", "-Xms512m", "-Xss4m"),
@@ -94,7 +101,7 @@ object build extends Build {
     promulgate.library("com.ambiata.saws", "ambiata-oss")
 
   lazy val testingSettings: Seq[Settings] = Seq(
-    initialCommands in console := "import org.specs2._"
+      initialCommands in console := "import org.specs2._"
     , logBuffered := false
     , cancelable := true
     , javaOptions += "-Xmx3G"

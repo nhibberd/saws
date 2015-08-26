@@ -1,8 +1,8 @@
 package com.ambiata.saws.testing
 
-import org.specs2.Specification
+import org.specs2._
 import org.specs2.specification.Fragments
 
-abstract class IntegrationSpec extends Specification {
+trait IntegrationSpec extends SpecificationLike {
   override def map(fs: =>Fragments) = section("integration", "aws") ^ super.map(fs)
 }
