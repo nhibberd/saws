@@ -1,6 +1,7 @@
 package com.ambiata.saws.cw
 
 import com.ambiata.com.amazonaws.services.cloudwatch.model.MetricDatum
+import com.ambiata.disorder.PositiveIntSmall
 import org.specs2._
 import Arbitraries._
 import scala.collection.JavaConverters._
@@ -11,9 +12,10 @@ class MetricDimensionsSpec extends Specification with ScalaCheck { def is = s2""
   only a maximum of 10 dimensions is allowed for metric data $dimensions
   dimension names must be unique                             $dimensionNames
 
- There are 2 ways to set dimensions on a metric data point
-   apply all the dimensions at once                      $exact
-   apply all non-empty prefixes of the dimensions list   $prefixes
+ There are several ways to set dimensions on a metric data points
+   apply all the dimensions at once                                      $exact
+   apply all non-empty prefixes of the dimensions list                   $prefixes
+   add additional points having more dimensions than the longuest prefix $extendLongestPrefix
 
 """
 
@@ -43,5 +45,22 @@ class MetricDimensionsSpec extends Specification with ScalaCheck { def is = s2""
     MetricDimensions.setDimensionsPrefixes(ds)(List(md)).map(_.getDimensions.asScala.toList) must_==
       ds.map(_.toDimension).inits.toList.filter(_.nonEmpty)
   }
+
+  def extendLongestPrefix = prop { (dims: List[MetricDimension], n: PositiveIntSmall, additional: MetricDimension, metricData: List[MetricDatum]) =>
+    // remove all dimensions first
+    val mds = metricData.map(_.withDimensions()).take(n.value)
+    val dimensions = dims.take(n.value)
+
+    val withPrefixes =
+      MetricDimensions.setDimensionsPrefixes(dimensions)(mds)
+
+    val extended =
+      MetricDimensions.extendLongestPrefix(List(additional))(withPrefixes)
+
+    extended must contain { d: MetricDatum =>
+      d.getDimensions.asScala.toList.map(MetricDimension.fromDimension) must_== dimensions :+ additional
+    }.exactly(mds.size.times).unless(dimensions.isEmpty)
+
+  }.set(minTestsOk = 5)
 }
 

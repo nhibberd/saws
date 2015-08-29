@@ -19,6 +19,9 @@ object MetricDimensions {
     else                                    md.right
   }
 
+  /**
+   * for each data point add similar data points for all prefixes of the list of dimensions
+   */
   def setDimensionsPrefixes(dimensions: List[MetricDimension]): List[MetricDatum] => List[MetricDatum] =
     (metricData: List[MetricDatum]) => {
       metricData.flatMap { md =>
@@ -28,9 +31,37 @@ object MetricDimensions {
       }
     }
 
+  /**
+   * for each data point add similar data points set precisely this list of dimensions
+   */
   def setAllDimensions(dimensions: List[MetricDimension]): List[MetricDatum] => List[MetricDatum] =
     (metricData: List[MetricDatum]) =>
       metricData.map(_.withDimensions(dimensions.map(_.toDimension).asJavaCollection))
+
+  /**
+   * Group all data points by equal name/value/unit
+   * The take the longest list of dimensions create a new data point with this list +
+   * new dimensions
+   */
+  def extendLongestPrefix(dimensions: List[MetricDimension]): List[MetricDatum] => List[MetricDatum] =
+    (metricData: List[MetricDatum]) => {
+      val byNameValueUnit: Map[(String, Double, String), List[MetricDatum]] =
+        metricData.groupBy(nameValueUnit)
+
+      val mostDimensions: List[MetricDatum] =
+        byNameValueUnit.map(_._2.maxBy(_.getDimensions.size)).toList
+
+      metricData ++ mostDimensions.map { md =>
+        val cloned = cloneMetricData(md)
+        val ds = cloned.getDimensions
+        // who doesn't like mutation?
+        ds.addAll(dimensions.map(_.toDimension).asJavaCollection)
+        cloned
+      }
+    }
+  
+  def nameValueUnit: MetricDatum => (String, Double, String) = (md: MetricDatum) =>
+    (md.getMetricName, md.getValue, md.getUnit)
 
   /** the beauty of mutability ... */
   def cloneMetricData(md: MetricDatum): MetricDatum =
