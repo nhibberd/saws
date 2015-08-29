@@ -15,14 +15,10 @@ import StatisticsMetrics._
  * The timestamp is considered global for all the data points
  * and should correspond to the end of the application run
  */
-case class StatisticsMetrics(statistics: Statistics, dimensions: MetricDimensions, timestamp: DateTime) {
+case class StatisticsMetrics(statistics: Statistics, setDimensions: List[MetricDatum] => List[MetricDatum], timestamp: DateTime) {
 
   def isEmpty: Boolean =
     statistics.isEmpty
-
-  /** add one more dimension */
-  def addDimension(d: MetricDimension): StatisticsMetrics =
-    copy(dimensions = dimensions.addDimension(d))
 
   /**
    * @return statistics as metric datum objects for CloudWatch
@@ -33,8 +29,8 @@ case class StatisticsMetrics(statistics: Statistics, dimensions: MetricDimension
     checkTimestamp(timestamp).map { ts =>
       for {
         tstamp <- ts
-        ds     <- MetricDimensions.checkDimensions(dimensions)
-        mds    =  ds.setDimensions(statistics.stats.toList.map(createMetricDatum))
+        mds    =  setDimensions(statistics.stats.toList.map(createMetricDatum))
+        ds     <- MetricDimensions.checkMetricDataDimensions(mds)
       } yield mds.map(setTimestamp(tstamp))
     }
 

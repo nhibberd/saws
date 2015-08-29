@@ -17,4 +17,8 @@ case class MetricDimension(name: String, value: String) extends {
     s"$name=$value"
 }
 
+object MetricDimension {
+  def fromDimension(d: Dimension): MetricDimension =
+    MetricDimension(d.getName, d.getValue)
+}
 

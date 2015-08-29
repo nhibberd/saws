@@ -57,19 +57,20 @@ object Arbitraries {
   def genDimensions: Gen[List[MetricDimension]] =
     Gen.nonEmptyListOf(arbitrary[MetricDimension]).map(_.groupBy(_.name).map(_._2.head).toList.take(10))
 
+  type MetricDimensions = List[MetricDatum] => List[MetricDatum]
   implicit def MetricDimensionsArbitrary: Arbitrary[MetricDimensions] =
     Arbitrary {
       for {
         b  <- arbitrary[Boolean]
         ds <- genDimensions
-      } yield if (b) ExactMetricDimensions(ds) else PrefixesMetricDimensions(ds)
+      } yield if (b) MetricDimensions.setAllDimensions(ds) else MetricDimensions.setDimensionsPrefixes(ds)
     }
 
-  implicit def ExactMetricDimensionsArbitrary: Arbitrary[ExactMetricDimensions] =
-    Arbitrary(genDimensions.map(ExactMetricDimensions.apply))
+  def exactMetricDimensions: Gen[MetricDimensions] =
+    genDimensions.map(MetricDimensions.setAllDimensions)
 
-  implicit def AggregateMetricDimensionsArbitrary: Arbitrary[PrefixesMetricDimensions] =
-    Arbitrary(genDimensions.map(PrefixesMetricDimensions.apply))
+  implicit def prefixesMetricDimensions: Gen[MetricDimensions] =
+    genDimensions.map(MetricDimensions.setDimensionsPrefixes)
 
   implicit def MetricDatumArbitrary: Arbitrary[MetricDatum] =
     Arbitrary {

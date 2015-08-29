@@ -17,30 +17,31 @@ class MetricDimensionsSpec extends Specification with ScalaCheck { def is = s2""
 
 """
 
-  def dimensions = prop { dimensions: MetricDimensions =>
-    MetricDimensions.checkDimensions(dimensions).toEither must beLeft { e: CloudWatchError =>
+  def dimensions = prop { md: MetricDatum =>
+    MetricDimensions.checkMetricDatumDimensions(md).toEither must beLeft { e: CloudWatchError =>
       e must beLike { case TooManyDimensions(_) => ok }
-    }.when(dimensions.size > 10)
+    }.when(md.getDimensions.size > 10)
   }
 
-  def dimensionNames = prop { dimensions: MetricDimensions =>
+  def dimensionNames = prop { md: MetricDatum =>
     // duplicate the dimensions
-    val ds = dimensions.addDimensions(dimensions.dimensions)
+    val ds = md.getDimensions
+    md.withDimensions(ds)
 
-    MetricDimensions.checkDimensions(ds).toEither must beLeft { e: CloudWatchError =>
+    MetricDimensions.checkMetricDatumDimensions(md).toEither must beLeft { e: CloudWatchError =>
       e must beLike { case DimensionsWithSameName(_) => ok }
     }.when(ds.size > 0)
   }
 
-  def exact = prop { (ds: ExactMetricDimensions, md: List[MetricDatum]) =>
-    ds.setDimensions(md) must contain { d: MetricDatum =>
+  def exact = prop { (ds: List[MetricDimension], mds: List[MetricDatum]) =>
+    MetricDimensions.setAllDimensions(ds)(mds) must contain { d: MetricDatum =>
       d.getDimensions must haveSize(ds.size)
     }.forall
   }
 
-  def prefixes = prop { (ds: PrefixesMetricDimensions, md: MetricDatum) =>
-    ds.setDimensions(List(md)).map(_.getDimensions.asScala.toList) must_==
-      ds.dimensions.map(_.toDimension).inits.toList.filter(_.nonEmpty)
+  def prefixes = prop { (ds: List[MetricDimension], md: MetricDatum) =>
+    MetricDimensions.setDimensionsPrefixes(ds)(List(md)).map(_.getDimensions.asScala.toList) must_==
+      ds.map(_.toDimension).inits.toList.filter(_.nonEmpty)
   }
 }
 
