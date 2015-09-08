@@ -1,0 +1,5 @@
+#!/bin/sh
+
+source $(dirname $0)/config
+
+./sbt -Dsbt.log.noformat=true "; clean; stats; test-only -- exclude integration -- console junitxml;  echo-version"
