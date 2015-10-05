@@ -12,17 +12,9 @@ class IAMAliasSpec extends IntegrationSpec with ScalaCheck { def is = s2"""
  ========
 
    Can list account aliases                       $list
-   Only test against ambiata account              $isAmbiata
-   Don't test against ambiata-prod account        $isNotAmbiataProd
 
 """
 
   def list =
-    IAMAlias.list.eval.unsafePerformIO must beOkLike(_ contains ("ambiata"))
-
-  def isAmbiata =
-    IAMAlias.isAmbiata.eval.unsafePerformIO must beOkValue(true)
-
-  def isNotAmbiataProd =
-    IAMAlias.isAmbiataProd.eval.unsafePerformIO must beOkValue(false)
+    IAMAlias.list.eval.unsafePerformIO must beOkLike(l => !l.isEmpty)
 }
