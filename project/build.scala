@@ -32,7 +32,7 @@ object build extends Build {
   , base = file("saws-core")
   , settings = standardSettings ++ lib("core") ++ Seq[Settings](
       name := "saws-core"
-    ) ++ Seq[Settings](libraryDependencies ++= depend.scalaz ++ depend.aws ++ depend.scalazStream ++ depend.mundane ++ depend.testing)
+    ) ++ Seq[Settings](libraryDependencies ++= depend.scalaz ++ depend.aws ++ depend.mundane ++ depend.testing)
   )
 
   lazy val iam = Project(

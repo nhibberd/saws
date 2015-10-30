@@ -17,7 +17,7 @@ import java.io._
 
 import scala.io.Codec
 
-import scalaz._, Scalaz._, effect._, stream._, concurrent.Task
+import scalaz._, Scalaz._, concurrent.Task
 import scalaz.\&/._
 
 case class SizedS3Address(s3: S3Address, size: Long)
@@ -287,7 +287,4 @@ object S3Address {
     (0 until numberOfParts.toInt).toList.map(part => (part * partSize, (part+1) * partSize - 1)) ++
       (if (lastPartSize == 0) List() else List((totalSize - lastPartSize, totalSize - 1)))
   }
-
-  def objectContentSink(f: InputStream => RIO[Unit]): Sink[Task, S3Object] =
-    io.channel((s3Object: S3Object) => RIO.toTask(f(s3Object.getObjectContent)))
 }
