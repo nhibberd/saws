@@ -5,14 +5,14 @@ object depend {
   val scalaz = Seq(  "org.scalaz" %% "scalaz-core"   % "7.1.0"
                    , "org.scalaz" %% "scalaz-effect" % "7.1.0")
 
-  val mundaneVersion = "1.2.1-20150318063632-5e03317"
+  val mundaneVersion = "1.2.1-20151110022459-5808a4b"
   val mundane = Seq(
       "com.ambiata" %% "mundane-io"
     , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion) ++ Seq(
       "com.ambiata" %% "mundane-io" % mundaneVersion % "test->test")
 
   val mundaneTesting = Seq(
-      "com.ambiata" %% "mundane-testing"   % mundaneVersion)
+      "com.ambiata" %% "mundane-testing"   % mundaneVersion % "test->test")
 
   val disorder =
     Seq("com.ambiata" %% "disorder" % "0.0.1-20150824025853-fa03215" % "test")
