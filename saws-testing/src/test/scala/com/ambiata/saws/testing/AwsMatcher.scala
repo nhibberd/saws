@@ -3,10 +3,13 @@ package com.ambiata.saws.testing
 import com.ambiata.mundane.control._
 import com.ambiata.mundane.testing.RIOMatcher._
 import com.ambiata.saws.core._
-import org.specs2._, matcher._, execute.{Result => SpecsResult, Error => SpecsError, _}, execute.Result.ResultMonoid
 import org.scalacheck.Prop
+import org.specs2._
+import org.specs2.execute.{Error => SpecsError, Result => SpecsResult, _}
+import org.specs2.matcher._
 
-import scalaz.{Success => _, Failure => _, _}, Scalaz._, effect.IO
+import scalaz.Scalaz._
+import scalaz.{Failure => _, Success => _, _}
 
 object AwsMatcher extends ThrownExpectations with ScalaCheckMatchers {
   implicit def AwsAsResult[R: Client, A: AsResult]: AsResult[Aws[R, A]] = new AsResult[Aws[R, A]] {

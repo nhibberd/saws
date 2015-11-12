@@ -4,10 +4,8 @@ import com.ambiata.mundane.control._
 import com.ambiata.mundane.testing.Arbitraries._
 import com.ambiata.saws.core._
 import com.ambiata.saws.s3._
-
-import org.scalacheck._, Arbitrary._
-
-import scalaz._, Scalaz._, effect.IO
+import org.scalacheck.Arbitrary._
+import org.scalacheck._
 
 import scala.io.Codec
 
