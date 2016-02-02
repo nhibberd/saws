@@ -17,7 +17,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
   /** Returns true if a role with the specified name exists. */
   def roleExists(roleName: String): Result[Boolean] =
-    safe { client.listRoles.getRoles.asScala.exists(_.getRoleName == roleName) }
+    safe { client.listRoles(new ListRolesRequest().withMaxItems(1000)).getRoles.asScala.exists(_.getRoleName == roleName) }
 
 
   /** Creates a new EC2 assumed role and add its policies. */
@@ -91,7 +91,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
   def getInstanceProfile(name: String): Result[Option[AwsInstanceProfile]] =
     safe {
       client
-        .listInstanceProfiles(new ListInstanceProfilesRequest)
+        .listInstanceProfiles(new ListInstanceProfilesRequest().withMaxItems(1000))
         .getInstanceProfiles.asScala
         .find(_.getInstanceProfileName == name)
     }
