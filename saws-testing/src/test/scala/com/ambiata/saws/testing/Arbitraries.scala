@@ -53,11 +53,6 @@ object Arbitraries {
     (m: Int) => (n: Int) => m * x
   ))
 
-  implicit def CodecArbitrary: Arbitrary[Codec] = Arbitrary(Gen.oneOf(
-      Codec.UTF8
-    , Codec.ISO8859
-  ))
-
   def testBucket: String = Option(System.getenv("AWS_TEST_BUCKET")).getOrElse("ambiata-dev-view")
 
   implicit def S3AddressArbitrary: Arbitrary[S3Address] = Arbitrary(for {

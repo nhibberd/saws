@@ -3,7 +3,8 @@ package com.ambiata.saws.s3
 import com.ambiata.com.amazonaws.AmazonServiceException
 import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
 import com.ambiata.com.amazonaws.services.s3.model._
-import com.ambiata.mundane.io.{FilePath, DirPath, Directories}
+import com.ambiata.mundane.io._
+import com.ambiata.mundane.path._
 import com.ambiata.saws.core._
 import com.ambiata.saws.s3.{S3Operations => Op}
 
@@ -44,26 +45,25 @@ case class S3Prefix(bucket: String, prefix: String) {
 
 // ------ Write
 
-  def putFiles(dir: DirPath): S3Action[Unit] =
+  def putFiles(dir: LocalDirectory): S3Action[Unit] =
     pufFilesWithMetadata(dir, S3.ServerSideEncryption)
 
-  def pufFilesWithMetadata(dir: DirPath, metadata: ObjectMetadata): S3Action[Unit] = for {
-    local <- S3Action.fromRIO(Directories.list(dir))
-    _     <- local.traverse({ source =>
-      val destination = source.toFile.getAbsolutePath.replace(dir.toFile.getAbsolutePath + "/", "")
-      (this | destination).putFile(source)
+  def pufFilesWithMetadata(dir: LocalDirectory, metadata: ObjectMetadata): S3Action[Unit] = for {
+    local <- S3Action.fromRIO(dir.listFilesRecursivelyRelativeTo)
+    _     <- local.traverse({ case (source, relative) =>
+      (this | relative.path.path).putFile(source)
     })
   } yield ()
 
 // ------ Read
 
-  def getFiles(dir: DirPath): S3Action[List[FilePath]] =
+  def getFiles(dir: LocalPath): S3Action[List[LocalFile]] =
     getFilesWithMetadata(dir, S3.ServerSideEncryption)
 
-  def getFilesWithMetadata(dir: DirPath, metadata: ObjectMetadata): S3Action[List[FilePath]] = for {
+  def getFilesWithMetadata(dir: LocalPath, metadata: ObjectMetadata): S3Action[List[LocalFile]] = for {
     l <- listSummary
-    z <- l.traverse({ obj =>
-      val destination = dir </> FilePath.unsafe(obj.getKey.replace(awsPrefix, ""))
+    z <- l.traverse(obj => {
+      val destination = dir / Path(obj.getKey.replace(awsPrefix, ""))
       S3Address(obj.getBucketName, obj.getKey).getFile(destination)
     })
   } yield z
