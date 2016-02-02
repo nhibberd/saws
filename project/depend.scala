@@ -40,6 +40,7 @@ object depend {
     , Resolver.typesafeRepo("releases")
     , "cloudera"              at "https://repository.cloudera.com/content/repositories/releases"
     , Resolver.url("ambiata-oss", new URL("https://ambiata-oss.s3.amazonaws.com"))(Resolver.ivyStylePatterns)
+    , Resolver.url("ambiata-oss-v2", new URL("https://ambiata-oss-v2.s3.amazonaws.com"))(Resolver.ivyStylePatterns)
     , "Scalaz Bintray Repo"   at "http://dl.bintray.com/scalaz/releases"
     // For 2.11 version of scala-ssh only
     , "spray.io"              at "http://repo.spray.io")
