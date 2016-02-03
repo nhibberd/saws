@@ -5,10 +5,13 @@ import com.ambiata.promulgate.project.ProjectPlugin._
 object build extends Build {
   type Settings = Def.Setting[_]
 
+  lazy val ossBucket: String =
+    sys.env.getOrElse("AMBIATA_IVY_OSS", "ambiata-oss")
+
   lazy val saws = Project(
     id = "saws",
     base = file("."),
-    settings = standardSettings ++ promulgate.library("com.ambiata.saws", "ambiata-oss"),
+    settings = standardSettings ++ promulgate.library("com.ambiata.saws", ossBucket),
     aggregate = Seq(core, ec2, s3, iam, emr, ses, cw, testing)
     ).dependsOn(core, ec2, s3, iam, emr, ses, cw)
 
@@ -98,7 +101,7 @@ object build extends Build {
   )
 
   lazy val packageSettings: Seq[Settings] =
-    promulgate.library("com.ambiata.saws", "ambiata-oss")
+    promulgate.library("com.ambiata.saws", ossBucket)
 
   lazy val testingSettings: Seq[Settings] = Seq(
       initialCommands in console := "import org.specs2._"
@@ -113,7 +116,7 @@ object build extends Build {
   )
 
   def lib(name: String) =
-    promulgate.library(s"com.ambiata.saws.$name", "ambiata-oss")
+    promulgate.library(s"com.ambiata.saws.$name", ossBucket)
 
   lazy val prompt = shellPrompt in ThisBuild := { state =>
     val name = Project.extract(state).currentRef.project

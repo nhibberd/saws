@@ -35,5 +35,5 @@ class RolePolicySpec extends IntegrationSpec with ThrownExpectations with Tables
   def exEmr = iam.updateRolePolicies(CiRole, allowEmrFullAccess) must beOk
 
   lazy val iam = IAM()
-  val CiRole = "ci-only-role"
+  val CiRole = "ci.ci.test"
 }

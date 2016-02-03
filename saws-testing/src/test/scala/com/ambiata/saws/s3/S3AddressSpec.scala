@@ -4,10 +4,12 @@ import java.security.MessageDigest
 
 import com.ambiata.disorder._
 import com.ambiata.mundane.control._
+import com.ambiata.mundane.data._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.Arbitraries._
 import com.ambiata.mundane.io.Temporary._
 import com.ambiata.mundane.io.MemoryConversions._
+import com.ambiata.mundane.path._
 import com.ambiata.saws.core._
 import com.ambiata.saws.testing._
 import com.ambiata.saws.testing.AwsMatcher._
@@ -70,26 +72,27 @@ class S3AddressSpec extends AwsScalaCheckSpec(5) { def is = s2"""
     f <- S3Action.fromRIO(local.fileWithContent(data))
     a <- s3.address
     _ <- a.putFile(f)
-    e <- a.withStream(is => Streams.read(is, "UTF-8"))
+    e <- a.withStream(is => Streams.readWithEncoding(is, "UTF-8"))
   } yield e ==== data)
 
   def download = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
     a <- s3.address
-    f <- S3Action.fromRIO(local.file)
+    f <- S3Action.fromRIO(local.path)
     _ <- a.put(data)
     _ <- a.getFile(f)
-    e <- S3Action.fromRIO(Files.exists(f))
-    d <- S3Action.fromRIO(Files.read(f))
-  } yield e -> d ==== true -> data)
+    e <- S3Action.fromRIO(f.exists)
+    d <- S3Action.fromRIO(f.read)
+  } yield e -> d ==== true -> data.some)
 
   def downloadTo = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
     d <- S3Action.fromRIO(local.directory)
     a <- s3.address
     _ <- a.put(data)
-    _ <- a.getFileTo(d)
-    e <- S3Action.fromRIO(Files.exists(d </> FilePath.unsafe(a.key)))
-    d <- S3Action.fromRIO(Files.read(d </> FilePath.unsafe(a.key)))
-  } yield e -> d ==== true -> data)
+    _ <- a.getFileTo(d.toLocalPath)
+    p = d.toLocalPath / Path(a.key)
+    e <- S3Action.fromRIO(p.exists)
+    d <- S3Action.fromRIO(p.read)
+  } yield e -> d ==== true -> data.some)
 
   def delete = prop((data: String, s3: S3Temporary) => for {
     a <- s3.address
@@ -136,31 +139,31 @@ class S3AddressSpec extends AwsScalaCheckSpec(5) { def is = s2"""
 
   def downloadParts = prop((s3: S3Temporary, local: LocalTemporary) => for {
     a <- s3.address
-    f <- S3Action.fromRIO(local.fileWithParent)
+    f <- S3Action.fromRIO(for {
+      f <- local.path
+      _ <- f.doesNotExist(s"${f} already exists", f.dirname.mkdirs)
+    } yield f)
     _ <- a.putLines(smallData)
-    _ <- S3Action.using(S3Action.fromRIO(f.toOutputStream))(out => a.withStreamMultipart(50.bytes, in => Streams.pipe(in, out), S3.NoTick))
-    r <- S3Action.fromRIO(Files.readLines(f))
-  } yield r.toList ==== smallData)
+    _ <- S3Action.using(S3Action.fromRIO(f.path.toOutputStream))(out => a.withStreamMultipart(50.bytes, in => Streams.pipe(in, out), S3.NoTick))
+    r <- S3Action.fromRIO(f.readLines)
+  } yield r ==== smallData.some)
 
   def uploadPartsSmall = prop((s3: S3Temporary, local: LocalTemporary) => for {
-    f <- S3Action.fromRIO(local.file)
-    _ <- S3Action.fromRIO(Files.writeLines(f, smallData))
+    f <- S3Action.fromRIO(local.fileWithContent(Lists.prepareForFile(smallData)))
     a <- s3.address
     _ <- a.putFileMultiPart(5.mb, f, S3.NoTickX)
     r <- a.getLines
   } yield r ==== smallData)
 
   def uploadParts = prop((s3: S3Temporary, local: LocalTemporary) => for {
-    f <- S3Action.fromRIO(local.file)
-    _ <- S3Action.fromRIO(Files.write(f, bigData))
+    f <- S3Action.fromRIO(local.fileWithContent(bigData))
     a <- s3.address
     _ <- a.putFileMultiPart(5.mb, f, S3.NoTickX)
     r <- a.get
   } yield r ==== bigData)
 
   def fileSizes = prop((data: String, s3: S3Temporary, local: LocalTemporary) => for {
-    f <- S3Action.fromRIO(local.file)
-    _ <- S3Action.fromRIO(Files.write(f, data))
+    f <- S3Action.fromRIO(local.fileWithContent(data))
     s <- S3Action.safe(f.toFile.length)
     a <- s3.address
     _ <- a.putFile(f)

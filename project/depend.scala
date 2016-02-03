@@ -5,7 +5,7 @@ object depend {
   val scalaz = Seq(  "org.scalaz" %% "scalaz-core"   % "7.1.0"
                    , "org.scalaz" %% "scalaz-effect" % "7.1.0")
 
-  val mundaneVersion = "1.2.1-20151110022459-5808a4b"
+  val mundaneVersion = "1.2.1-20160108044905-83acfd2"
   val mundane = Seq(
       "com.ambiata" %% "mundane-io"
     , "com.ambiata" %% "mundane-control").map(_ % mundaneVersion) ++ Seq(
@@ -40,6 +40,7 @@ object depend {
     , Resolver.typesafeRepo("releases")
     , "cloudera"              at "https://repository.cloudera.com/content/repositories/releases"
     , Resolver.url("ambiata-oss", new URL("https://ambiata-oss.s3.amazonaws.com"))(Resolver.ivyStylePatterns)
+    , Resolver.url("ambiata-oss-v2", new URL("https://ambiata-oss-v2.s3.amazonaws.com"))(Resolver.ivyStylePatterns)
     , "Scalaz Bintray Repo"   at "http://dl.bintray.com/scalaz/releases"
     // For 2.11 version of scala-ssh only
     , "spray.io"              at "http://repo.spray.io")

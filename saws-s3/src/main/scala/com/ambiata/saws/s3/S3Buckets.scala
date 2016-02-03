@@ -18,13 +18,13 @@ object S3Buckets {
   def findByName(name: String): S3Action[Option[Bucket]] =
     list.map(_.find(_.getName == name))
 
+  def exists(name: String): S3Action[Boolean] =
+    S3Action(client => client.doesBucketExist(name))
+
   def ensure(name: String): S3Action[Bucket] = for {
-    current <- findByName(name)
-    bucket  <- current match {
-      case None         => create(name)
-      case Some(bucket) => bucket.pure[S3Action]
-    }
-  } yield bucket
+    e <- exists(name)
+    b <- if(e) new Bucket(name).pure[S3Action] else create(name)
+  } yield b
 
   def create(name: String): S3Action[Bucket] =
     S3Action(client => client.createBucket(name, Region.AP_Sydney)) <*

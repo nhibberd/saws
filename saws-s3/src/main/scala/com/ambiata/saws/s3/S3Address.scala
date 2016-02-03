@@ -10,6 +10,7 @@ import com.ambiata.com.amazonaws.services.s3.transfer.model.UploadResult
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.MemoryConversions._
+import com.ambiata.mundane.path._
 import com.ambiata.mundane.control._
 import com.ambiata.mundane.data._
 
@@ -66,18 +67,16 @@ case class S3Address(bucket: String, key: String) {
     getWithEncoding(Codec.UTF8)
 
   def getWithEncoding(encoding: Codec): S3Action[String] =
-    withStream(is => Streams.read(is, encoding.name))
+    withStream(is => Streams.readWithEncoding(is, encoding))
 
   def getLines: S3Action[List[String]] =
     withStream(Streams.read(_)).map(_.lines.toList)
 
-  def getFile(destination: FilePath): S3Action[FilePath] =
-    withStream(Files.writeStream(destination, _)).as(destination)
+  def getFile(destination: LocalPath): S3Action[LocalFile] =
+    withStream(destination.writeStream)
 
-  def getFileTo(dir: DirPath): S3Action[FilePath] = {
-    val destination = dir </> FilePath.unsafe(key)
-    getFile(destination)
-  }
+  def getFileTo(dir: LocalPath): S3Action[LocalFile] =
+    getFile(dir / Path(key))
 
   def exists: S3Action[Boolean] =
     if (bucket.equals("")) S3Action.ok(false)
@@ -137,10 +136,10 @@ case class S3Address(bucket: String, key: String) {
   def putBytesWithMetadata(data: Array[Byte], metadata: ObjectMetadata): S3Action[PutObjectResult] =
     putStreamWithMetadata(new ByteArrayInputStream(data), S3Address.ReadLimitDefault, metadata <| (_.setContentLength(data.length)))
 
-  def putFile(file: FilePath): S3Action[S3UploadResult] =
+  def putFile(file: LocalFile): S3Action[S3UploadResult] =
     putFileWithMetaData(file, S3.ServerSideEncryption)
 
-  def putFileWithMetaData(file: FilePath, metadata: ObjectMetadata): S3Action[S3UploadResult] =
+  def putFileWithMetaData(file: LocalFile, metadata: ObjectMetadata): S3Action[S3UploadResult] =
     S3Action(_.putObject(new PutObjectRequest(bucket, key, file.toFile).withMetadata(metadata)))
       .onResult(_.prependErrorMessage(s"Could not put file to S3://$render")).map(p => S3UploadResult(p.getETag, p.getVersionId))
 
@@ -163,7 +162,7 @@ case class S3Address(bucket: String, key: String) {
    *
    * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
    */
-  def putFileMultiPart(maxPartSize: BytesQuantity, filePath: FilePath, tick: Long => Unit): S3Action[S3UploadResult] =
+  def putFileMultiPart(maxPartSize: BytesQuantity, filePath: LocalFile, tick: Long => Unit): S3Action[S3UploadResult] =
     putFileMultiPartWithMetadata(maxPartSize, filePath, tick, S3.ServerSideEncryption)
 
   /**
@@ -172,9 +171,9 @@ case class S3Address(bucket: String, key: String) {
    *
    * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
    */
-  def putFileMultiPartWithMetadata(maxPartSize: BytesQuantity, filePath: FilePath, tick: Long => Unit, metadata: ObjectMetadata): S3Action[S3UploadResult] = {
+  def putFileMultiPartWithMetadata(maxPartSize: BytesQuantity, filePath: LocalFile, tick: Long => Unit, metadata: ObjectMetadata): S3Action[S3UploadResult] = {
     S3Action.safe({
-      val file = new File(filePath.path)
+      val file = filePath.toFile
       val length = file.length
       file -> length
     }) >>= {

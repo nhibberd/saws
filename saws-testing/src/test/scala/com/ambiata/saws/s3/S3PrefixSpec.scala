@@ -10,6 +10,7 @@ import com.ambiata.mundane.control._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.Arbitraries._
 import com.ambiata.mundane.io.Temporary._
+import com.ambiata.mundane.path._
 import org.specs2._
 
 import scalaz.{Name =>_,_}, Scalaz._, effect._, effect.Effect._
@@ -44,8 +45,8 @@ class S3PrefixSpec extends AwsScalaCheckSpec(5) { def is = s2"""
   def upload = prop((data: String, s3: S3Temporary, local: LocalTemporary, dp: DistinctPair[Ident]) => for {
     p <- s3.prefix
     d <- S3Action.fromRIO(local.directory)
-    _ <- S3Action.fromRIO(Files.write(d </> FilePath.unsafe(dp.first.value), data))
-    _ <- S3Action.fromRIO(Files.write(d </> FilePath.unsafe(dp.second.value), data))
+    _ <- S3Action.fromRIO((d.toLocalPath / Path(dp.first.value)).write(data))
+    _ <- S3Action.fromRIO((d.toLocalPath / Path(dp.second.value)).write(data))
     _ <- p.putFiles(d)
     f <- (p | dp.first.value).exists
     s <- (p | dp.second.value).exists
@@ -56,10 +57,10 @@ class S3PrefixSpec extends AwsScalaCheckSpec(5) { def is = s2"""
     d <- S3Action.fromRIO(local.directory)
     _ <- (p | key.first.value).put(data.first)
     _ <- (p | key.second.value).put(data.second)
-    _ <- p.getFiles(d)
-    f <- S3Action.fromRIO(Files.read(d </> FilePath.unsafe(key.first.value)))
-    s <- S3Action.fromRIO(Files.read(d </> FilePath.unsafe(key.second.value)))
-  } yield f -> s ==== data.first -> data.second)
+    _ <- p.getFiles(d.toLocalPath)
+    f <- S3Action.fromRIO((d.toLocalPath / Path(key.first.value)).read)
+    s <- S3Action.fromRIO((d.toLocalPath / Path(key.second.value)).read)
+  } yield f -> s ==== data.first.some -> data.second.some)
 
   def delete = prop((s3: S3Temporary, key: Ident) => for {
     p <- s3.prefix
@@ -99,10 +100,10 @@ class S3PrefixSpec extends AwsScalaCheckSpec(5) { def is = s2"""
   def fileSizes = prop((s3: S3Temporary, local: LocalTemporary, dp: DistinctPair[Ident], key: Ident) => for {
     d <- S3Action.fromRIO(local.directory)
     p <- s3.prefix
-    _ <- S3Action.fromRIO(Files.write(d </> FilePath.unsafe(dp.first.value), ""))
-    _ <- S3Action.fromRIO(Files.write(d </> DirPath.unsafe(dp.second.value) </> FilePath.unsafe(key.value), ""))
-    f <- S3Action.safe((d </> FilePath.unsafe(dp.first.value)).toFile.length())
-    k <- S3Action.safe((d </> DirPath.unsafe(dp.second.value) </> FilePath.unsafe(key.value)).toFile.length())
+    f1 <- S3Action.fromRIO((d.toLocalPath / Path(dp.first.value)).write(""))
+    f2 <- S3Action.fromRIO((d.toLocalPath / Path(dp.second.value) / Path(key.value)).write(""))
+    f <- S3Action.safe(f1.toFile.length())
+    k <- S3Action.safe(f2.toFile.length())
     _ <- p.putFiles(d)
     s <- p.size
   } yield s ==== f + k)
