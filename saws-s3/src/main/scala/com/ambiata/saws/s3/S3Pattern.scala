@@ -1,10 +1,21 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
-import com.ambiata.mundane.io._
+import com.ambiata.com.amazonaws.event.{ProgressEvent, ProgressListener}
+import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
+import com.ambiata.com.amazonaws.services.s3.model._
+import com.ambiata.com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
+import com.ambiata.com.amazonaws.services.s3.transfer.model.UploadResult
+
+import com.ambiata.mundane.control._
+import com.ambiata.mundane.data._
+import com.ambiata.mundane.io._, MemoryConversions._
+import com.ambiata.mundane.path._
 import com.ambiata.saws.core.S3Action
 import com.ambiata.saws.s3.{S3Operations => Op}
 import com.ambiata.saws.s3.S3Pattern._
+
+import java.io._
+import scala.io.Codec
 
 import scalaz._, Scalaz._
 
@@ -77,6 +88,112 @@ case class S3Pattern(bucket: String, unknown: String) {
       case Some(-\/(v)) => v.exists
       case None         => false.pure[S3Action]
     })
+
+  def withStream[A](f: InputStream => RIO[A]): S3Action[A] =
+    determineAddress.flatMap(_.withStream(f))
+ 
+  def withStreamMultipart(maxPartSize: BytesQuantity, f: InputStream => RIO[Unit], tick: () => Unit): S3Action[Unit] =
+    determineAddress.flatMap(_.withStreamMultipart(maxPartSize, f, tick))
+
+  def createRequests(maxPartSize: BytesQuantity): S3Action[List[GetObjectRequest]] =
+    determineAddress.flatMap(_.createRequests(maxPartSize))
+
+  def getBytes: S3Action[Array[Byte]] =
+    withStream(is => Streams.readBytes(is))
+
+  def get: S3Action[String] =
+    getWithEncoding(Codec.UTF8)
+
+  def getWithEncoding(encoding: Codec): S3Action[String] =
+    withStream(is => Streams.readWithEncoding(is, encoding))
+
+  def getLines: S3Action[List[String]] =
+    withStream(Streams.read(_)).map(_.lines.toList)
+
+  def getFile(destination: LocalPath): S3Action[LocalFile] =
+    withStream(destination.writeStream)
+
+  def getFileTo(dir: LocalPath): S3Action[LocalFile] =
+    getFile(dir / Path(unknown))
+
+  def put(data: String): S3Action[PutObjectResult] =
+    putWithEncoding(data, Codec.UTF8)
+
+  def putWithEncoding(data: String, encoding: Codec): S3Action[PutObjectResult] =
+    putWithEncodingAndMetadata(data, encoding, S3.ServerSideEncryption)
+
+  def putWithEncodingAndMetadata(data: String, encoding: Codec, metadata: ObjectMetadata): S3Action[PutObjectResult] =
+    putBytesWithMetadata(data.getBytes(encoding.name), metadata)
+
+  def putLines(lines: List[String]): S3Action[PutObjectResult] =
+    putLinesWithEncoding(lines, Codec.UTF8)
+
+  def putLinesWithEncoding(lines: List[String], encoding: Codec) =
+    putLinesWithEncodingAndMetadata(lines, encoding, S3.ServerSideEncryption)
+
+  def putLinesWithEncodingAndMetadata(lines: List[String], encoding: Codec, metadata: ObjectMetadata): S3Action[PutObjectResult] =
+    putWithEncodingAndMetadata(Lists.prepareForFile(lines), encoding, metadata)
+
+  def putBytes(data: Array[Byte]): S3Action[PutObjectResult] =
+    putBytesWithMetadata(data, S3.ServerSideEncryption)
+
+  def putBytesWithMetadata(data: Array[Byte], metadata: ObjectMetadata): S3Action[PutObjectResult] =
+    putStreamWithMetadata(new ByteArrayInputStream(data), S3Address.ReadLimitDefault, metadata <| (_.setContentLength(data.length)))
+
+  def putFile(file: LocalFile): S3Action[S3UploadResult] =
+    putFileWithMetaData(file, S3.ServerSideEncryption)
+
+  def putFileWithMetaData(file: LocalFile, metadata: ObjectMetadata): S3Action[S3UploadResult] =
+    Op.putFileWithMetaData(bucket, unknown, file, metadata)
+
+  def putStream(stream: InputStream): S3Action[PutObjectResult] =
+    putStreamWithMetadata(stream, S3Address.ReadLimitDefault, S3.ServerSideEncryption)
+
+  def putStreamWithReadLimit(stream: InputStream, readLimit: Int): S3Action[PutObjectResult] =
+    putStreamWithMetadata(stream, readLimit, S3.ServerSideEncryption)
+
+  def putStreamWithMetadata(stream: InputStream, readLimit: Int, metadata: ObjectMetadata): S3Action[PutObjectResult] =
+    Op.putStreamWithMetadata(bucket, unknown, stream, readLimit, metadata)
+
+  /**
+   * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
+   * to avoid having the stream materialised fully in memory
+   *
+   * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
+   */
+  def putFileMultiPart(maxPartSize: BytesQuantity, filePath: LocalFile, tick: Long => Unit): S3Action[S3UploadResult] =
+    putFileMultiPartWithMetadata(maxPartSize, filePath, tick, S3.ServerSideEncryption)
+
+  /**
+   * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
+   * to avoid having the stream materialised fully in memory
+   *
+   * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
+   */
+  def putFileMultiPartWithMetadata(maxPartSize: BytesQuantity, filePath: LocalFile, tick: Long => Unit, metadata: ObjectMetadata): S3Action[S3UploadResult] =
+    Op.putFileMultiPartWithMetadata(bucket, unknown, maxPartSize, filePath, tick, metadata)
+
+  /**
+   * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
+   * to avoid having the stream materialised fully in memory
+   *
+   * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
+   */
+  def putStreamMultiPart(maxPartSize: BytesQuantity, stream: InputStream, readLimit: Int, tick: Long => Unit): S3Action[S3UploadResult] =
+    putStreamMultiPartWithMetaData(maxPartSize, stream, readLimit, tick, S3.ServerSideEncryption)
+
+  /**
+   * Note: when you use this method with a Stream you need to set the contentLength on the metadata object
+   * to avoid having the stream materialised fully in memory
+   *
+   * The minimum maxPartSize is 5mb. If passed less than 5mb, it will be increased to the minimum limit of 5mb
+   */
+  def putStreamMultiPartWithMetaData(maxPartSize: BytesQuantity, stream: InputStream, readLimit: Int, tick: Long => Unit, metadata: ObjectMetadata): S3Action[S3UploadResult] =
+    Op.putStreamMultiPartWithMetaData(bucket, unknown, maxPartSize, stream, readLimit, tick, metadata)
+
+  /** cache and pass your own transfer manager if you need to run lots of uploads */
+  def putStreamMultiPartWithTransferManager(transferManager: TransferManager, stream: InputStream, readLimit: Int, tick: Long => Unit, metadata: ObjectMetadata): S3Action[() => UploadResult] =
+    Op.putStreamMultiPartWithTransferManager(bucket, unknown, transferManager, stream, readLimit, tick, metadata)
 }
 
 
