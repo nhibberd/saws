@@ -23,7 +23,7 @@ object build extends Build {
 
   lazy val projectSettings: Seq[Settings] = Seq(
       name := "saws"
-    , version in ThisBuild := "1.2.2"
+    , version in ThisBuild := "1.3.0"
     , organization := "com.ambiata"
     , scalaVersion := "2.11.6"
     , crossScalaVersions := Seq(scalaVersion.value)

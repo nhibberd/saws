@@ -1,96 +1,99 @@
 package com.ambiata.saws
 package iam
 
+trait Policy {
+  def name: String
+}
 
 /** IAM policy. */
-case class Policy(name: String, document: String)
+case class InlinePolicy(name: String, document: String) extends Policy
 
 
 /** Constructors for different policies. */
-object Policy {
+object InlinePolicy {
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadPath(path: String, constrainList: Boolean): Policy = {
     val name = s"ReadAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("GetObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy = {
     val name = s"ReadAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("GetObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
   def allowS3WritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("PutObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
   def allowS3WritePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("PutObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectACL' and 'ListBucket' for the specified S3 path. */
   def allowS3WriteAclPath(path: String, constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectACL' and 'ListBucket' for the specified S3 path. */
   def allowS3WriteAclPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWritePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "GetObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteAclPath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteAclPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteDeletePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteDeletePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteAclDeletePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$path".replace('/', '+')
-    Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteAclDeletePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$bucket"
-    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
+    InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'ListBucket' and other S3 actions for the specified S3 path. */
@@ -151,7 +154,7 @@ object Policy {
           |    }
           |  ]
           |}""".stripMargin
-    Policy("iam-list-account-aliases", doc)
+    InlinePolicy("iam-list-account-aliases", doc)
   }
 
   /** Create a policy allowing full access to all EC2 actions. */
@@ -167,7 +170,7 @@ object Policy {
           |    }
           |  ]
           |}""".stripMargin
-    Policy("ec2-full-access", doc)
+    InlinePolicy("ec2-full-access", doc)
   }
 
   /** Create a policy allowing access to describe tags. */
@@ -183,7 +186,7 @@ object Policy {
           |    }
           |  ]
           |}""".stripMargin
-    Policy("ec2-describe-tags", doc)
+    InlinePolicy("ec2-describe-tags", doc)
   }
 
   /** Create a policy for allowing full acces to SQS.
@@ -202,7 +205,7 @@ object Policy {
          |    }
          |  ]
          |}""".stripMargin
-    Policy("sqs-full-access", doc)
+    InlinePolicy("sqs-full-access", doc)
   }
 
    /** Create a policy for allowing full access to SES.
@@ -221,7 +224,7 @@ object Policy {
          |    }
          |  ]
          |}""".stripMargin
-    Policy("ses-full-access", doc)
+    InlinePolicy("ses-full-access", doc)
   }
 
   /** Create a policy for allowing send email access to SES.
@@ -240,7 +243,7 @@ object Policy {
          |    }
          |  ]
          |}""".stripMargin
-    Policy("ses-send-access", doc)
+    InlinePolicy("ses-send-access", doc)
   }
 
   /** Create a policies for allowing full access to all EMR actions as well as read-only access
@@ -279,7 +282,7 @@ object Policy {
           |  ]
           |}""".stripMargin
     List(
-      Policy("emr-full-access", doc),
+      InlinePolicy("emr-full-access", doc),
       allowS3ReadPath("elasticmapreduce", false),
       allowS3ReadPath("ap-southeast-2.elasticmapreduce", false)
     )
@@ -301,6 +304,6 @@ object Policy {
          |    }
          |  ]
          |}""".stripMargin
-    Policy("cloudwatch-put-metric-access", doc)
+    InlinePolicy("cloudwatch-put-metric-access", doc)
   }
 }
