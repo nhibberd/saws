@@ -17,7 +17,7 @@ Attempted use of Proguard in saws
 - Proguard was unsuccessful in handling certain scala classes, namely package objects and some type parameters
 
 Current solution
-- `saws-aws` adds the `com.ambiata` prefix to package names from the `aws-java-sdk`. i.e. `com.amazonaws.foo` -> `com.ambiata.com.amazonaws.foo`
+- `saws-aws` adds the `com.ambiata` prefix to package names from the `aws-java-sdk`. i.e. `com.amazonaws.foo` -> `com.amazonaws.foo`
 - There is a source code change to match `saws-aws`
 
 NB - Any downstream dependencies will need to use the `saws-aws` version of the `aws-java-sdk` or end up with two large jars (`saws-aws` as well as `aws-java-sdk`) on your classpath

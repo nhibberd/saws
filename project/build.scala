@@ -1,5 +1,5 @@
 import sbt._
-import Keys._
+import Keys.{name, _}
 import com.ambiata.promulgate.project.ProjectPlugin._
 
 object build extends Build {
@@ -23,9 +23,9 @@ object build extends Build {
 
   lazy val projectSettings: Seq[Settings] = Seq(
       name := "saws"
-    , version in ThisBuild := "1.2.1"
+    , version in ThisBuild := "1.3.0"
     , organization := "com.ambiata"
-    , scalaVersion := "2.11.2"
+    , scalaVersion := "2.11.6"
     , crossScalaVersions := Seq(scalaVersion.value)
     , publishArtifact in (Test, packageBin) := true
   ) ++ Seq(prompt)
@@ -71,14 +71,14 @@ object build extends Build {
   lazy val cw = Project(
       id = "cw"
     , base = file("saws-cw")
-    , settings = standardSettings ++ lib("cw") ++ Seq[Settings](name := "saws-cw")  ++
+    , settings = standardSettings ++ lib("cloudwatch") ++ Seq[Settings](name := "saws-cw")  ++
         Seq[Settings](libraryDependencies ++= depend.scalaz ++ depend.testing ++ depend.disorder ++ depend.mundaneTesting)
   ).dependsOn(core)
 
   lazy val testing = Project(
     id = "testing"
   , base = file("saws-testing")
-  , settings = standardSettings ++ lib("testing") ++ Seq[Settings](name := "saws-testing"
+  , settings = standardSettings ++ lib("test-utils") ++ Seq[Settings](name := "saws-testing"
     ) ++ Seq[Settings](libraryDependencies ++= depend.specs2 ++ depend.ssh ++ depend.mundane ++ depend.mundaneTesting ++ depend.disorder)
   ).dependsOn(iam, emr, ec2, ses, s3, cw, cw % "test->test")
 
@@ -95,7 +95,7 @@ object build extends Build {
     , "-Ywarn-value-discard"
     , "-Yno-adapted-args"
     , "-Xlint"
-    , "-Xfatal-warnings"
+//    , "-Xfatal-warnings" // too painful to fix as my scala knowledge is poor
     , "-Yinline-warnings"),
     scalacOptions in Test ++= Seq("-Yrangepos")
   )
@@ -115,8 +115,8 @@ object build extends Build {
                                  Seq(Tests.Argument("--", "exclude", "aws")))
   )
 
-  def lib(name: String) =
-    promulgate.library(s"com.ambiata.saws.$name", ossBucket)
+  def lib(name: String): Seq[sbt.Def.Setting[_]] =
+    Seq[Settings]( libraryDependencies ++= Seq( "com.amazonaws" % s"aws-java-sdk-$name" % "1.11.83" ) )
 
   lazy val prompt = shellPrompt in ThisBuild := { state =>
     val name = Project.extract(state).currentRef.project

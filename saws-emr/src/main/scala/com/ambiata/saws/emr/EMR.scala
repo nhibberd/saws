@@ -1,8 +1,9 @@
 package com.ambiata.saws
 package emr
 
-import com.ambiata.com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
-import com.ambiata.com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, Instance => EMRInstance, _}
+import scala.Unit
+import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClient
+import com.amazonaws.services.elasticmapreduce.model.{Cluster => EMRCluster, Instance => EMRInstance, _}
 import com.ambiata.saws.core._
 import com.ambiata.saws.core.EMRAction
 
@@ -114,8 +115,10 @@ object EMR {
       client.listInstances(new ListInstancesRequest().withClusterId(clusterId).withInstanceGroupTypes(groups: _*)).getInstances.asScala.toList)
 
   def terminateCluster(clusterIds: String*): EMRAction[Unit] =
-    EMRAction(client =>
-      client.terminateJobFlows(new TerminateJobFlowsRequest(clusterIds.asJava)))
+    EMRAction(client => {
+      client.terminateJobFlows(new TerminateJobFlowsRequest(clusterIds.asJava))
+      ()
+    })
 
   /** Add steps to an existing cluster, returning the step IDs. */
   def addSteps(clusterId: String, steps: List[Step]): EMRAction[List[String]] = {

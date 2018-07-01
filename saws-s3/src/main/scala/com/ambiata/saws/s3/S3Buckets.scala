@@ -1,8 +1,8 @@
 package com.ambiata.saws
 package s3
 
-import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
-import com.ambiata.com.amazonaws.services.s3.model._
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model._
 import com.ambiata.saws.core._
 
 import scala.collection.JavaConverters._
@@ -27,7 +27,7 @@ object S3Buckets {
   } yield b
 
   def create(name: String): S3Action[Bucket] =
-    S3Action(client => client.createBucket(name, Region.AP_Sydney)) <*
+    S3Action(client => client.createBucket(new CreateBucketRequest(name, Region.AP_Sydney))) <*
       AwsLog.CreateBucket(name).log
 
   def isVersioned(bucket: String): S3Action[Boolean] =

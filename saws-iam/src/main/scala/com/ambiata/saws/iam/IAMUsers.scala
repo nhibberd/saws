@@ -2,8 +2,8 @@ package com.ambiata.saws
 package iam
 
 import com.ambiata.saws.core._
-import com.ambiata.com.amazonaws.services.identitymanagement.model.{User => AwsUser, _}
-import com.ambiata.com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
+import com.amazonaws.services.identitymanagement.model.{User => AwsUser, _}
+import com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
 
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
@@ -68,7 +68,6 @@ object IAMUsers {
     IAMAction(_.putUserPolicy(new PutUserPolicyRequest(userName, policy.name, policy.document)))
 
 
-
   /* Access keys */
 
   /** Create an access and secret keys for an IAM user. */
@@ -84,7 +83,10 @@ object IAMUsers {
 
   /** Delete the access key associated with an IAM user. */
   def deleteAccessKey(userName: String, accessKey: String): IAMAction[Unit] =
-    IAMAction(client => client.deleteAccessKey(new DeleteAccessKeyRequest(userName, accessKey)))
+    IAMAction(client => {
+      client.deleteAccessKey(new DeleteAccessKeyRequest(userName, accessKey))
+      ()
+    })
 
   /** Delete all the access keys associated with an IAM user. */
   def deleteAllAccessKeys(userName: String): IAMAction[Unit] = for {

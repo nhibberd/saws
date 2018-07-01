@@ -1,12 +1,12 @@
 package com.ambiata.saws.s3
 
 import com.ambiata.saws.s3.{S3Operations => Op}
-import com.ambiata.com.amazonaws.event.{ProgressEvent, ProgressListener}
-import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
-import com.ambiata.com.amazonaws.services.s3.model._
-import com.ambiata.com.amazonaws.AmazonServiceException
-import com.ambiata.com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
-import com.ambiata.com.amazonaws.services.s3.transfer.model.UploadResult
+import com.amazonaws.event.{ProgressEvent, ProgressListener}
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model._
+import com.amazonaws.AmazonServiceException
+import com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
+import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io._
 import com.ambiata.mundane.io.MemoryConversions._

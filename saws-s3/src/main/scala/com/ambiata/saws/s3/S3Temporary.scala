@@ -6,7 +6,7 @@ import com.ambiata.mundane.control._
 import com.ambiata.mundane.io.Temporary._
 import com.ambiata.saws.core._
 import com.ambiata.saws.s3.S3Temporary._
-import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.AmazonS3Client
 import java.util.concurrent.atomic.AtomicInteger
 import scalaz._, Scalaz._, effect._
 

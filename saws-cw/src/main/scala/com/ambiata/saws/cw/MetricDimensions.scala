@@ -1,6 +1,6 @@
 package com.ambiata.saws.cw
 
-import com.ambiata.com.amazonaws.services.cloudwatch.model.MetricDatum
+import com.amazonaws.services.cloudwatch.model.MetricDatum
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 

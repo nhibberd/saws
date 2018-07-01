@@ -1,7 +1,7 @@
 package com.ambiata.saws
 package iam
 
-import com.ambiata.com.amazonaws.services.identitymanagement.model.{Role => AwsRole, _}
+import com.amazonaws.services.identitymanagement.model.{Role => AwsRole, _}
 import com.ambiata.saws.core._
 import com.ambiata.saws.iam._
 import scala.collection.JavaConverters._

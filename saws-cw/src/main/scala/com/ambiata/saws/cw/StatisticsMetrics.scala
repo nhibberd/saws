@@ -1,6 +1,6 @@
 package com.ambiata.saws.cw
 
-import com.ambiata.com.amazonaws.services.cloudwatch.model._
+import com.amazonaws.services.cloudwatch.model._
 import com.ambiata.mundane.control.RIO
 import com.ambiata.saws.core.Clients
 import org.joda.time._

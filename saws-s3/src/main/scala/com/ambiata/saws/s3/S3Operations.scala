@@ -3,11 +3,11 @@ package com.ambiata.saws.s3
 import com.ambiata.saws.core._
 import com.ambiata.mundane.io._, MemoryConversions._
 
-import com.ambiata.com.amazonaws.event.{ProgressEvent, ProgressListener}
-import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
-import com.ambiata.com.amazonaws.services.s3.model._
-import com.ambiata.com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
-import com.ambiata.com.amazonaws.services.s3.transfer.model.UploadResult
+import com.amazonaws.event.{ProgressEvent, ProgressListener}
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model._
+import com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
+import com.amazonaws.services.s3.transfer.model.UploadResult
 
 import java.io._
 
@@ -91,7 +91,7 @@ object S3Operations {
 
       def setupConf(l: Long) = {
         configuration.setMinimumUploadPartSize(l)
-        configuration.setMultipartUploadThreshold(l.toInt)
+        configuration.setMultipartUploadThreshold(l.toLong)
       }
 
       val transferManager = new TransferManager(client)

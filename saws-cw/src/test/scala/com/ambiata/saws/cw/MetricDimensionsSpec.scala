@@ -1,6 +1,6 @@
 package com.ambiata.saws.cw
 
-import com.ambiata.com.amazonaws.services.cloudwatch.model.MetricDatum
+import com.amazonaws.services.cloudwatch.model.MetricDatum
 import com.ambiata.disorder.PositiveIntSmall
 import org.specs2._
 import Arbitraries._

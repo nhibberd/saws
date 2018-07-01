@@ -1,10 +1,10 @@
 package com.ambiata.saws.s3
 
-import com.ambiata.com.amazonaws.event.{ProgressEvent, ProgressListener}
-import com.ambiata.com.amazonaws.services.s3.AmazonS3Client
-import com.ambiata.com.amazonaws.services.s3.model._
-import com.ambiata.com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
-import com.ambiata.com.amazonaws.services.s3.transfer.model.UploadResult
+import com.amazonaws.event.{ProgressEvent, ProgressListener}
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model._
+import com.amazonaws.services.s3.transfer.{TransferManagerConfiguration, TransferManager}
+import com.amazonaws.services.s3.transfer.model.UploadResult
 
 import com.ambiata.mundane.control._
 import com.ambiata.mundane.data._

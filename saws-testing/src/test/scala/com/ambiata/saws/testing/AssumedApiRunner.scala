@@ -5,7 +5,7 @@ import scalaz._, Scalaz._
 import org.specs2.matcher._
 import scala.collection.JavaConversions._
 import com.ambiata.saws.core._
-import com.ambiata.com.amazonaws.services.ec2.model._
+import com.amazonaws.services.ec2.model._
 import com.decodified.scalassh._
 import ec2._
 

@@ -1,7 +1,7 @@
 package com.ambiata.saws
 package emr
 
-import com.ambiata.com.amazonaws.services.elasticmapreduce.model.ActionOnFailure
+import com.amazonaws.services.elasticmapreduce.model.ActionOnFailure
 import com.ambiata.saws.tooling._
 import scalaz._, Scalaz._
 

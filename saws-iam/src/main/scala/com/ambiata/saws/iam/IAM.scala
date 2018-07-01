@@ -4,10 +4,10 @@ package iam
 import scalaz._, Scalaz._
 import scala.collection.JavaConverters._
 import com.ambiata.saws.core._
-import com.ambiata.com.amazonaws.auth.AWSCredentials
-import com.ambiata.com.amazonaws.auth.BasicAWSCredentials
-import com.ambiata.com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
-import com.ambiata.com.amazonaws.services.identitymanagement.model.{InstanceProfile => AwsInstanceProfile, _}
+import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
+import com.amazonaws.services.identitymanagement.model.{InstanceProfile => AwsInstanceProfile, _}
 import com.ambiata.mundane.control.Result
 import Result.safe
 
@@ -51,7 +51,10 @@ case class IAM(client: AmazonIdentityManagementClient) {
   def deleteRole(roleName: String): Result[Unit] = {
     clearRolePolicies(roleName) >>
     deleteInstanceProfile(roleName) >>
-    safe { client.deleteRole((new DeleteRoleRequest).withRoleName(roleName)) }
+    safe {
+      client.deleteRole((new DeleteRoleRequest).withRoleName(roleName))
+      ()
+    }
   }
 
 
@@ -61,7 +64,10 @@ case class IAM(client: AmazonIdentityManagementClient) {
       .withRoleName(roleName)
       .withPolicyName(policy.name)
       .withPolicyDocument(policy.document)
-    safe { client.putRolePolicy(policyReq) }
+    safe {
+      client.putRolePolicy(policyReq)
+      ()
+    }
   }
 
 

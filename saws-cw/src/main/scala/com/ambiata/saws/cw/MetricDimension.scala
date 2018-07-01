@@ -1,6 +1,6 @@
 package com.ambiata.saws.cw
 
-import com.ambiata.com.amazonaws.services.cloudwatch.model.Dimension
+import com.amazonaws.services.cloudwatch.model.Dimension
 
 /**
  * Scala-friendly Dimension class

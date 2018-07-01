@@ -1,6 +1,6 @@
 package com.ambiata.saws.cw
 
-import com.ambiata.com.amazonaws.services.cloudwatch.model.MetricDatum
+import com.amazonaws.services.cloudwatch.model.MetricDatum
 import com.ambiata.disorder._
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone._

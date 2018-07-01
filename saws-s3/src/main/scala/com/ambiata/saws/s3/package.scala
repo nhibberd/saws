@@ -1,6 +1,6 @@
 package com.ambiata.saws
 
-import com.ambiata.com.amazonaws.services.s3.model._
+import com.amazonaws.services.s3.model._
 
 import scalaz._, Scalaz._, effect._
 
