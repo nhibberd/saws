@@ -163,7 +163,7 @@ class S3PatternSpec extends AwsScalaCheckSpec(5) { def is = s2"""
     pattern.delete.as(ok))
 
   def deleteFailure = prop((bucket: Ident, unknown: Ident) =>
-    S3Pattern(bucket.value, unknown.value).delete.as(ok))
+    S3Pattern(bucket.value + java.util.UUID.randomUUID().toString, unknown.value).delete.as(ok))
 
   def fromUri = prop((pattern: S3Pattern) =>
     S3Pattern.fromURI(s"s3://${pattern.bucket}/${pattern.unknown}") ==== pattern.some)
