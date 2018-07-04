@@ -15,6 +15,9 @@ object EC2VPC {
   def findByName(name: String): EC2Action[Option[Vpc]] =
     list.map(_.find(_.getTags.asScala.toList.map(t => (t.getKey, t.getValue)).contains(("Name" -> name))))
 
+  def findDefault: EC2Action[Option[Vpc]] =
+    list.map(_.find(_.isDefault))
+
   def findByNameOrFail(name: String): EC2Action[Vpc] =
     findByName(name).flatMap({
       case None =>
