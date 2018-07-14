@@ -15,10 +15,22 @@ object Policy {
     Policy(name, allowS3PathForActions(path, Seq("GetObject"), constrainList))
   }
 
+  /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy = {
+    val name = s"ReadAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("GetObject"), constrainList))
+  }
+
   /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
   def allowS3WritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$path".replace('/', '+')
     Policy(name, allowS3PathForActions(path, Seq("PutObject"), constrainList))
+  }
+
+  /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3WritePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
+    val name = s"WriteAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectACL' and 'ListBucket' for the specified S3 path. */
@@ -27,10 +39,22 @@ object Policy {
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl"), constrainList))
   }
 
+  /** Create a policy allowing 'PutObject', 'PutObjectACL' and 'ListBucket' for the specified S3 path. */
+  def allowS3WriteAclPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
+    val name = s"WriteAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl"), constrainList))
+  }
+
   /** Create a policy allowing 'PutObject', 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteAccessTo_$path".replace('/', '+')
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject"), constrainList))
+  }
+
+  /** Create a policy allowing 'PutObject', 'GetObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadWritePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
+    val name = s"ReadWriteAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject' and 'ListBucket' for the specified S3 path. */
@@ -39,10 +63,22 @@ object Policy {
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
   }
 
+  /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadWriteAclPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
+    val name = s"ReadWriteAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl", "GetObject"), constrainList))
+  }
+
   /** Create a policy allowing 'PutObject', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadWriteDeletePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"ReadWriteDeleteAccessTo_$path".replace('/', '+')
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
+  }
+
+  /** Create a policy allowing 'PutObject', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadWriteDeletePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
+    val name = s"ReadWriteDeleteAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "GetObject", "DeleteObject"), constrainList))
   }
 
   /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
@@ -51,31 +87,43 @@ object Policy {
     Policy(name, allowS3PathForActions(path, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
   }
 
+  /** Create a policy allowing 'PutObject', 'PutObjectAcl', 'GetObject', 'DeleteObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadWriteAclDeletePath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy  = {
+    val name = s"ReadWriteDeleteAccessTo_$bucket"
+    Policy(name, allowS3PathForActions(bucket, keys, Seq("PutObject", "PutObjectAcl", "GetObject", "DeleteObject"), constrainList))
+  }
+
   /** Create a policy allowing 'ListBucket' and other S3 actions for the specified S3 path. */
-  def allowS3PathForActions(path: String, actions: Seq[String], constrainList: Boolean) = {
-    val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
+  def allowS3PathForActions(path: String, actions: Seq[String], constrainList: Boolean): String = {
     val bucket = path.takeWhile(_ != '/')
     val key = path.drop(bucket.length + 1)
+    allowS3PathForActions(bucket, Seq(key), actions, constrainList)
+  }
 
+  def allowS3PathForActions(bucket: String, keys: Seq[String], actions: Seq[String], constrainList: Boolean): String = {
+    val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
     val listCondition =
       if (!constrainList)
         ""
-      else
+      else {
+        val patterns = keys.map( x => s""""${x}/*"""" ).mkString( ", " )
         s"""|"Condition": {
-            |  "StringLike": { "s3:prefix": ["$key/*"] }
+            |  "StringLike": { "s3:prefix": [$patterns] }
             |},""".stripMargin
+      }
 
+    val s3Arns = keys.map( x => s""""arn:aws:s3:::${bucket}/${x}/*"""" ).mkString( ", " )
     s"""|{
         |  "Version": "2012-10-17",
         |  "Statement": [
         |    {
         |      "Action": [ ${s3Actions} ],
-        |      "Resource": [ "arn:aws:s3:::$path/*" ],
+        |      "Resource": [ ${s3Arns} ],
         |      "Effect": "Allow"
         |    },
         |    {
         |      "Action": [ "s3:ListBucket" ],
-        |      "Resource": [ "arn:aws:s3:::$bucket" ],
+        |      "Resource": [ "arn:aws:s3:::${bucket}" ],
         |      $listCondition
         |      "Effect": "Allow"
         |    }
