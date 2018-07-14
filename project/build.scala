@@ -25,7 +25,7 @@ object build extends Build {
       name := "saws"
     , version in ThisBuild := "1.2.2"
     , organization := "com.ambiata"
-    , scalaVersion := "2.11.2"
+    , scalaVersion := "2.11.6"
     , crossScalaVersions := Seq(scalaVersion.value)
     , publishArtifact in (Test, packageBin) := true
   ) ++ Seq(prompt)
