@@ -1,12 +1,13 @@
 package com.ambiata.saws
 package iam
 
-import com.ambiata.saws.core._
+import com.ambiata.com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import com.ambiata.com.amazonaws.services.identitymanagement.model.{User => AwsUser, _}
-import com.ambiata.com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
+import com.ambiata.saws.core.IAMAction
+import scalaz.Scalaz._
+import scalaz._
 
 import scala.collection.JavaConverters._
-import scalaz._, Scalaz._
 
 
 /** An IAM user. */
@@ -55,18 +56,35 @@ object IAMUsers {
     for {
       policies <- IAMAction(_.listUserPolicies(new ListUserPoliciesRequest(userName)).getPolicyNames.asScala.toList)
       _        <- policies.traverseU(p => IAMAction(_.deleteUserPolicy(new DeleteUserPolicyRequest(userName, p))))
+
+      managed  <- IAMAction(_.listAttachedUserPolicies(
+                    new ListAttachedUserPoliciesRequest().withUserName(userName)).getAttachedPolicies.asScala.toList)
+      _        <- managed.traverseU(p => IAMAction(_.detachUserPolicy(
+                    new DetachUserPolicyRequest().withUserName(userName).withPolicyArn(p.getPolicyArn))))
     } yield ()
   }
 
   /** Add multiple policies to a given IAM user. */
   def addUserPolicies(userName: String, policies: List[Policy]): IAMAction[Unit] = for {
-    _ <- policies.traverse(addUserPolicy(userName, _))
+    _ <- policies.traverse((p => p match {
+      case i: InlinePolicy => addUserPolicy(userName, i)
+      case p: AwsManagedPolicy => addUserPolicy(userName, p)
+      case _ => IAMAction(throw new Exception("unsupported policy type " + p.toString))
+    }): (Policy => IAMAction[Unit]))
   } yield ()
 
+
   /** Add a single policy to a given IAM user. */
-  def addUserPolicy(userName: String, policy: Policy): IAMAction[Unit] =
+  def addUserPolicy(userName: String, policy: InlinePolicy): IAMAction[Unit] =
     IAMAction(_.putUserPolicy(new PutUserPolicyRequest(userName, policy.name, policy.document)))
 
+
+  /** Add a single policy to a given IAM user. */
+  def addUserPolicy(userName: String, policy: AwsManagedPolicy): IAMAction[Unit] =
+    IAMAction(_.attachUserPolicy(new AttachUserPolicyRequest()
+      .withUserName(userName)
+      .withPolicyArn(policy.arn)
+    ))
 
 
   /* Access keys */

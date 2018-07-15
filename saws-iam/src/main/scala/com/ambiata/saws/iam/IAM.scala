@@ -1,16 +1,15 @@
 package com.ambiata.saws
 package iam
 
-import scalaz._, Scalaz._
-import scala.collection.JavaConverters._
-import com.ambiata.saws.core._
-import com.ambiata.com.amazonaws.auth.AWSCredentials
-import com.ambiata.com.amazonaws.auth.BasicAWSCredentials
 import com.ambiata.com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.ambiata.com.amazonaws.services.identitymanagement.model.{InstanceProfile => AwsInstanceProfile, _}
 import com.ambiata.mundane.control.Result
-import Result.safe
+import com.ambiata.mundane.control.Result.safe
+import com.ambiata.saws.core.IAMAction
+import scalaz.Scalaz._
+import scalaz._
 
+import scala.collection.JavaConverters._
 
 /** Wrapper for Java IAM client. */
 case class IAM(client: AmazonIdentityManagementClient) {
@@ -56,7 +55,7 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
 
   /** Add a policy to an IAM role. */
-  def addRolePolicy(roleName: String, policy: Policy): Result[Unit] = {
+  def addRolePolicy(roleName: String, policy: InlinePolicy): Result[Unit] = {
     val policyReq = (new PutRolePolicyRequest())
       .withRoleName(roleName)
       .withPolicyName(policy.name)
@@ -64,11 +63,22 @@ case class IAM(client: AmazonIdentityManagementClient) {
     safe { client.putRolePolicy(policyReq) }
   }
 
+  def addRolePolicy(roleName: String, policy: AwsManagedPolicy): Result[Unit] = {
+    val policyReq = (new AttachRolePolicyRequest())
+      .withRoleName(roleName)
+      .withPolicyArn(policy.arn)
+    safe { client.attachRolePolicy(policyReq) }
+  }
 
   /** Add multiple policies to an IAM role. */
   def addRolePolicies(roleName: String, policies: List[Policy]): Result[Unit] =
-    policies.traverse((p: Policy) => addRolePolicy(roleName, p)).map(_ => ())
-
+    policies.traverse(
+      (p => p match {
+        case i: InlinePolicy => addRolePolicy( roleName, i )
+        case m: AwsManagedPolicy => addRolePolicy( roleName, m )
+        case _ => Result.fail( "no supported policy type " + p.toString )
+      }): (Policy => Result[Unit])
+    ).map( _ => () )
 
   /** Remove all policies from a role then add a set of new policies. */
   def updateRolePolicies(roleName: String, policies: List[Policy]): Result[Unit] =
