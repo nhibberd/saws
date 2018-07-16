@@ -41,7 +41,8 @@ object build extends Build {
   lazy val iam = Project(
     id = "iam"
   , base = file("saws-iam")
-  , settings = standardSettings ++ lib("iam") ++ Seq[Settings](name := "saws-iam")
+  , settings = standardSettings ++ lib("iam") ++ Seq[Settings](name := "saws-iam") ++
+      Seq[Settings](libraryDependencies ++= depend.testing)
   ).dependsOn(core)
 
   lazy val ec2 = Project(
