@@ -13,13 +13,13 @@ case class InlinePolicy(name: String, document: String) extends Policy
 object InlinePolicy {
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
-  def allowS3ReadPath(path: String, constrainList: Boolean): Policy = {
+  def allowS3ReadPath(path: String, constrainList: Boolean): InlinePolicy = {
     val name = s"ReadAccessTo_$path".replace('/', '+')
     InlinePolicy(name, allowS3PathForActions(path, Seq("GetObject"), constrainList))
   }
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
-  def allowS3ReadPath(bucket: String, keys: Seq[String], constrainList: Boolean): Policy = {
+  def allowS3ReadPath(bucket: String, keys: Seq[String], constrainList: Boolean): InlinePolicy = {
     val name = s"ReadAccessTo_$bucket"
     InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("GetObject"), constrainList))
   }
@@ -105,17 +105,19 @@ object InlinePolicy {
 
   def allowS3PathForActions(bucket: String, keys: Seq[String], actions: Seq[String], constrainList: Boolean): String = {
     val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
+    val strippedKeys = keys.map { _.stripPrefix("/").stripSuffix("/") }
     val listCondition =
       if (!constrainList)
         ""
       else {
-        val patterns = keys.map( x => s""""${x}/*"""" ).mkString( ", " )
+        val patterns = strippedKeys.map(Seq(_, "*").filter(_.nonEmpty) mkString "/")
+          .map(x => s""""${x}"""").mkString(", ")
         s"""|"Condition": {
             |  "StringLike": { "s3:prefix": [$patterns] }
             |},""".stripMargin
       }
 
-    val s3Arns = keys.map( x => s""""arn:aws:s3:::${bucket}/${x}/*"""" ).mkString( ", " )
+    val s3Arns = strippedKeys.map( Seq(bucket,_).filter(_.nonEmpty) mkString "/").map ( x => s""""arn:aws:s3:::${x}/*"""" ).mkString( ", " )
     s"""|{
         |  "Version": "2012-10-17",
         |  "Statement": [

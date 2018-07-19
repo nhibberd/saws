@@ -88,12 +88,18 @@ case class IAM(client: AmazonIdentityManagementClient) {
 
   /** Remove all the policies from a given role. */
   def clearRolePolicies(roleName: String): Result[Unit] = {
-    val listReq = (new ListRolePoliciesRequest).withRoleName(roleName)
-    def deleteReq(p: String) = (new DeleteRolePolicyRequest()).withRoleName(roleName).withPolicyName(p)
+    val listInReq = (new ListRolePoliciesRequest).withRoleName(roleName)
+    val listManReq = (new ListAttachedRolePoliciesRequest).withRoleName(roleName)
+    def deleteInReq(p: String) = (new DeleteRolePolicyRequest()).withRoleName(roleName).withPolicyName(p)
+    def deleteManReq(p: AttachedPolicy) = (new DetachRolePolicyRequest()).withRoleName(roleName).withPolicyArn(p.getPolicyArn)
 
     for {
-      policies <- safe { client.listRolePolicies(listReq).getPolicyNames.asScala.toList }
-      _        <- policies.traverse(p => safe { client.deleteRolePolicy(deleteReq(p)) })
+      policies <- safe { client.listRolePolicies(listInReq).getPolicyNames.asScala.toList }
+      _        <- policies.traverse(p => safe { client.deleteRolePolicy(deleteInReq(p)) })
+
+      managed  <- safe { client.listAttachedRolePolicies(listManReq).getAttachedPolicies.asScala.toList }
+      _        <- managed.traverseU(p => safe { client.detachRolePolicy(deleteManReq(p)) })
+
     } yield ()
   }
 
