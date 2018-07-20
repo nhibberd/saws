@@ -3,7 +3,7 @@ package com.ambiata.saws.iam
 import com.ambiata.com.amazonaws.services.s3.model._
 import com.ambiata.mundane.testing.ResultMatcher._
 import com.ambiata.saws.core._
-import com.ambiata.saws.iam.InlinePolicy._
+import com.ambiata.saws.iam.Policy._
 import com.ambiata.saws.s3._
 import com.ambiata.saws.testing.AssumedApiRunner._
 import com.ambiata.saws.testing._

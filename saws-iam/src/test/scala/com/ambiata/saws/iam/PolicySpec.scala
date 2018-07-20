@@ -1,7 +1,7 @@
 package com.ambiata.saws
 package iam
 
-import com.ambiata.saws.iam.InlinePolicy.allowS3ReadPath
+import com.ambiata.saws.iam.Policy._
 import org.specs2.{ScalaCheck, Specification}
 
 class PolicySpec extends Specification with ScalaCheck {def is = s2"""

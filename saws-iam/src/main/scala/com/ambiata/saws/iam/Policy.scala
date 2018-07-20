@@ -1,16 +1,42 @@
 package com.ambiata.saws
 package iam
 
-trait Policy {
+sealed trait Policy {
   def name: String
 }
 
 /** IAM policy. */
 case class InlinePolicy(name: String, document: String) extends Policy
 
+/**
+  * Represents a policy that is managed either by AWS (predfinined) or customer created (shared)
+  *
+  * @param name
+  */
+case class AwsManagedPolicy(val name: String, val arnPrefix: String = "arn:aws:iam::aws:policy") extends Policy {
+  def arn: String = s"$arnPrefix/$name"
+}
+
+/**
+  * Represents a policy that is managed either by AWS (predfinined) or customer created (shared)
+  *
+  * @param name
+  * @param document
+  * @todo NOT IMPLEMENTED YET
+  */
+case class CustomerManagedPolicy(val name: String, val document: String) extends Policy
+
 
 /** Constructors for different policies. */
-object InlinePolicy {
+object Policy {
+  /** Policy to enable Amazon ECS to manage your cluster. */
+  def awsAmazonECSServiceRolePolicy: AwsManagedPolicy = AwsManagedPolicy("AmazonECSServiceRolePolicy", "arn:aws:iam::aws:policy/service-role")
+
+  /** Provides administrative access to Amazon ECS resources and enables ECS features through access to other AWS service resources, including VPCs, Auto Scaling groups, and CloudFormation stacks. */
+  def awsAmazonECS_FullAccess: AwsManagedPolicy = AwsManagedPolicy("AmazonECS_FullAccess")
+
+  /** Provides full access to Auto Scaling. */
+  def awsAutoScalingFullAccess: AwsManagedPolicy = AwsManagedPolicy("AutoScalingFullAccess")
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadPath(path: String, constrainList: Boolean): InlinePolicy = {
@@ -174,6 +200,7 @@ object InlinePolicy {
           |}""".stripMargin
     InlinePolicy("ec2-full-access", doc)
   }
+
 
   /** Create a policy allowing access to describe tags. */
   val allowEc2DescribeTags: Policy = {
