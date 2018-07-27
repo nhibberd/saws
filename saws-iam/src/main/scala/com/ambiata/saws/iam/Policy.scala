@@ -50,6 +50,13 @@ object Policy {
     InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("GetObject"), constrainList))
   }
 
+  /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadBuckets(buckets: Seq[String]): InlinePolicy = {
+    val bucketConcat = buckets.mkString(",")
+    val name = s"ReadAccessTo_${bucketConcat}".replace('/', '+')
+    InlinePolicy(name, allowS3BucketsForActions(buckets, Seq("GetObject")))
+  }
+
   /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
   def allowS3WritePath(path: String, constrainList: Boolean): Policy  = {
     val name = s"WriteAccessTo_$path".replace('/', '+')
@@ -162,6 +169,26 @@ object Policy {
         |}""".stripMargin
   }
 
+  def allowS3BucketsForActions(buckets: Seq[String], actions: Seq[String]): String = {
+    val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
+    val s3PathArns = buckets.map ( x => s""""arn:aws:s3:::${x}/*"""" ).mkString( ", " )
+    val s3BucketArns = buckets.map ( x => s""""arn:aws:s3:::${x}"""" ).mkString( ", " )
+    s"""|{
+        |  "Version": "2012-10-17",
+        |  "Statement": [
+        |    {
+        |      "Action": [ ${s3Actions} ],
+        |      "Resource": [ ${s3PathArns} ],
+        |      "Effect": "Allow"
+        |    },
+        |    {
+        |      "Action": [ "s3:ListBucket" ],
+        |      "Resource": [ ${s3BucketArns} ],
+        |      "Effect": "Allow"
+        |    }
+        |  ]
+        |}""".stripMargin
+  }
 
 
   /** Allow IAM account aliases to be listed. This is important for verifying environments. */
