@@ -1,7 +1,7 @@
 package com.ambiata.saws
 package iam
 
-import com.ambiata.saws.iam.InlinePolicy.allowS3ReadPath
+import com.ambiata.saws.iam.Policy._
 import org.specs2.{ScalaCheck, Specification}
 
 class PolicySpec extends Specification with ScalaCheck {def is = s2"""
@@ -10,6 +10,7 @@ class PolicySpec extends Specification with ScalaCheck {def is = s2"""
   entire bucket - passed slash:       $extraSlash
   two paths given:                    $twoPaths
   bucket/path:                        $bucketAndPath
+  2buckets:                           $multiBuckets
 
 """
 
@@ -31,6 +32,25 @@ class PolicySpec extends Specification with ScalaCheck {def is = s2"""
         |  ]
         |}""".stripMargin
 
+
+  def expectedBucketsPolicy(s3Actions: String, s3Arns: String, buckets: String)=
+    s"""|{
+        |  "Version": "2012-10-17",
+        |  "Statement": [
+        |    {
+        |      "Action": [ ${s3Actions} ],
+        |      "Resource": [ ${s3Arns} ],
+        |      "Effect": "Allow"
+        |    },
+        |    {
+        |      "Action": [ "s3:ListBucket" ],
+        |      "Resource": [ ${buckets} ],
+        |
+        |      "Effect": "Allow"
+        |    }
+        |  ]
+        |}""".stripMargin
+
   def entireBucket = allowS3ReadPath("ambiata-dist/", constrainList = false)
     .document must beEqualTo(expectedPolicy("\"s3:GetObject\"", "\"arn:aws:s3:::ambiata-dist/*\"", "ambiata-dist")).ignoreSpace
 
@@ -42,5 +62,8 @@ class PolicySpec extends Specification with ScalaCheck {def is = s2"""
 
   def bucketAndPath = allowS3ReadPath("ambiata-dist/test", constrainList = false)
     .document must beEqualTo(expectedPolicy("\"s3:GetObject\"", "\"arn:aws:s3:::ambiata-dist/test/*\"", "ambiata-dist")).ignoreSpace
+
+  def multiBuckets = allowS3ReadBuckets(Seq("ambiata-dist", "ambiata-dispensary"))
+    .document must beEqualTo(expectedBucketsPolicy("\"s3:GetObject\"", "\"arn:aws:s3:::ambiata-dist/*\", \"arn:aws:s3:::ambiata-dispensary/*\"", "\"arn:aws:s3:::ambiata-dist\", \"arn:aws:s3:::ambiata-dispensary\"")).ignoreSpace
 
 }

@@ -1,16 +1,63 @@
 package com.ambiata.saws
 package iam
 
-trait Policy {
+sealed trait Policy {
   def name: String
+}
+sealed trait PolicyWithDocument {
+  def document: String
+}
+sealed trait HasArn {
+  def arn: String
 }
 
 /** IAM policy. */
-case class InlinePolicy(name: String, document: String) extends Policy
+case class InlinePolicy(name: String, document: String) extends Policy with PolicyWithDocument
 
+/**
+  * Represents a policy that is managed by AWS (predfinined)
+  *
+  * @param name
+  */
+case class AwsManagedPolicy(name: String, arnPrefix: String) extends Policy with HasArn {
+  def arn: String = s"$arnPrefix/$name"
+}
+
+/**
+  * Represents a policy that is managed by customer created (shared)
+  *
+  * @param name
+  * @param document
+  * @todo NOT IMPLEMENTED YET
+  */
+case class CustomerManagedPolicy(name: String, document: String, accountId: String) extends Policy with PolicyWithDocument with HasArn {
+  def arn: String = s"arn:aws:iam::${accountId}:policy/${name}"
+}
+
+object AwsManagedPolicy {
+  /** aws managed policy intended to be attached to a service role */
+  def servicePolicy(name: String) = AwsManagedPolicy(name, "arn:aws:iam::aws:policy/service-role")
+
+  /** Policy to enable Amazon ECS to manage your cluster. */
+  def amazonECSServiceRolePolicy: AwsManagedPolicy = servicePolicy("AmazonECSServiceRolePolicy")
+
+  /** aws managed policy intended for user usage */
+  def userPolicy(name: String) = AwsManagedPolicy(name, "arn:aws:iam::aws:policy")
+
+  /** Provides administrative access to Amazon ECS resources and enables ECS features through access to other AWS service resources, including VPCs, Auto Scaling groups, and CloudFormation stacks. */
+  def amazonECS_FullAccess: AwsManagedPolicy = userPolicy("AmazonECS_FullAccess")
+
+  /** Provides full access to Auto Scaling. */
+  def autoScalingFullAccess: AwsManagedPolicy = userPolicy("AutoScalingFullAccess")
+}
+
+object CustomerManagedPolicies {
+  // TODO...?
+  def create(accountId: String)(name: String, document: String) = CustomerManagedPolicy(name, document, accountId)
+}
 
 /** Constructors for different policies. */
-object InlinePolicy {
+object Policy {
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadPath(path: String, constrainList: Boolean): InlinePolicy = {
@@ -22,6 +69,13 @@ object InlinePolicy {
   def allowS3ReadPath(bucket: String, keys: Seq[String], constrainList: Boolean): InlinePolicy = {
     val name = s"ReadAccessTo_$bucket"
     InlinePolicy(name, allowS3PathForActions(bucket, keys, Seq("GetObject"), constrainList))
+  }
+
+  /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
+  def allowS3ReadBuckets(buckets: Seq[String]): InlinePolicy = {
+    val bucketConcat = buckets.mkString(",")
+    val name = s"ReadAccessTo_${bucketConcat}".replace('/', '+')
+    InlinePolicy(name, allowS3BucketsForActions(buckets, Seq("GetObject")))
   }
 
   /** Create a policy allowing 'PutObject' and 'ListBucket' for the specified S3 path. */
@@ -136,7 +190,26 @@ object InlinePolicy {
         |}""".stripMargin
   }
 
-
+  def allowS3BucketsForActions(buckets: Seq[String], actions: Seq[String]): String = {
+    val s3Actions = actions.map(a => s""""s3:${a}"""").mkString(",")
+    val s3PathArns = buckets.map ( x => s""""arn:aws:s3:::${x}/*"""" ).mkString( ", " )
+    val s3BucketArns = buckets.map ( x => s""""arn:aws:s3:::${x}"""" ).mkString( ", " )
+    s"""|{
+        |  "Version": "2012-10-17",
+        |  "Statement": [
+        |    {
+        |      "Action": [ ${s3Actions} ],
+        |      "Resource": [ ${s3PathArns} ],
+        |      "Effect": "Allow"
+        |    },
+        |    {
+        |      "Action": [ "s3:ListBucket" ],
+        |      "Resource": [ ${s3BucketArns} ],
+        |      "Effect": "Allow"
+        |    }
+        |  ]
+        |}""".stripMargin
+  }
 
   /** Allow IAM account aliases to be listed. This is important for verifying environments. */
   val allowIAMListAliasAccess: Policy = {
@@ -174,6 +247,7 @@ object InlinePolicy {
           |}""".stripMargin
     InlinePolicy("ec2-full-access", doc)
   }
+
 
   /** Create a policy allowing access to describe tags. */
   val allowEc2DescribeTags: Policy = {
