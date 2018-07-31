@@ -164,4 +164,4 @@ object IAM {
   * @param policies list of policies to attach
   * @param trust a list of services or aws accounts that can assume this role (trust policy). a tupl of type: name. e.g. ("Service", "spotfleet.amazonaws.com")
   */
-case class Role(name: String, policies: List[Policy], trust: Option[List[(String, String)]] = None)
+case class Role(name: String, policies: List[Policy], trust: List[(String, String)] = Nil)

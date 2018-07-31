@@ -4,39 +4,60 @@ package iam
 sealed trait Policy {
   def name: String
 }
+sealed trait PolicyWithDocument {
+  def document: String
+}
+sealed trait HasArn {
+  def arn: String
+}
 
 /** IAM policy. */
-case class InlinePolicy(name: String, document: String) extends Policy
+case class InlinePolicy(name: String, document: String) extends Policy with PolicyWithDocument
 
 /**
-  * Represents a policy that is managed either by AWS (predfinined) or customer created (shared)
+  * Represents a policy that is managed by AWS (predfinined)
   *
   * @param name
   */
-case class AwsManagedPolicy(val name: String, val arnPrefix: String = "arn:aws:iam::aws:policy") extends Policy {
+case class AwsManagedPolicy(name: String, arnPrefix: String) extends Policy with HasArn {
   def arn: String = s"$arnPrefix/$name"
 }
 
 /**
-  * Represents a policy that is managed either by AWS (predfinined) or customer created (shared)
+  * Represents a policy that is managed by customer created (shared)
   *
   * @param name
   * @param document
   * @todo NOT IMPLEMENTED YET
   */
-case class CustomerManagedPolicy(val name: String, val document: String) extends Policy
+case class CustomerManagedPolicy(name: String, document: String, accountId: String) extends Policy with PolicyWithDocument with HasArn {
+  def arn: String = s"arn:aws:iam::${accountId}:policy/${name}"
+}
 
+object AwsManagedPolicy {
+  /** aws managed policy intended to be attached to a service role */
+  def servicePolicy(name: String) = AwsManagedPolicy(name, "arn:aws:iam::aws:policy/service-role")
+
+  /** Policy to enable Amazon ECS to manage your cluster. */
+  def amazonECSServiceRolePolicy: AwsManagedPolicy = servicePolicy("AmazonECSServiceRolePolicy")
+
+  /** aws managed policy intended for user usage */
+  def userPolicy(name: String) = AwsManagedPolicy(name, "arn:aws:iam::aws:policy")
+
+  /** Provides administrative access to Amazon ECS resources and enables ECS features through access to other AWS service resources, including VPCs, Auto Scaling groups, and CloudFormation stacks. */
+  def amazonECS_FullAccess: AwsManagedPolicy = userPolicy("AmazonECS_FullAccess")
+
+  /** Provides full access to Auto Scaling. */
+  def autoScalingFullAccess: AwsManagedPolicy = userPolicy("AutoScalingFullAccess")
+}
+
+object CustomerManagedPolicies {
+  // TODO...?
+  def create(accountId: String)(name: String, document: String) = CustomerManagedPolicy(name, document, accountId)
+}
 
 /** Constructors for different policies. */
 object Policy {
-  /** Policy to enable Amazon ECS to manage your cluster. */
-  def awsAmazonECSServiceRolePolicy: AwsManagedPolicy = AwsManagedPolicy("AmazonECSServiceRolePolicy", "arn:aws:iam::aws:policy/service-role")
-
-  /** Provides administrative access to Amazon ECS resources and enables ECS features through access to other AWS service resources, including VPCs, Auto Scaling groups, and CloudFormation stacks. */
-  def awsAmazonECS_FullAccess: AwsManagedPolicy = AwsManagedPolicy("AmazonECS_FullAccess")
-
-  /** Provides full access to Auto Scaling. */
-  def awsAutoScalingFullAccess: AwsManagedPolicy = AwsManagedPolicy("AutoScalingFullAccess")
 
   /** Create a policy allowing 'GetObject' and 'ListBucket' for the specified S3 path. */
   def allowS3ReadPath(path: String, constrainList: Boolean): InlinePolicy = {
@@ -189,7 +210,6 @@ object Policy {
         |  ]
         |}""".stripMargin
   }
-
 
   /** Allow IAM account aliases to be listed. This is important for verifying environments. */
   val allowIAMListAliasAccess: Policy = {
